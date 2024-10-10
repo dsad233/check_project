@@ -1,17 +1,17 @@
-from app.api.core.database import Session
+from app.core.database import get_db
 from app.api.routes.auth.schema.authSchema import Register, Login
-from app.api.models.models import Users
+from app.models.models import Users
 from fastapi import APIRouter, Response, Depends
 from fastapi.responses import JSONResponse
 import bcrypt
-from app.api.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
+from app.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
 from typing import Annotated
-from app.api.middleware.tokenVerify import vaildate_Token
+from app.middleware.tokenVerify import vaildate_Token
 
 
 
 router = APIRouter()
-users = Session()
+users = get_db()
 
 # 패스워드 hash 함수
 def hashPassword(password : str):
