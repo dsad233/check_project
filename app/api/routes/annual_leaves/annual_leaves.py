@@ -1,19 +1,20 @@
-from app.api.core.database import Session
+from app.core.database import get_db
 from fastapi import APIRouter, Depends
-from app.api.middleware.tokenVerify import vaildate_Token
+from sqlalchemy.orm import Session
+from app.middleware.tokenVerify import vaildate_Token
 from app.api.routes.annual_leaves.schema.annual_leave_schema import AnnualLeaveCreate
-from app.api.models.models import AnnualLeave, Users
-from app.api.routes.annual_leaves.schema.annual_leave_schema import AnnualLeaveStatus
+from app.models.models import AnnualLeave, Users
+from app.api.routes.annual_leaves.schema.annual_leave_schema import AnnualLeaveStatus, AnnualLeaveApprove
 
 router = APIRouter(dependencies=[Depends(vaildate_Token)])
-annual_leaves = Session()
 
 @router.get('')
 async def getAnnualLeave(
-    current_user: Users = Depends(vaildate_Token)
+    current_user: Users = Depends(vaildate_Token),
+    db: Session = Depends(get_db)
 ):
     try:
-        getAnnualLeave = annual_leaves.query(AnnualLeave).filter(AnnualLeave.proposer_id == current_user.id).all()
+        getAnnualLeave = db.query(AnnualLeave).filter(AnnualLeave.proposer_id == current_user.id).all()
         return { "message" : "연차 조회에 성공하였습니다.", "data" : getAnnualLeave }
     except Exception as err:
         print("에러가 발생하였습니다.")
@@ -22,7 +23,8 @@ async def getAnnualLeave(
 @router.post('')
 async def createAnnualLeave(
     annualLeaveCreate: AnnualLeaveCreate,
-    current_user: Users = Depends(vaildate_Token)
+    current_user: Users = Depends(vaildate_Token),
+    db: Session = Depends(get_db)
 ):
     try:
         create = AnnualLeave(
@@ -32,9 +34,31 @@ async def createAnnualLeave(
             application_date = annualLeaveCreate.application_date,
             proposer_note = annualLeaveCreate.proposer_note,
         )
-        annual_leaves.add(create)
-        annual_leaves.commit()
+        db.add(create)
+        db.commit()
         return { "message" : "연차 생성에 성공하였습니다." }    
+    except Exception as err:
+        print("에러가 발생하였습니다.")
+        print(err)
+        
+@router.post('/{id}')
+async def approveAnnualLeave(
+    id : int,
+    annualLeaveApprove: AnnualLeaveApprove,
+    current_user: Users = Depends(vaildate_Token),
+    db: Session = Depends(get_db)
+):
+    try:
+        annual_leave = db.query(AnnualLeave).filter(AnnualLeave.id == id).first()
+        
+        if annual_leave.status == AnnualLeaveStatus.PENDING:
+            annual_leave.status = annualLeaveApprove.status
+            annual_leave.manager_id = current_user.id
+            annual_leave.manager_note = annualLeaveApprove.manager_note
+            db.commit()
+            return { "message" : "연차 승인에 성공하였습니다." }
+        else:
+            return { "message" : "이미 승인/반려된 연차입니다." }
     except Exception as err:
         print("에러가 발생하였습니다.")
         print(err)
