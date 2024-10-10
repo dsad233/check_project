@@ -1,5 +1,5 @@
-from app.core.database import get_db
-from app.models.models import Users
+from app.api.core.database import Session
+from app.api.models import Users
 from app.api.routes.users.schema.usersSchema import UsersEdit
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
