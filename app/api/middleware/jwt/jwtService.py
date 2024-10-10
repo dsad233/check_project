@@ -1,4 +1,5 @@
 from app.api.middleware.jwt.jwtEncoder import JWTEncoder
+from app.api.middleware.jwt.jwtDecoder import JWTDecoder
 from datetime import datetime
 from zoneinfo import ZoneInfo
 from app.api.core.config import settings
