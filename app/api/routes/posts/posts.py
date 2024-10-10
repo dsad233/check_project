@@ -1,13 +1,13 @@
-from app.api.core.database import Session
+from app.core.database import get_db
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from app.api.middleware.tokenVerify import vaildate_Token
-from app.api.models.models import Posts
+from app.middleware.tokenVerify import vaildate_Token
+from app.models.models import Posts
 from app.api.routes.posts.schema.postsSchema import PostCreate, PostsEdit
 
 
 router = APIRouter(dependencies=[Depends(vaildate_Token)])
-posts = Session()
+posts = get_db()
 
 # 게시글 전체 조회
 @router.get('')
