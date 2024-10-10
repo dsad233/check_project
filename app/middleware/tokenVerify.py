@@ -1,9 +1,9 @@
-from app.api.core.database import Session
-from app.api.models.models import Users
+from app.core.database import get_db
+from app.models.models import Users
 from fastapi import Request, HTTPException
-from app.api.middleware.jwt.jwtService import JWTService, JWTDecoder
+from app.middleware.jwt.jwtService import JWTService, JWTDecoder
 
-db = Session()
+db = get_db()
 
 async def vaildate_Token(req : Request):
     header = req.cookies.get('authorization')
