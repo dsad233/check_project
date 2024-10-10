@@ -27,12 +27,10 @@ async def createAnnualLeave(
     try:
         create = AnnualLeave(
             type = annualLeaveCreate.type,
-            manager_id = annualLeaveCreate.manager_id,
             proposer_id = current_user.id,
             date_count = annualLeaveCreate.date_count,
             application_date = annualLeaveCreate.application_date,
             proposer_note = annualLeaveCreate.proposer_note,
-            manager_note = annualLeaveCreate.manager_note,
         )
         annual_leaves.add(create)
         annual_leaves.commit()
