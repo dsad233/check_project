@@ -2,6 +2,7 @@
 .env
 .DS_Store
 poetry.lock
+.venv
 
 # app
 app/api/__pycache__
