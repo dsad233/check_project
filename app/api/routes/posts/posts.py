@@ -1,8 +1,8 @@
 from app.core.database import get_db
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from app.middleware.tokenVerify import vaildate_Token
-from app.models.models import Posts
+from app.api.middleware.tokenVerify import vaildate_Token
+from app.api.models.models import Posts
 from app.api.routes.posts.schema.postsSchema import PostCreate, PostsEdit
 
 
