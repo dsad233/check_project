@@ -22,3 +22,9 @@ class AnnualLeaveCreate(BaseModel):
 class AnnualLeaveApprove(BaseModel):
     status : AnnualLeaveStatus
     manager_note : str
+    
+class AnnualLeaveUpdate(BaseModel):
+    type : AnnualLeaveType
+    date_count : int
+    application_date : datetime
+    proposer_note : str
