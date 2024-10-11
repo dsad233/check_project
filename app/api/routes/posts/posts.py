@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from app.middleware.tokenVerify import vaildate_Token
 from app.models.models import Posts
-from app.api.routes.posts.schema.postsSchema import PostCreate, PostsEdit
+from app.api.routes.posts.schema.postschema import PostCreate, PostsEdit
 
 
 router = APIRouter(dependencies=[Depends(vaildate_Token)])
