@@ -2,13 +2,10 @@ from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from app.core.config import settings
-from dotenv import load_dotenv
-import os
 
-load_dotenv()
 
 meta = MetaData()
-engine = create_async_engine(os.getenv('DATABASE_URL'))
+engine = create_async_engine(settings.DATABASE_URL, echo=True)
 async_session = async_sessionmaker(engine, autoflush=False, autocommit=False, class_=AsyncSession)
 
 Base = declarative_base()
