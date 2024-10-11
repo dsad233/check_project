@@ -5,9 +5,10 @@ from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Overtime
 from fastapi.responses import JSONResponse
+from typing import Annotated
 
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter(dependencies=Annotated[Overtime,Depends(validate_token)])
 overtime = async_session()
 
 
@@ -50,7 +51,7 @@ async def find_one():
 
 # overtime 생성
 @router.post('')
-async def time_create(schema : OverTimeCrete, token : Annotated[Users, Depends(vaildate_Token)]):
+async def time_create(schema : OverTimeCrete, token : Annotated[Overtime, Depends(validate_token)]):
     try :
         
         overtimecreate = Overtime(
@@ -71,7 +72,7 @@ async def time_create(schema : OverTimeCrete, token : Annotated[Users, Depends(v
 
 # overtime 수정 [어드민만]
 @router.patch('/{id}')
-async def time_edit(id : int, schema : OverTimeEdit, token : Annotated[Users, Depends(vaildate_Token)]):
+async def time_edit(id : int, schema : OverTimeEdit, token : Annotated[Overtime, Depends(validate_token)]):
     try :
 
         find_over_time = overtime.query(Overtime).filter(Overtime.id == id).first()
