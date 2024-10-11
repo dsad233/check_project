@@ -9,7 +9,7 @@ __pycache__/
 #app
 app/__pycache__
 app/api/__pycache__
-app/api/middleware/__pycache__
+app/middleware/__pycache__
 app/api/middleware/jwt/__pycache__
 app/api/models/__pycache__
 app/api/utils/__pycache__
