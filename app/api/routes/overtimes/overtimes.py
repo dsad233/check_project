@@ -25,7 +25,7 @@ async def find_all():
             "data": overtimeall,
         }
     except Exception as err:
-        print("에러가 발생하였습니다.")
+        print("에러가 발생하였습니다.")    
         print(err)
 
 
