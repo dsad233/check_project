@@ -4,9 +4,9 @@ from app.api.routes.users.schema.userschema import UsersEdit
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 from app.api.routes.auth.auth import hashPassword
-from app.middleware.tokenVerify import vaildate_Token
+from app.middleware.tokenVerify import  validate_token
 
-router = APIRouter(dependencies=[Depends(vaildate_Token)])
+router = APIRouter(dependencies=[Depends(validate_token)])
 users = get_db()
 
 
