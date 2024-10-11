@@ -17,7 +17,7 @@ class Users(Base):
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), nullable=True)
     commutes = relationship("Commute", back_populates="user")
-    personnel_records = relationship("PersonnelRecord", back_populates="user")
+    personnel_records = relationship("PersonnelRecord", foreign_keys="PersonnelRecord.user_id",  back_populates="user")
     annual_leaves_proposer = relationship("AnnualLeave", foreign_keys="AnnualLeave.proposer_id", back_populates="proposer")
     annual_leaves_manager = relationship("AnnualLeave", foreign_keys="AnnualLeave.manager_id", back_populates="manager")
     overtimes_proposer = relationship("Overtime", foreign_keys="Overtime.proposer_id", back_populates="proposer")
@@ -35,7 +35,7 @@ class Commute(Base):
     work_time = Column(Integer, nullable=True)
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), nullable=True)
-    user = relationship("User", back_populates="commutes")
+    user = relationship("Users", back_populates="commutes")
 
 
 class PersonnelRecord(Base):
@@ -49,8 +49,8 @@ class PersonnelRecord(Base):
     created_at = Column(DateTime, nullable=True, default=datetime.now)
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), nullable=True)
-    user = relationship("User", foreign_keys=[user_id], back_populates="personnel_records")
-    manager = relationship("User", foreign_keys=[manager_id])
+    user = relationship("Users", foreign_keys=[user_id], back_populates="personnel_records")
+    manager = relationship("Users", foreign_keys=[manager_id])
     
 
 class AnnualLeave(Base):
@@ -69,8 +69,8 @@ class AnnualLeave(Base):
     created_at = Column(DateTime, nullable=True, default=datetime.now)
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), nullable=True, default='N')
-    proposer = relationship("User", foreign_keys=[proposer_id], back_populates="annual_leaves_proposer")
-    manager = relationship("User", foreign_keys=[manager_id], back_populates="annual_leaves_manager")
+    proposer = relationship("Users", foreign_keys=[proposer_id], back_populates="annual_leaves_proposer")
+    manager = relationship("Users", foreign_keys=[manager_id], back_populates="annual_leaves_manager")
 
 
 class Overtime(Base):
@@ -89,5 +89,5 @@ class Overtime(Base):
     created_at = Column(DateTime, nullable=True, default=datetime.now)
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), nullable=True)
-    proposer = relationship("User", foreign_keys=[proposer_id], back_populates="overtimes_proposer")
-    manager = relationship("User", foreign_keys=[manager_id], back_populates="overtimes_manager")
+    proposer = relationship("Users", foreign_keys=[proposer_id], back_populates="overtimes_proposer")
+    manager = relationship("Users", foreign_keys=[manager_id], back_populates="overtimes_manager")

@@ -7,6 +7,7 @@ import bcrypt
 from app.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
 from typing import Annotated
 from app.middleware.tokenVerify import vaildate_Token
+from sqlalchemy.orm import Session
 
 
 
@@ -19,7 +20,8 @@ def hashPassword(password : str):
 
 # 비밀번호 비교
 def verifyPassword(password: str, hashed_password: str) -> bool:
-    return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
+    return password == hashed_password
+    # return bcrypt.checkpw(password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 # 회원가입
 @router.post('/register')
@@ -61,7 +63,7 @@ async def register(register: Register):
 
 # 로그인
 @router.post('/login')
-async def login(login : Login, res : Response):
+async def login(login : Login, res : Response, db: Session = Depends(get_db)):
     try :
         findUser = users.query(Users).filter(Users.email == login.email).first()
 
@@ -73,11 +75,19 @@ async def login(login : Login, res : Response):
         
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
-        jwtSign = jwt_service._create_token(data={ "id" : findUser.id })
+        jwtToken = jwt_service._create_token(data={ "id" : findUser.id })
 
-        res.set_cookie('authorization', f'Bearer {jwtSign}')
+        # res.set_cookie('authorization', f'Bearer {jwtSign}')
 
-        return { "message" : "로그인 완료" }
+        # 토큰을 응답 본문에 포함시켜 반환
+        return JSONResponse(
+            status_code=200,
+            content={
+                "message": "로그인 완료",
+                "access_token": jwtToken,
+                "token_type": "bearer"
+            }
+        )
 
     except Exception as err:
         print("에러가 발생하였습니다.")
