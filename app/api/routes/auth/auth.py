@@ -63,19 +63,19 @@ async def register(register: Register):
 
 # 로그인
 @router.post('/login')
-async def login(login : Login, res : Response, db: Session = Depends(get_db)):
+async def login(login : Login, res : Response):
     try :
-        findUser = users.query(Users).filter(Users.email == login.email).first()
+        findUser = await users.query(Users).filter(Users.email == login.email).first()
 
         if (findUser == None):
             return JSONResponse(status_code= 404, content= "유저가 존재하지 않습니다.")
         
-        if (not verifyPassword(login.password, findUser.password)):
+        if (not await verifyPassword(login.password, findUser.password)):
             return JSONResponse(status_code= 400, content= "패스워드가 일치하지 않습니다.")
         
-        jwt_service = JWTService(JWTEncoder(), JWTDecoder())
+        jwt_service = await JWTService(JWTEncoder(), JWTDecoder())
 
-        jwtToken = jwt_service._create_token(data={ "id" : findUser.id })
+        jwtToken = await jwt_service._create_token(data={ "id" : findUser.id })
 
         # res.set_cookie('authorization', f'Bearer {jwtSign}')
 
