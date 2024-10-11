@@ -68,7 +68,7 @@ class AnnualLeave(Base):
     manager_note = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=True, default=datetime.now)
     updated_at = Column(DateTime, nullable=True, default=datetime.now, onupdate=datetime.now)
-    deleted_yn = Column(String(1), nullable=True)
+    deleted_yn = Column(String(1), nullable=True, default='N')
     proposer = relationship("Users", foreign_keys=[proposer_id], back_populates="annual_leaves_proposer")
     manager = relationship("Users", foreign_keys=[manager_id], back_populates="annual_leaves_manager")
 
