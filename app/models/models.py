@@ -61,7 +61,7 @@ class AnnualLeave(Base):
     manager_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     proposer_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     application_date = Column(DateTime, nullable=True)
-    type = Column(Enum('paid annual leave', 'unpaid annual leave', 'paid half day leave', 'unpaid half day leave', name='leave_type'), nullable=True)
+    type = Column(Enum('annual_leave', 'sick_leave', 'bereavement_leave', 'parental_leave', 'leave_of_absence', 'official_leave', name='leave_type'), nullable=True)
     date_count = Column(Integer, nullable=True)
     application_status = Column(Enum('pending', 'approved', 'rejected', name='application_status'), nullable=True, default='pending')
     proposer_note = Column(Text, nullable=True)

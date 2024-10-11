@@ -2,7 +2,7 @@ from app.core.database import get_db
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from app.middleware.tokenVerify import vaildate_Token
-from app.api.routes.annual_leaves.schema.annual_leave_schema import AnnualLeaveCreate, AnnualLeaveStatus, AnnualLeaveApprove, AnnualLeaveUpdate, AnnualLeaveListsResponse
+from app.api.routes.annual_leaves.schema.annual_leave_schema import AnnualLeaveCreate, AnnualLeaveApprove, AnnualLeaveUpdate, AnnualLeaveListsResponse
 from app.models.models import AnnualLeave, Users
 
 router = APIRouter(dependencies=[Depends(vaildate_Token)])
@@ -15,19 +15,20 @@ async def getAnnualLeave(
     try:
         annual_leaves = db.query(AnnualLeave).filter(AnnualLeave.proposer_id == current_user.id, AnnualLeave.deleted_yn == 'N').all()
         annual_leave_dtos=[]    
-        for leave in annual_leaves:
+        
+        for leave in annual_leaves:     
             dto = AnnualLeaveListsResponse(
                 id = leave.annual_leave_id,
                 proposer_name = leave.proposer.name,
-                work_part = leave.proposer.work_part,
+                work_part = leave.proposer.part,
                 application_date = leave.application_date,
                 type = leave.type,
                 date_count = leave.date_count,
-                status = AnnualLeaveStatus(leave.application_status),
+                status = leave.application_status,
                 proposer_note = leave.proposer_note,
-                manager_note = leave.manager_note if leave.manager_note else None,
+                manager_note = leave.manager_note if leave.manager_note else "",
                 updated_at = leave.updated_at,
-                manager_name = leave.manager.name if leave.manager else None
+                manager_name = leave.manager.name
             )
             annual_leave_dtos.append(dto)
         return { "message" : "연차 조회에 성공하였습니다.", "data" : annual_leave_dtos }
@@ -40,24 +41,24 @@ async def getPendingAnnualLeave(
     current_user: Users = Depends(vaildate_Token),
     db: Session = Depends(get_db)
 ):
-    if not current_user.is_admin:
+    if current_user.role == "사원":
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
     try:
-        getPendingAnnualLeaves = db.query(AnnualLeave).filter(AnnualLeave.status == AnnualLeaveStatus.PENDING, AnnualLeave.deleted_yn == 'N').all()
+        getPendingAnnualLeaves = db.query(AnnualLeave).filter(AnnualLeave.application_status == "pending", AnnualLeave.deleted_yn == 'N').all()
         annual_leave_dtos=[]    
         for leave in getPendingAnnualLeaves:
             dto = AnnualLeaveListsResponse(
                 id = leave.annual_leave_id,
                 proposer_name = leave.proposer.name,
-                work_part = leave.proposer.work_part,
+                work_part = leave.proposer.part,
                 application_date = leave.application_date,
                 type = leave.type,
                 date_count = leave.date_count,
-                status = AnnualLeaveStatus(leave.application_status),
+                status = leave.application_status,
                 proposer_note = leave.proposer_note,
-                manager_note = leave.manager_note if leave.manager_note else None,
+                manager_note = leave.manager_note if leave.manager_note else "",
                 updated_at = leave.updated_at,
-                manager_name = leave.manager.name if leave.manager else None
+                manager_name = leave.manager.name
             )
             annual_leave_dtos.append(dto)
         return { "message" : "연차 조회에 성공하였습니다.", "data" : annual_leave_dtos }
@@ -73,6 +74,7 @@ async def createAnnualLeave(
 ):
     try:
         create = AnnualLeave(
+            manager_id = annualLeaveCreate.manager_id,
             type = annualLeaveCreate.type,
             proposer_id = current_user.id,
             date_count = annualLeaveCreate.date_count,
@@ -95,13 +97,13 @@ async def approveAnnualLeave(
     db: Session = Depends(get_db)
 ):
     try:
-        if not current_user.is_admin:
+        if current_user.role == "사원":
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         annual_leave = db.query(AnnualLeave).filter(AnnualLeave.id == id).first()
         if not annual_leave:
             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
         
-        if annual_leave.status == AnnualLeaveStatus.PENDING:
+        if annual_leave.application_status == "pending":
             annual_leave.status = annualLeaveApprove.status
             annual_leave.manager_id = current_user.id
             annual_leave.manager_note = annualLeaveApprove.manager_note
@@ -131,7 +133,7 @@ async def updateAnnualLeave(
         if annual_leave.proposer_id != current_user.id:
             raise HTTPException(status_code=403, detail="연차를 수정할 권한이 없습니다.")
         
-        if annual_leave.status != AnnualLeaveStatus.PENDING:
+        if annual_leave.application_status != "pending":
             raise HTTPException(status_code=400, detail="승인/반려된 연차는 수정할 수 없습니다.")
         
         annual_leave.type = annualLeaveUpdate.type
@@ -161,7 +163,7 @@ async def deleteAnnualLeave(
         if annual_leave.proposer_id != current_user.id:
             raise HTTPException(status_code=403, detail="연차를 삭제할 권한이 없습니다.")
         
-        if annual_leave.status != AnnualLeaveStatus.PENDING:
+        if annual_leave.application_status != "pending":
             raise HTTPException(status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다.")
         
         annual_leave.deleted_yn = 'Y'
