@@ -1,21 +1,31 @@
+<<<<<<< HEAD
 from fastapi import APIRouter, Depends
 from app.middleware.tokenVerify import vaildate_Token
 from app.core.database import SessionLocal
+=======
+from fastapi import APIRouter
+from app.core.database import async_session
+>>>>>>> d02ad36 (Fix : Git 충돌 오류 해결)
 from app.models.models import Overtime
 from fastapi.responses import JSONResponse
 from app.models.models import Users
 from typing import Annotated
 from app.api.routes.overtimes.schema.overtimeschema import OverTimeCrete, OverTimeEdit
 
+<<<<<<< HEAD
 router = APIRouter(dependencies=Depends(vaildate_Token))
 overtime = SessionLocal()
+=======
+router = APIRouter()
+overtime = async_session()
+>>>>>>> d02ad36 (Fix : Git 충돌 오류 해결)
 
 
 # overtime 전체 조회
 @router.get('')
 async def find_all():
     try :
-        overtimeall = overtime.query(Overtime).all()
+        overtimeall = await overtime.query(Overtime).all()
 
         if(len(overtimeall) == 0):
             return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
@@ -44,7 +54,7 @@ async def find_spot():
 @router.get('/{id}')
 async def find_one():
     try :
-        overtimeone = overtime.query(Overtime).filter(Overtime.manager_id == id).first()
+        overtimeone = await overtime.query(Overtime).filter(Overtime.manager_id == id).first()
 
         if(overtimeone == None):
             return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
