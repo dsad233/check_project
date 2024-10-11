@@ -8,6 +8,7 @@ from app.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
 from typing import Annotated
 from app.middleware.tokenVerify import vaildate_Token
 from app.core.database import async_session
+from sqlalchemy.future import select
 
 
 
@@ -63,23 +64,22 @@ async def register(register: Register):
 
 # 로그인
 @router.post('/login')
-async def login(login : Login, res : Response):
-    try :
-        findUser = await users.query(Users).filter(Users.email == login.email).first()
+async def login(login: Login, res: Response):
+    try:
+        stmt = select(Users).where(Users.email == login.email)
+        result = await users.execute(stmt)
+        findUser = result.scalar_one_or_none()
 
-        if (findUser == None):
-            return JSONResponse(status_code= 404, content= "유저가 존재하지 않습니다.")
+        if findUser is None:
+            return JSONResponse(status_code=404, content="유저가 존재하지 않습니다.")
         
-        if (not await verifyPassword(login.password, findUser.password)):
-            return JSONResponse(status_code= 400, content= "패스워드가 일치하지 않습니다.")
+        if not verifyPassword(login.password, findUser.password):
+            return JSONResponse(status_code=400, content="패스워드가 일치하지 않습니다.")
         
-        jwt_service = await JWTService(JWTEncoder(), JWTDecoder())
+        jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
-        jwtToken = await jwt_service._create_token(data={ "id" : findUser.id })
+        jwtToken = jwt_service._create_token(data={"id": findUser.id})
 
-        # res.set_cookie('authorization', f'Bearer {jwtSign}')
-
-        # 토큰을 응답 본문에 포함시켜 반환
         return JSONResponse(
             status_code=200,
             content={
@@ -92,6 +92,7 @@ async def login(login : Login, res : Response):
     except Exception as err:
         print("에러가 발생하였습니다.")
         print(err)
+        return JSONResponse(status_code=500, content="서버 오류가 발생했습니다.")
 
 
 # 로그아웃
