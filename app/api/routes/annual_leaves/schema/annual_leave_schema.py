@@ -6,6 +6,7 @@ class AnnualLeaveCreate(BaseModel):
     date_count : int
     application_date : datetime
     proposer_note : str
+    manager_id : int
     
 class AnnualLeaveApprove(BaseModel):
     status : str
