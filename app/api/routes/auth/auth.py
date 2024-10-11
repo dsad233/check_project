@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 import bcrypt
 from app.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
 from typing import Annotated
-from app.middleware.tokenVerify import vaildate_Token
+from app.middleware.tokenVerify import validate_token
 from app.core.database import async_session
 from sqlalchemy.future import select
 
@@ -97,7 +97,7 @@ async def login(login: Login, res: Response):
 
 # 로그아웃
 @router.post('/logout')
-async def logout(res : Response, token : Annotated[Users, Depends(vaildate_Token)]):
+async def logout(res : Response, token : Annotated[Users, Depends(validate_token)]):
     try:
         res.delete_cookie('authorization')
         return { "message" : "로그아웃 완료" }

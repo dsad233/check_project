@@ -1,18 +1,17 @@
 from app.core.database import async_session
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.orm import Session
-from app.middleware.tokenVerify import vaildate_Token
+from app.middleware.tokenVerify import validate_token
 from app.api.routes.annual_leaves.schema.annual_leave_schema import AnnualLeaveCreate, AnnualLeaveApprove, AnnualLeaveUpdate, AnnualLeaveListsResponse
 from app.models.models import AnnualLeave, Users
 from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
-router = APIRouter(dependencies=[Depends(vaildate_Token)])
+router = APIRouter(dependencies=[Depends(validate_token)])
 annualleaves = async_session()
 
 @router.get('')
 async def getAnnualLeave(
-    current_user: Users = Depends(vaildate_Token)
+    current_user: Users = Depends(validate_token)
 ):
     try:
         query = (
@@ -46,7 +45,7 @@ async def getAnnualLeave(
 
 @router.get('/pending')
 async def getPendingAnnualLeave(
-    current_user: Users = Depends(vaildate_Token)
+    current_user: Users = Depends(validate_token)
 ):
     if current_user.role.strip() == "사원":
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -83,7 +82,7 @@ async def getPendingAnnualLeave(
 @router.post('')
 async def createAnnualLeave(
     annualLeaveCreate: AnnualLeaveCreate,
-    current_user: Users = Depends(vaildate_Token),
+    current_user: Users = Depends(validate_token),
 ):
     try:
         create = AnnualLeave(
@@ -107,7 +106,7 @@ async def createAnnualLeave(
 async def approveAnnualLeave(
     id : int,
     annualLeaveApprove: AnnualLeaveApprove,
-    current_user: Users = Depends(vaildate_Token),
+    current_user: Users = Depends(validate_token),
 ):
     try:
         if current_user.role.strip() == "사원":
@@ -139,7 +138,7 @@ async def approveAnnualLeave(
 async def updateAnnualLeave(
     id : int,
     annualLeaveUpdate: AnnualLeaveUpdate,
-    current_user: Users = Depends(vaildate_Token)
+    current_user: Users = Depends(validate_token)
 ):
     try:
         query = select(AnnualLeave).where(AnnualLeave.annual_leave_id == id)
@@ -171,7 +170,7 @@ async def updateAnnualLeave(
 @router.delete('/{id}')
 async def deleteAnnualLeave(
     id : int,
-    current_user: Users = Depends(vaildate_Token)
+    current_user: Users = Depends(validate_token)
 ):
     try:
         query = select(AnnualLeave).where(AnnualLeave.annual_leave_id == id)
