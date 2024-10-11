@@ -63,7 +63,7 @@ class AnnualLeave(Base):
     application_date = Column(DateTime, nullable=True)
     type = Column(Enum('annual_leave', 'sick_leave', 'bereavement_leave', 'parental_leave', 'leave_of_absence', 'official_leave', name='leave_type'), nullable=True)
     date_count = Column(Integer, nullable=True)
-    application_status = Column(Enum('pending', 'approved', 'rejected', name='application_status'), nullable=True, default='pending')
+    application_status = Column(Enum('pending', 'approved', 'rejected', name='application_status'), default='pending')
     proposer_note = Column(Text, nullable=True)
     manager_note = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=True, default=datetime.now)

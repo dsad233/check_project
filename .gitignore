@@ -5,8 +5,6 @@ poetry.lock
 .venv
 __pycache__/
 
-
-
 #app
 app/__pycache__
 app/api/__pycache__
