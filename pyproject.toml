@@ -18,6 +18,8 @@ python-jose = "^3.3.0"
 alembic = "^1.13.3"
 uvicorn = "^0.31.1"
 pymysql = "^1.1.1"
+aiomysql = "^0.2.0"
+asyncmy = "^0.2.9"
 
 
 [build-system]

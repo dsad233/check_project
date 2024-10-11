@@ -7,12 +7,12 @@ import bcrypt
 from app.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
 from typing import Annotated
 from app.middleware.tokenVerify import vaildate_Token
-from sqlalchemy.orm import Session
+from app.core.database import async_session
 
 
 
 router = APIRouter()
-users = get_db()
+users = async_session()
 
 # 패스워드 hash 함수
 def hashPassword(password : str):
