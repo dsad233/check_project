@@ -1,11 +1,11 @@
 from fastapi import APIRouter, Depends
-from app.middleware.tokenVerify import vaildate_Token
+from app.middleware.tokenVerify import validate_token
 from app.core.database import async_session
 from app.models.models import Overtime
 from fastapi.responses import JSONResponse
 
 
-router = APIRouter(dependencies=Depends(vaildate_Token))
+router = APIRouter(dependencies=[Depends(validate_token)])
 overtime = async_session()
 
 
