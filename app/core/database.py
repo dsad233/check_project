@@ -1,17 +1,30 @@
-from sqlalchemy import create_engine
+from sqlalchemy import MetaData
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
+from dotenv import load_dotenv
+import os
 
-engine = create_engine(settings.DATABASE_URL)
+load_dotenv()
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+meta = MetaData()
+engine = create_async_engine(os.getenv('DATABASE_URL'))
+async_session = async_sessionmaker(engine, autoflush=False, autocommit=False, class_=AsyncSession)
 
 Base = declarative_base()
 
-def get_db():
-    db = SessionLocal()
-    try:
-        return db
+async def get_db():
+    # 비동기에서 달라지는 부분
+    async with engine.begin() as conn:
+        await conn.run_sync(meta.create_all)
+
+    db = async_session()                                                                                        
+    try:                            
+        yield db
     finally:
-        db.close()
+        await db.close()
+
+
+
+
+                
