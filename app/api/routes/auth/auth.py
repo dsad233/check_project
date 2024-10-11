@@ -7,7 +7,11 @@ import bcrypt
 from app.middleware.jwt.jwtService import JWTService, JWTEncoder, JWTDecoder
 from typing import Annotated
 from app.middleware.tokenVerify import vaildate_Token
+<<<<<<< HEAD
 from app.core.database import async_session
+=======
+from sqlalchemy.orm import Session
+>>>>>>> afe7ce9 (fix/login process)
 
 
 
@@ -63,7 +67,7 @@ async def register(register: Register):
 
 # 로그인
 @router.post('/login')
-async def login(login : Login, res : Response):
+async def login(login : Login, res : Response, db: Session = Depends(get_db)):
     try :
         findUser = await users.query(Users).filter(Users.email == login.email).first()
 
@@ -75,7 +79,11 @@ async def login(login : Login, res : Response):
         
         jwt_service = await JWTService(JWTEncoder(), JWTDecoder())
 
+<<<<<<< HEAD
         jwtToken = await jwt_service._create_token(data={ "id" : findUser.id })
+=======
+        jwtToken = jwt_service._create_token(data={ "id" : findUser.id })
+>>>>>>> afe7ce9 (fix/login process)
 
         # res.set_cookie('authorization', f'Bearer {jwtSign}')
 
