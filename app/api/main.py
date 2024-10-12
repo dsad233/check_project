@@ -15,5 +15,4 @@ app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(
     branch_policies.router, prefix="/branch_policies", tags=["Branch_policies"]
 )
-# app.include_router(annual_leaves.router, prefix='/annual-leaves', tags=['Annual Leaves'])
-# app.include_router(overtimes.router, prefix='/overtime', tags=['Overtime'])       
+# app.include_router(overtimes.router, prefix='/overtime', tags=['Overtime'])
