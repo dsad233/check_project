@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 
+
 class PartWorkPolicyCreate(BaseModel):
     work_policy_id: int
     work_start_time: str

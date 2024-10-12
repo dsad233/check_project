@@ -1,28 +1,34 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, delete
+from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
+
+from app.api.routes.parts_policy.schema.parts_policy_schema import (
+    PartWorkPolicyCreate,
+    PartWorkPolicyResponse,
+)
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Users
-from app.models.policies.partpolicies import PartWorkPolicies
 from app.models.policies.branchpolicies import WorkPolicies
-from app.api.routes.parts_policy.schema.parts_policy_schema import PartWorkPolicyResponse, PartWorkPolicyCreate
+from app.models.policies.partpolicies import PartWorkPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
+
 @router.get("/{part_id}")
-async def getPartWorkPolicy(part_id: int, current_user: Users = Depends(validate_token)):
+async def getPartWorkPolicy(
+    part_id: int, current_user: Users = Depends(validate_token)
+):
     try:
-        query = (
-            select(PartWorkPolicies)
-            .where(PartWorkPolicies.part_id == part_id)
-        )
+        query = select(PartWorkPolicies).where(PartWorkPolicies.part_id == part_id)
         result = await db.execute(query)
         part_work_policy = result.scalars().one_or_none()
 
         if not part_work_policy:
-            raise HTTPException(status_code=400, detail="존재하지 않는 부서 근무 정책입니다.")
+            raise HTTPException(
+                status_code=400, detail="존재하지 않는 부서 근무 정책입니다."
+            )
 
         part_work_policy_response = PartWorkPolicyResponse(
             id=part_work_policy.id,
@@ -37,31 +43,38 @@ async def getPartWorkPolicy(part_id: int, current_user: Users = Depends(validate
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/{part_id}")
-async def createPartWorkPolicy(part_id: int, data: PartWorkPolicyCreate, current_user: Users = Depends(validate_token)):
+async def createPartWorkPolicy(
+    part_id: int,
+    data: PartWorkPolicyCreate,
+    current_user: Users = Depends(validate_token),
+):
     try:
-        part_work_policy_query = (
-            select(PartWorkPolicies)
-            .where(PartWorkPolicies.part_id == part_id)
+        part_work_policy_query = select(PartWorkPolicies).where(
+            PartWorkPolicies.part_id == part_id
         )
         result = await db.execute(part_work_policy_query)
         part_work_policy = result.scalars().one_or_none()
-        
+
         if part_work_policy:
-            raise HTTPException(status_code=400, detail="이미 존재하는 부서 정책입니다.")
-        
-        work_policy_query = (
-            select(WorkPolicies)
-            .where(WorkPolicies.id == data.work_policy_id)
+            raise HTTPException(
+                status_code=400, detail="이미 존재하는 부서 정책입니다."
+            )
+
+        work_policy_query = select(WorkPolicies).where(
+            WorkPolicies.id == data.work_policy_id
         )
         result = await db.execute(work_policy_query)
         work_policy = result.scalars().one_or_none()
-        
+
         if not work_policy:
-            raise HTTPException(status_code=400, detail="존재하지 않는 근무 정책입니다.")
-        
+            raise HTTPException(
+                status_code=400, detail="존재하지 않는 근무 정책입니다."
+            )
+
         # work_policy를 참조하며, 유효성을 판단하기
-        
+
         create_data = PartWorkPolicies(
             part_id=part_id,
             work_policy_id=data.work_policy_id,
@@ -79,8 +92,13 @@ async def createPartWorkPolicy(part_id: int, data: PartWorkPolicyCreate, current
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.patch("/{part_id}")
-async def updatePartWorkPolicy(part_id: int, data: PartWorkPolicyCreate, current_user: Users = Depends(validate_token)):
+async def updatePartWorkPolicy(
+    part_id: int,
+    data: PartWorkPolicyCreate,
+    current_user: Users = Depends(validate_token),
+):
     try:
         part_work_policy_query = (
             select(PartWorkPolicies)
@@ -91,10 +109,12 @@ async def updatePartWorkPolicy(part_id: int, data: PartWorkPolicyCreate, current
         part_work_policy = result.scalars().one_or_none()
 
         if not part_work_policy:
-            raise HTTPException(status_code=400, detail="존재하지 않는 부서 근무 정책입니다.")
-        
+            raise HTTPException(
+                status_code=400, detail="존재하지 않는 부서 근무 정책입니다."
+            )
+
         # 유효성 검증다
-                
+
         if data.work_start_time is not None:
             part_work_policy.work_start_time = data.work_start_time
         if data.work_end_time is not None:
@@ -114,13 +134,13 @@ async def updatePartWorkPolicy(part_id: int, data: PartWorkPolicyCreate, current
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.delete("/{part_id}")
-async def deletePartWorkPolicy(part_id: int, current_user: Users = Depends(validate_token)):
+async def deletePartWorkPolicy(
+    part_id: int, current_user: Users = Depends(validate_token)
+):
     try:
-        query = (
-            delete(PartWorkPolicies)
-            .where(PartWorkPolicies.part_id == part_id)
-        )
+        query = delete(PartWorkPolicies).where(PartWorkPolicies.part_id == part_id)
         await db.execute(query)
         await db.commit()
 
