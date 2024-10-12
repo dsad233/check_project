@@ -1,6 +1,7 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Date, DateTime, Enum, ForeignKey, Integer, String
+from sqlalchemy import (Column, Date, DateTime, Enum, ForeignKey, Integer,
+                        String)
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -17,7 +18,7 @@ class Branches(Base):
 
     users = relationship("Users", back_populates="branch")
     parts = relationship("Parts", back_populates="branch")
-    branch_policies = relationship("BranchPolicies", back_populates="branch")
+    # branch_policies = relationship("BranchPolicies", back_populates="branch")
 
 
 class Parts(Base):
@@ -32,7 +33,7 @@ class Parts(Base):
 
     branch = relationship("Branches", back_populates="parts")
     users = relationship("Users", back_populates="part")
-    part_policies = relationship("PartPolicies", back_populates="part")
+    # part_policies = relationship("PartPolicies", back_populates="part")
 
 
 class Users(Base):
@@ -57,10 +58,10 @@ class Users(Base):
     last_career_start_date = Column(Date, nullable=True)
     last_career_end_date = Column(Date, nullable=True)
 
-    role = Column(
-        Enum("MSO 최고권한", "최고관리자", "관리자", "사원", name="user_role"),
-        nullable=False
-    )
+    # role = Column(
+    #     Enum("MSO 최고권한", "최고관리자", "관리자", "사원", name="user_role"),
+    #     nullable=False
+    # )
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
