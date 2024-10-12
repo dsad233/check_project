@@ -77,16 +77,14 @@ async def login(login: Login, res: Response):
         
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
-        jwtToken = await jwt_service._create_token(data={ "id" : findUser.id })
-
-        res.set_cookie('authorization', f'Bearer {jwtSign}')
+        jwtToken = jwt_service._create_token(data={ "id" : findUser.id })
 
         # 토큰을 응답 본문에 포함시켜 반환
         return JSONResponse(
             status_code=200,
             content={
                 "message": "로그인 완료",
-                "access_token": jwtSign,
+                "access_token": jwtToken,
                 "token_type": "bearer"
             }
         )
