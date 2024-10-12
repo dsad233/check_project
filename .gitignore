@@ -1,5 +1,7 @@
 # main
 .env
+.env.dev
+.env.prod
 .DS_Store
 poetry.lock
 .venv
