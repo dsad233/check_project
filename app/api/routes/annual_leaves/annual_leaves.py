@@ -3,8 +3,11 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from app.api.routes.annual_leaves.schema.annual_leave_schema import (
-    AnnualLeaveApprove, AnnualLeaveCreate, AnnualLeaveListsResponse,
-    AnnualLeaveUpdate)
+    AnnualLeaveApprove,
+    AnnualLeaveCreate,
+    AnnualLeaveListsResponse,
+    AnnualLeaveUpdate,
+)
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import AnnualLeave, Users

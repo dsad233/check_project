@@ -1,11 +1,20 @@
 from datetime import datetime
-from app.models.policies.branchpolicies import BranchPolicies
 
-from sqlalchemy import (Boolean, Column, Date, DateTime, Enum, ForeignKey,
-                        Integer, String)
+from sqlalchemy import (
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Integer,
+    String,
+)
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.models.policies.branchpolicies import BranchPolicies
+
 
 class Branches(Base):
     __tablename__ = "branches"
@@ -20,6 +29,7 @@ class Branches(Base):
     parts = relationship("Parts", back_populates="branch")
     branch_policies = relationship("BranchPolicies", back_populates="branch")
 
+
 class Parts(Base):
     __tablename__ = "parts"
 
@@ -29,7 +39,7 @@ class Parts(Base):
     is_doctor = Column(Boolean, default=False)
     required_certification = Column(String(500), nullable=True)
     leave_granting_authority = Column(String(500), nullable=True)
-    
+
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -40,6 +50,7 @@ class Parts(Base):
     part_policies = relationship("PartPolicies", back_populates="part")
     part_work_policies = relationship("PartWorkPolicies", back_populates="part")
     part_salary_policies = relationship("PartSalaryPolicies", back_populates="part")
+
 
 class Users(Base):
     __tablename__ = "users"

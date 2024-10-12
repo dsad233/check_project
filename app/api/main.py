@@ -1,9 +1,10 @@
 from fastapi import APIRouter
 
 from app.api.routes.auth import auth
+from app.api.routes.branch_policies import branch_policies
 from app.api.routes.parts import parts
 from app.api.routes.users import users
-from app.api.routes.branch_policies import branch_policies
+
 # from app.api.routes.annual_leaves import annual_leaves
 # from app.api.routes.overtimes import overtimes
 
