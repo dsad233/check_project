@@ -1,8 +1,10 @@
 from typing import Annotated
+
 import bcrypt
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
+
 from app.api.routes.auth.schema.authSchema import Login, Register
 from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
@@ -62,9 +64,9 @@ async def register(register: Register):
 
 
 # 로그인
-@router.post('/login')
-async def login(login : Login):
-    try :
+@router.post("/login")
+async def login(login: Login):
+    try:
         stmt = select(Users).where(Users.email == login.email)
         result = await users.execute(stmt)
         findUser = result.scalar_one_or_none()

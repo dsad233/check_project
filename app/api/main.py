@@ -1,4 +1,5 @@
 from fastapi import APIRouter
+
 from app.api.routes.auth import auth
 from app.api.routes.parts import parts
 # from app.api.routes.annual_leaves import annual_leaves
