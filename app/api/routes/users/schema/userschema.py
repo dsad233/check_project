@@ -1,8 +1,7 @@
+from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
-from datetime import date
-from typing import Optional
 
 
 # 유저 정보 업데이트를 위한 Pydantic 모델

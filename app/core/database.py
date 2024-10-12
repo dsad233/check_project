@@ -1,7 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy import MetaData
-from sqlalchemy.ext.asyncio import (AsyncSession, async_sessionmaker,
-                                    create_async_engine)
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
 
 from app.core.config import settings

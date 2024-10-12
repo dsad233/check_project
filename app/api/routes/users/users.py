@@ -18,13 +18,29 @@ users = async_session()
 async def get_users():
     try:
         # password를 제외한 모든 컬럼 선택
-        stmt = select(Users).options(load_only(
-            Users.id, Users.name, Users.email, Users.phone_number,
-            Users.address, Users.education, Users.birth_date, Users.hire_date,
-            Users.resignation_date, Users.gender, Users.part_id, Users.branch_id,
-            Users.last_company, Users.last_position, Users.last_career_start_date,
-            Users.last_career_end_date, Users.created_at, Users.updated_at, Users.deleted_yn
-        ))
+        stmt = select(Users).options(
+            load_only(
+                Users.id,
+                Users.name,
+                Users.email,
+                Users.phone_number,
+                Users.address,
+                Users.education,
+                Users.birth_date,
+                Users.hire_date,
+                Users.resignation_date,
+                Users.gender,
+                Users.part_id,
+                Users.branch_id,
+                Users.last_company,
+                Users.last_position,
+                Users.last_career_start_date,
+                Users.last_career_end_date,
+                Users.created_at,
+                Users.updated_at,
+                Users.deleted_yn,
+            )
+        )
         result = await users.execute(stmt)
         findAll = result.scalars().all()
 
@@ -46,19 +62,41 @@ async def get_users():
 async def get_user_detail(id: int):
     try:
         # password를 제외한 모든 컬럼 선택
-        stmt = select(Users).options(load_only(
-            Users.id, Users.name, Users.email, Users.phone_number,
-            Users.address, Users.education, Users.birth_date, Users.hire_date,
-            Users.resignation_date, Users.gender, Users.part_id, Users.branch_id,
-            Users.last_company, Users.last_position, Users.last_career_start_date,
-            Users.last_career_end_date, Users.created_at, Users.updated_at, Users.deleted_yn
-        )).where(Users.id == id)
-        
+        stmt = (
+            select(Users)
+            .options(
+                load_only(
+                    Users.id,
+                    Users.name,
+                    Users.email,
+                    Users.phone_number,
+                    Users.address,
+                    Users.education,
+                    Users.birth_date,
+                    Users.hire_date,
+                    Users.resignation_date,
+                    Users.gender,
+                    Users.part_id,
+                    Users.branch_id,
+                    Users.last_company,
+                    Users.last_position,
+                    Users.last_career_start_date,
+                    Users.last_career_end_date,
+                    Users.created_at,
+                    Users.updated_at,
+                    Users.deleted_yn,
+                )
+            )
+            .where(Users.id == id)
+        )
+
         result = await users.execute(stmt)
         user = result.scalars().first()
 
         if not user:
-            raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
+            raise HTTPException(
+                status_code=404, detail="해당 ID의 유저가 존재하지 않습니다."
+            )
 
         return {
             "message": "유저 상세 정보를 정상적으로 조회하였습니다.",
@@ -78,9 +116,11 @@ async def update_user(id: int, user_update: UserUpdate):
     try:
         # 업데이트할 필드만 선택
         update_data = user_update.dict(exclude_unset=True)
-        
+
         if not update_data:
-            raise HTTPException(status_code=400, detail="업데이트할 정보가 제공되지 않았습니다.")
+            raise HTTPException(
+                status_code=400, detail="업데이트할 정보가 제공되지 않았습니다."
+            )
 
         # 유저 존재 여부 확인
         stmt = select(Users).where(Users.id == id)
@@ -88,7 +128,9 @@ async def update_user(id: int, user_update: UserUpdate):
         user = result.scalars().first()
 
         if not user:
-            raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
+            raise HTTPException(
+                status_code=404, detail="해당 ID의 유저가 존재하지 않습니다."
+            )
 
         # 유저 정보 업데이트
         update_stmt = update(Users).where(Users.id == id).values(**update_data)
@@ -96,19 +138,39 @@ async def update_user(id: int, user_update: UserUpdate):
         await users.commit()
 
         # 업데이트된 유저 정보 조회 (비밀번호 제외)
-        stmt = select(Users).options(load_only(
-            Users.id, Users.name, Users.email, Users.phone_number,
-            Users.address, Users.education, Users.birth_date, Users.hire_date,
-            Users.resignation_date, Users.gender, Users.part_id, Users.branch_id,
-            Users.last_company, Users.last_position, Users.last_career_start_date,
-            Users.last_career_end_date, Users.created_at, Users.updated_at, Users.deleted_yn
-        )).where(Users.id == id)
+        stmt = (
+            select(Users)
+            .options(
+                load_only(
+                    Users.id,
+                    Users.name,
+                    Users.email,
+                    Users.phone_number,
+                    Users.address,
+                    Users.education,
+                    Users.birth_date,
+                    Users.hire_date,
+                    Users.resignation_date,
+                    Users.gender,
+                    Users.part_id,
+                    Users.branch_id,
+                    Users.last_company,
+                    Users.last_position,
+                    Users.last_career_start_date,
+                    Users.last_career_end_date,
+                    Users.created_at,
+                    Users.updated_at,
+                    Users.deleted_yn,
+                )
+            )
+            .where(Users.id == id)
+        )
         result = await users.execute(stmt)
         updated_user = result.scalars().first()
 
         return {
             "message": "유저 정보가 성공적으로 업데이트되었습니다.",
-            "data": updated_user
+            "data": updated_user,
         }
     except HTTPException as http_err:
         await users.rollback()

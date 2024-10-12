@@ -5,6 +5,7 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
+
 class PartWorkPolicies(Base):
     __tablename__ = "part_work_policies"
 
@@ -42,4 +43,6 @@ class PartSalaryPolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     part = relationship("Parts", back_populates="part_salary_policies")
-    salary_policy = relationship("SalaryPolicies", back_populates="part_salary_policies")
+    salary_policy = relationship(
+        "SalaryPolicies", back_populates="part_salary_policies"
+    )
