@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import insert, select
-from sqlalchemy.orm import selectinload
+from sqlalchemy import select
 
-from app.api.routes.parts.schema.partsSchema import PartCreate, PartResponse
+from app.api.routes.parts.schema.parts_schema import PartCreate, PartResponse
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Branches, Parts, Users
