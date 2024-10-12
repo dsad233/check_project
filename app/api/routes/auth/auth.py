@@ -1,12 +1,10 @@
 from typing import Annotated
-
 import bcrypt
 from fastapi import APIRouter, Depends, Response
 from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
-
 from app.api.routes.auth.schema.authSchema import Login, Register
-from app.core.database import async_session, get_db
+from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Users
@@ -64,9 +62,9 @@ async def register(register: Register):
 
 
 # 로그인
-@router.post("/login")
-async def login(login: Login, res: Response):
-    try:
+@router.post('/login')
+async def login(login : Login):
+    try :
         stmt = select(Users).where(Users.email == login.email)
         result = await users.execute(stmt)
         findUser = result.scalar_one_or_none()
@@ -83,6 +81,7 @@ async def login(login: Login, res: Response):
 
         jwtToken = jwt_service._create_token(data={"id": findUser.id})
 
+        # 토큰을 응답 본문에 포함시켜 반환
         return JSONResponse(
             status_code=200,
             content={

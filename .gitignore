@@ -5,14 +5,18 @@
 .DS_Store
 poetry.lock
 .venv
-__pycache__/
 
 
 #app
 app/__pycache__
-app/api/__pycache__
 app/middleware/__pycache__
-app/api/middleware/jwt/__pycache__
-app/api/models/__pycache__
-app/api/utils/__pycache__
-app/api/core/__pycache__
+app/middleware/jwt/__pycache__
+app/models/__pycache__
+app/models/policies/__pycache__
+app/api/__pycache__
+app/core/__pycache__
+app/routes/overtimes/__pycache__
+app/routes/auth/__pycache__
+app/routes/auth/schema/__pycache__
+app/routes/annual_leaves/__pycache__
+app/routes/annual_leaves/schema/__pycache__

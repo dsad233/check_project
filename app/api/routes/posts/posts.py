@@ -5,6 +5,8 @@ from app.api.routes.posts.schema.postschema import PostCreate, PostsEdit
 from app.core.database import get_db
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Posts
+from app.api.routes.posts.schema.postschema import PostCreate, PostsEdit
+
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 posts = get_db()
