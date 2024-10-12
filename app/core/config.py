@@ -1,6 +1,8 @@
-from pydantic_settings import BaseSettings
-from typing import Union
 import os
+from typing import Union
+
+from pydantic_settings import BaseSettings
+
 
 class DevSettings(BaseSettings):
     JWT_SECRET_KEY: str
@@ -15,10 +17,11 @@ class DevSettings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f'mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}'
-    
+        return f"mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+
     class Config:
-        env_file = ('.env', '.env.dev')
+        env_file = (".env", ".env.dev")
+
 
 class ProdSettings(BaseSettings):
     JWT_SECRET_KEY: str
@@ -32,20 +35,21 @@ class ProdSettings(BaseSettings):
 
     @property
     def DATABASE_URL(self) -> str:
-        return f'mysql+aiomysql://{self.RDS_USER}:{self.RDS_PASSWORD}@{self.RDS_HOST}:{self.RDS_PORT}/{self.RDS_DATABASE}'
-    
+        return f"mysql+aiomysql://{self.RDS_USER}:{self.RDS_PASSWORD}@{self.RDS_HOST}:{self.RDS_PORT}/{self.RDS_DATABASE}"
+
     class Config:
-        env_file = ('.env', '.env.prod')
+        env_file = (".env", ".env.prod")
+
 
 def load_settings() -> Union[DevSettings, ProdSettings]:
-    mode = os.getenv('MODE', 'dev')
+    mode = os.getenv("MODE", "dev")
 
-    if mode == 'dev':
+    if mode == "dev":
         return DevSettings()
-    elif mode == 'prod':
+    elif mode == "prod":
         return ProdSettings()
     else:
         raise ValueError(f"Unsupported environment: {mode}")
-    
+
 
 settings = load_settings()

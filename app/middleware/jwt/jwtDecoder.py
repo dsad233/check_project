@@ -1,11 +1,14 @@
 from abc import ABC, abstractmethod
-from jose import jwt, JWTError
+
+from jose import JWTError, jwt
+
 
 class AbstractJWTDecoder(ABC):
     @abstractmethod
     def decode(self, token: str, secret_key: str, algorithm: str) -> dict | None:
         pass
- 
+
+
 class JWTDecoder(AbstractJWTDecoder):
     def decode(self, token: str, secret_key: str, algorithm: str) -> dict | None:
         try:
