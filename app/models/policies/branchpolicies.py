@@ -10,7 +10,7 @@ from app.core.database import Base
 class BranchPolicies(Base):
     __tablename__ = "branch_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     name = Column(String(255), nullable=False)
     policy_type = Column(
@@ -33,7 +33,7 @@ class BranchPolicies(Base):
 class DocumentPolicies(Base):
     __tablename__ = "document_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     document_type = Column(String(255), nullable=False)
     can_view = Column(Boolean, default=False)
@@ -49,7 +49,7 @@ class DocumentPolicies(Base):
 class WorkPolicies(Base):
     __tablename__ = "work_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     work_start_time = Column(DateTime, nullable=False)
     work_end_time = Column(DateTime, nullable=False)
@@ -68,7 +68,7 @@ class WorkPolicies(Base):
 class SalaryPolicies(Base):
     __tablename__ = "salary_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     base_salary = Column(Integer, nullable=False)
     annual_leave_days = Column(Integer, nullable=False)
@@ -89,7 +89,7 @@ class SalaryPolicies(Base):
 class PartPolicies(Base):
     __tablename__ = "part_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     policy_details = Column(String(500), nullable=True)

@@ -9,7 +9,7 @@ from app.core.database import Base
 class PartWorkPolicies(Base):
     __tablename__ = "part_work_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     work_policy_id = Column(Integer, ForeignKey("work_policies.id"), nullable=False)
     work_start_time = Column(DateTime, nullable=True)
@@ -29,7 +29,7 @@ class PartWorkPolicies(Base):
 class PartSalaryPolicies(Base):
     __tablename__ = "part_salary_policies"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     salary_policy_id = Column(Integer, ForeignKey("salary_policies.id"), nullable=False)
     base_salary = Column(Integer, nullable=True)
@@ -43,6 +43,4 @@ class PartSalaryPolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     part = relationship("Parts", back_populates="part_salary_policies")
-    salary_policy = relationship(
-        "SalaryPolicies", back_populates="part_salary_policies"
-    )
+    salary_policy = relationship("SalaryPolicies", back_populates="part_salary_policies")
