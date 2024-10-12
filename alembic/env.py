@@ -1,13 +1,11 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
-
+from sqlalchemy import engine_from_config, pool
 from sqlalchemy.engine import Connection
+from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -19,14 +17,15 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from app.core.config import settings
-from app.models.models import Base
+from app.core.database import Base
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# 여기서 모든 모델을 import합니다.
+# 이렇게 하면 모든 모델이 Base.metadata에 등록됩니다.
+from app.models import models
+from app.models.policies import branchpolicies, partpolicies
+
+# 단일 MetaData 객체 사용
 target_metadata = Base.metadata
-
 
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
@@ -35,8 +34,10 @@ config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+
 def get_url():
     return str(settings.DATABASE_URL)
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -61,11 +62,13 @@ def run_migrations_offline() -> None:
     with context.begin_transaction():
         context.run_migrations()
 
+
 def do_run_migrations(connection: Connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata)
 
     with context.begin_transaction():
         context.run_migrations()
+
 
 async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine
