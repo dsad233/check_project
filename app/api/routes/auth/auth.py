@@ -73,24 +73,17 @@ async def login(login: Login, res: Response):
 
         if findUser is None:
             return JSONResponse(status_code=404, content="유저가 존재하지 않습니다.")
-
+        
         if not verifyPassword(login.password, findUser.password):
-            return JSONResponse(
-                status_code=400, content="패스워드가 일치하지 않습니다."
-            )
-
+            return JSONResponse(status_code=400, content="패스워드가 일치하지 않습니다.")
+        
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
-        jwtToken = jwt_service._create_token(data={"id": findUser.id})
+        jwtSign = jwt_service._create_token(data={ "id" : findUser.id })
 
-        return JSONResponse(
-            status_code=200,
-            content={
-                "message": "로그인 완료",
-                "access_token": jwtToken,
-                "token_type": "bearer"
-            }
-        )
+        res.set_cookie('authorization', f'Bearer {jwtSign}')
+
+        return { "message" : "로그인 완료" }
 
     except Exception as err:
         print("에러가 발생하였습니다.")
