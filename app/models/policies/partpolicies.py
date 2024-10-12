@@ -5,7 +5,6 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
-
 class PartWorkPolicies(Base):
     __tablename__ = "part_work_policies"
 

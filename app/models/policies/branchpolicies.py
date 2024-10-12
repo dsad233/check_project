@@ -6,7 +6,6 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
-
 class BranchPolicies(Base):
     __tablename__ = "branch_policies"
 
