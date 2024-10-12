@@ -19,6 +19,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from app.core.config import settings
+<<<<<<< HEAD
 from app.core.database import Base
 
 # 여기서 모든 모델을 import합니다.
@@ -29,6 +30,17 @@ from app.models.policies import branchpolicies, partpolicies
 # 단일 MetaData 객체 사용
 target_metadata = Base.metadata
 
+=======
+from app.models.models import Base
+
+# add your model's MetaData object here
+# for 'autogenerate' support
+# from myapp import mymodel
+# target_metadata = mymodel.Base.metadata
+target_metadata = Base.metadata
+
+
+>>>>>>> origin/dev
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 # other values from the config, defined by the needs of env.py,
