@@ -65,7 +65,7 @@ class Users(Base):
 
     role = Column(
         Enum("MSO 최고권한", "최고관리자", "관리자", "사원", name="user_role"),
-        nullable=False
+        nullable=False,
     )
 
     created_at = Column(DateTime, default=datetime.now)
