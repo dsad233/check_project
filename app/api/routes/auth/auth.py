@@ -1,12 +1,10 @@
-from typing import Annotated
-
-import bcrypt
-from fastapi import APIRouter, Depends, Response
+from app.api.routes.auth.schema.authSchema import Register, Login
+from app.models.models import Users
+from fastapi import APIRouter, Response, Depends
 from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
-
 from app.api.routes.auth.schema.authSchema import Login, Register
-from app.core.database import async_session, get_db
+from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Users
@@ -79,9 +77,9 @@ async def login(login: Login, res: Response):
         
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
-        jwtSign = jwt_service._create_token(data={ "id" : findUser.id })
+        jwtToken = jwt_service._create_token(data={ "id" : findUser.id })
 
-        res.set_cookie('authorization', f'Bearer {jwtSign}')
+        res.set_cookie('authorization', f'Bearer {jwtToken}')
 
         return { "message" : "로그인 완료" }
 
