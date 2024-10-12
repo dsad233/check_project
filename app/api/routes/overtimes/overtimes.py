@@ -9,7 +9,7 @@ from typing import Annotated
 from sqlalchemy.future import select
 # from app.api.routes.overtimes.schema.overtimeschema import OverTimeCrete, OverTimeEdit
 
-router = APIRouter(dependencies=Annotated[Overtime,Depends(validate_token)])
+router = APIRouter(dependencies=[Depends(validate_token)])
 overtime = async_session()
 
 
@@ -69,17 +69,17 @@ async def find_one(id : int):
 
 # overtime 생성
 @router.post('')
-async def time_create(schema : OverTimeCrete, token : Annotated[Overtime, Depends(validate_token)]):
+async def time_create(token : Annotated[Overtime, Depends(validate_token)]):
     try :
         
-        overtimecreate = Overtime(
-            proposer_id = token.id,
-            application_note = schema.application_note                                                                      
-        )                                   
+        # overtimecreate = Overtime(
+        #     proposer_id = token.id,
+        #     application_note = schema.application_note                                                                      
+        # )                                   
         
-        overtime.add(overtimecreate)
-        overtime.commit()                                        
-        overtime.refresh(overtimecreate)
+        # overtime.add(overtimecreate)
+        # overtime.commit()                                        
+        # overtime.refresh(overtimecreate)
 
         
         return { "message" : "오버타임 데이터 요청에 성공하였습니다." }
@@ -90,7 +90,7 @@ async def time_create(schema : OverTimeCrete, token : Annotated[Overtime, Depend
 
 # overtime 수정 [어드민만]
 @router.patch('/{id}')
-async def time_edit(id : int, schema : OverTimeEdit, token : Annotated[Overtime, Depends(validate_token)]):
+async def time_edit(id : int, token : Annotated[Overtime, Depends(validate_token)]):
     try :
 
         find_over_time = overtime.query(Overtime).filter(Overtime.id == id).first()
@@ -98,10 +98,10 @@ async def time_edit(id : int, schema : OverTimeEdit, token : Annotated[Overtime,
         if(find_over_time == None):         
             return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
         
-        find_over_time.manager_id = token.id
-        find_over_time.proposer_note = schema.proposer_note
-        find_over_time.processed_date = schema.processed_date
-        find_over_time.application_status = schema.application_status
+        # find_over_time.manager_id = token.id
+        # find_over_time.proposer_note = schema.proposer_note
+        # find_over_time.processed_date = schema.processed_date
+        # find_over_time.application_status = schema.application_status
 
         
         return { "message" : "오버타임 데이터 업데이트에 성공하였습니다." }

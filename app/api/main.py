@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 from app.api.routes.auth import auth
+<<<<<<< HEAD
 # from app.api.routes.annual_leaves import annual_leaves
 # from app.api.routes.overtimes import overtimes
 

@@ -2,12 +2,14 @@ from fastapi import FastAPI
 
 from app.api import main
 from fastapi.openapi.utils import get_openapi
-from app.api.routes.auth import auth
-app = FastAPI()
+from app.api.routes.auth import auth                         
+                                                                       
+app = FastAPI() 
 app.include_router(auth.router, prefix="/api")
+
 def custom_openapi():
     if app.openapi_schema:
-        return app.openapi_schema
+        return app.openapi_schema                               
     openapi_schema = get_openapi(
         title="Your API",
         version="1.0.0",
