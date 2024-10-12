@@ -37,36 +37,31 @@ async def find_all():
 
 # overtime 지점애 따라 조회
 @router.get('/{spot}')
-async def find_spot():
+async def find_spot(spot : str):
     try:
-        find_spot = overtime.query(Overtime).filter()
+        find_spot = await overtime.execute(select(Overtime).where(Overtime.overtime_id == id))
+        result = find_spot.scalar_one_or_none()
 
-        if(find_spot == None):
+        if(result == None):
             return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
 
-        return { "message" : "지점별 오버타임 전체 조회에 성공하였습니다.", "data" : find_spot }
+        return { "message" : "지점별 오버타임 전체 조회에 성공하였습니다.", "data" : result }
     except Exception as err:
         print("에러가 발생하였습니다.")    
         print(err)
 
 
 # overtime 상세 조회
-@router.get("/{id}")
-async def find_one():
-    try:
-        overtimeone = (
-            await overtime.query(Overtime).filter(Overtime.manager_id == id).first()
-        )
+@router.get('/{id}')
+async def find_one(id : int):
+    try :
+        overtimeone = await overtime.execute(select(Overtime).where(Overtime.overtime_id == id))
+        result = overtimeone.scalar_one_or_none()
 
-        if overtimeone == None:
-            return JSONResponse(
-                status_code=404, content="타임 데이터가 존재하지 않습니다."
-            )
-
-        return {
-            "message": "오버타임 데이터 전체 조회에 성공하였습니다.",
-            "data": overtimeone,
-        }
+        if(overtimeone == None):
+            return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
+        
+        return { "message" : "오버타임 데이터 전체 조회에 성공하였습니다.", "data" : overtimeone }
     except Exception as err:
         print("에러가 발생하였습니다.")
         print(err)

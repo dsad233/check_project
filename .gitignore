@@ -5,8 +5,7 @@
 .DS_Store
 poetry.lock
 .venv
-.env.dev
-.env.prod
+__pycache__/
 
 
 #app
