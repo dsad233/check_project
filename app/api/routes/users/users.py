@@ -1,21 +1,27 @@
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
+from sqlalchemy.future import select
 
 from app.api.routes.auth.auth import hashPassword
 from app.api.routes.users.schema.userschema import UsersEdit
-from app.core.database import get_db
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-users = get_db()
+users = async_session()
 
 
 # 유저 전체 조회
 @router.get("")
-async def getUser():
+async def get_users():
     try:
-        findAll = users.query(Users).all()
+        stmt = select(Users)
+        result = await users.execute(stmt)
+        findAll = result.scalars().all()
+
+        print(findAll)
+
         if len(findAll) == 0:
             return JSONResponse(status_code=404, content="유저가 존재하지 않습니다.")
         return {

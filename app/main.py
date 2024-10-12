@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from app.api import main
 from fastapi.openapi.utils import get_openapi
 
 from app.api import main

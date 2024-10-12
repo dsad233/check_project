@@ -1,9 +1,9 @@
 from typing import Annotated
+
 from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
-from app.core.database import async_session
-from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
+
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Overtime
@@ -25,7 +25,7 @@ data = {
 # overtime 전체 조회
 @router.get("")
 async def find_all():
-    try :
+    try:
         overtimeall = await overtime.execute(select(Overtime).offset(0).limit(100))
         result = overtimeall.scalars().all()
 
