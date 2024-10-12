@@ -14,7 +14,6 @@ Base = declarative_base()
 
 
 async def get_db():
-    # 비동기에서 달라지는 부분
     async with engine.begin() as conn:
         await conn.run_sync(meta.create_all)
 

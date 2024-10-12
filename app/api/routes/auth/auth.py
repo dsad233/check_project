@@ -88,8 +88,8 @@ async def login(login: Login, res: Response):
             content={
                 "message": "로그인 완료",
                 "access_token": jwtToken,
-                "token_type": "bearer",
-            },
+                "token_type": "bearer"
+            }
         )
 
     except Exception as err:
