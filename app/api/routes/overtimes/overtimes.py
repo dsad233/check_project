@@ -6,22 +6,45 @@ from app.middleware.tokenVerify import validate_token
 from app.models.models import Overtime
 from fastapi.responses import JSONResponse
 from typing import Annotated
-
+from sqlalchemy.future import select
+# from app.api.routes.overtimes.schema.overtimeschema import OverTimeCrete, OverTimeEdit
 
 router = APIRouter(dependencies=Annotated[Overtime,Depends(validate_token)])
 overtime = async_session()
 
 
+data = {
+    "overtime_id" : 1,
+    "application_date" : 32,
+    "application_note" : 32,
+    "proposer_note" : 32
+}
+
 # overtime 전체 조회
 @router.get("")
 async def find_all():
-    try:
-        overtimeall = await overtime.query(Overtime).all()
+    try :
+        overtimeall = await overtime.execute(select(Overtime))
+        result = overtimeall.scalar()
 
         if(len(overtimeall) == 0):
             return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
         
-        return { "message" : "타임 데이터 전체 조회에 성공하였습니다.", "data" : overtimeall }
+        return { "message" : "오버타임 데이터 전체 조회에 성공하였습니다.", "data" : result }
+    except Exception as err:
+        print("에러가 발생하였습니다.")
+        print(err)
+
+# overtime 지점애 따라 조회
+@router.get('/{spot}')
+async def find_spot():
+    try:
+        find_spot = overtime.query(Overtime).filter()
+
+        if(find_spot == None):
+            return JSONResponse(status_code= 404, content="타임 데이터가 존재하지 않습니다.")
+
+        return { "message" : "지점별 오버타임 전체 조회에 성공하였습니다.", "data" : find_spot }
     except Exception as err:
         print("에러가 발생하였습니다.")    
         print(err)
