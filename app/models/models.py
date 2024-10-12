@@ -18,7 +18,8 @@ class Branches(Base):
 
     users = relationship("Users", back_populates="branch")
     parts = relationship("Parts", back_populates="branch")
-    branch_policies = relationship("BranchPolicies", back_populates="branch")
+    # branch_policies = relationship("BranchPolicies", back_populates="branch")
+
 
 class Parts(Base):
     __tablename__ = "parts"
@@ -37,9 +38,8 @@ class Parts(Base):
 
     branch = relationship("Branches", back_populates="parts")
     users = relationship("Users", back_populates="part")
-    part_policies = relationship("PartPolicies", back_populates="part")
-    part_work_policies = relationship("PartWorkPolicies", back_populates="part")
-    part_salary_policies = relationship("PartSalaryPolicies", back_populates="part")
+    # part_policies = relationship("PartPolicies", back_populates="part")
+
 
 class Users(Base):
     __tablename__ = "users"
@@ -65,7 +65,7 @@ class Users(Base):
 
     role = Column(
         Enum("MSO 최고권한", "최고관리자", "관리자", "사원", name="user_role"),
-        nullable=False,
+        nullable=False
     )
 
     created_at = Column(DateTime, default=datetime.now)
