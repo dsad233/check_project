@@ -19,14 +19,15 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from app.core.config import settings
-from app.models.models import Base
+from app.core.database import Base
 
-# add your model's MetaData object here
-# for 'autogenerate' support
-# from myapp import mymodel
-# target_metadata = mymodel.Base.metadata
+# 여기서 모든 모델을 import합니다.
+# 이렇게 하면 모든 모델이 Base.metadata에 등록됩니다.
+from app.models import models
+from app.models.policies import branchpolicies, partpolicies
+
+# 단일 MetaData 객체 사용
 target_metadata = Base.metadata
-
 
 config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
