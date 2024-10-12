@@ -1,8 +1,9 @@
+from fastapi import HTTPException
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-from app.core.config import settings
 
+from app.core.config import settings
 from fastapi import HTTPException
 
 meta = MetaData()
@@ -23,6 +24,6 @@ async def get_db():
         yield db
     except Exception as err:
         print(err)
-        raise HTTPException(status_code= 500, detail="서버 에러가 발생하였습니다.")
+        raise HTTPException(status_code=500, detail="서버 에러가 발생하였습니다.")
     finally:
         await db.close()
