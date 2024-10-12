@@ -20,7 +20,6 @@ class Branches(Base):
     parts = relationship("Parts", back_populates="branch")
     # branch_policies = relationship("BranchPolicies", back_populates="branch")
 
-
 class Parts(Base):
     __tablename__ = "parts"
 
@@ -38,8 +37,9 @@ class Parts(Base):
 
     branch = relationship("Branches", back_populates="parts")
     users = relationship("Users", back_populates="part")
-    # part_policies = relationship("PartPolicies", back_populates="part")
-
+    part_policies = relationship("PartPolicies", back_populates="part")
+    part_work_policies = relationship("PartWorkPolicies", back_populates="part")
+    part_salary_policies = relationship("PartSalaryPolicies", back_populates="part")
 
 class Users(Base):
     __tablename__ = "users"
