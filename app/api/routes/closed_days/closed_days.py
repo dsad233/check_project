@@ -1,3 +1,5 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, update
 
@@ -87,6 +89,42 @@ async def update_closed_day(closed_day_id: int, closed_day_update: ClosedDayUpda
 
         return {
             "message": "휴무일 정보가 성공적으로 업데이트되었습니다.",
+        }
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+# 휴무일 삭제
+@router.delete("/{closed_day_id}")
+async def delete_closed_day(closed_day_id: int):
+    try:
+        # 휴무일 존재 여부 확인
+        stmt = select(ClosedDays).where(ClosedDays.id == closed_day_id)
+        result = await db.execute(stmt)
+        closed_day = result.scalars().first()
+
+        if not closed_day:
+            raise HTTPException(
+                status_code=404, detail="해당 ID의 휴무일이 존재하지 않습니다."
+            )
+
+        # 휴무일 삭제
+        update_stmt = (
+            update(ClosedDays)
+            .where(ClosedDays.id == closed_day_id)
+            .values(deleted_yn="Y", updated_at=datetime.now(UTC))
+        )
+        await db.execute(update_stmt)
+        await db.commit()
+
+        return {
+            "message": "휴무일이 성공적으로 삭제되었습니다.",
         }
     except HTTPException as http_err:
         await db.rollback()
