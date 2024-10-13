@@ -67,7 +67,7 @@ async def register(register: Register):
 @router.post("/login")
 async def login(login: Login):
     try:
-        stmt = select(Users).where(Users.email == login.email)
+        stmt = select(Users).where((Users.email == login.email) & (Users.deleted_yn == "N"))
         result = await users.execute(stmt)
         findUser = result.scalar_one_or_none()
 
