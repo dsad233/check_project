@@ -1,8 +1,9 @@
+from datetime import UTC, datetime
+
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
 from sqlalchemy.orm import load_only
-from datetime import datetime, UTC
 
 from app.api.routes.auth.auth import hashPassword
 from app.api.routes.users.schema.userschema import UserUpdate
@@ -19,29 +20,33 @@ db = async_session()
 async def get_users():
     try:
         # password를 제외한 모든 컬럼 선택
-        stmt = select(Users).options(
-            load_only(
-                Users.id,
-                Users.name,
-                Users.email,
-                Users.phone_number,
-                Users.address,
-                Users.education,
-                Users.birth_date,
-                Users.hire_date,
-                Users.resignation_date,
-                Users.gender,
-                Users.part_id,
-                Users.branch_id,
-                Users.last_company,
-                Users.last_position,
-                Users.last_career_start_date,
-                Users.last_career_end_date,
-                Users.created_at,
-                Users.updated_at,
-                Users.deleted_yn,
+        stmt = (
+            select(Users)
+            .options(
+                load_only(
+                    Users.id,
+                    Users.name,
+                    Users.email,
+                    Users.phone_number,
+                    Users.address,
+                    Users.education,
+                    Users.birth_date,
+                    Users.hire_date,
+                    Users.resignation_date,
+                    Users.gender,
+                    Users.part_id,
+                    Users.branch_id,
+                    Users.last_company,
+                    Users.last_position,
+                    Users.last_career_start_date,
+                    Users.last_career_end_date,
+                    Users.created_at,
+                    Users.updated_at,
+                    Users.deleted_yn,
+                )
             )
-        ).where(Users.deleted_yn == "N")
+            .where(Users.deleted_yn == "N")
+        )
 
         result = await db.execute(stmt)
         print(result)
@@ -65,7 +70,9 @@ async def get_users():
 async def get_user_detail(id: int):
     try:
         # password를 제외한 모든 컬럼 선택
-        stmt = select(Users).options(
+        stmt = (
+            select(Users)
+            .options(
                 load_only(
                     Users.id,
                     Users.name,
@@ -86,9 +93,10 @@ async def get_user_detail(id: int):
                     Users.created_at,
                     Users.updated_at,
                     Users.deleted_yn,
+                )
             )
-        ).where((Users.id == id) & (Users.deleted_yn == "N"))
-        
+            .where((Users.id == id) & (Users.deleted_yn == "N"))
+        )
 
         result = await db.execute(stmt)
         user = result.scalars().first()
@@ -165,9 +173,7 @@ async def delete_user(id: int):
             )
 
         if user.deleted_yn == "Y":
-            raise HTTPException(
-                status_code=400, detail="이미 삭제된 유저입니다."
-            )
+            raise HTTPException(status_code=400, detail="이미 삭제된 유저입니다.")
 
         # 유저 정보 soft delete
         update_stmt = (
