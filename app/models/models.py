@@ -28,6 +28,12 @@ class Branches(Base):
     users = relationship("Users", back_populates="branch")
     parts = relationship("Parts", back_populates="branch")
     branch_policies = relationship("BranchPolicies", back_populates="branch")
+    part_work_policies = relationship("PartWorkPolicies", back_populates="branch")
+    part_salary_policies = relationship("PartSalaryPolicies", back_populates="branch")
+    document_policies = relationship("DocumentPolicies", back_populates="branch")
+    work_policies = relationship("WorkPolicies", back_populates="branch")
+    salary_policies = relationship("SalaryPolicies", back_populates="branch")
+    part_policies = relationship("PartPolicies", back_populates="branch")
 
 
 class Parts(Base):
@@ -75,8 +81,9 @@ class Users(Base):
     last_career_end_date = Column(Date, nullable=True)
 
     role = Column(
-        Enum("MSO 최고권한", "최고관리자", "관리자", "사원", name="user_role"),
+        Enum("MSO 최고권한", "최고관리자", "관리자", "사원", "퇴사자", name="user_role"),
         nullable=False,
+        default="사원"
     )
 
     created_at = Column(DateTime, default=datetime.now)
