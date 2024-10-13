@@ -26,19 +26,6 @@ async def create_policie(
         if token.role != "MSO 최고권한" | token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
         
-        if(branchCreate.name == None):
-            raise HTTPException(status_code=400, detail="지점 정책명 작성란이 누락되었습니다. 다시 작성해주세요.") 
-        
-        if(branchCreate.policy_type == None):
-            raise HTTPException(status_code=400, detail="지점 정책 카테고리 작성란이 누락되었습니다. 다시 작성해주세요.")
-        
-        if(branchCreate.effective_from == None):
-            raise HTTPException(status_code=400, detail="지점 정책 시작일란이 누락되었습니다. 다시 작성해주세요.")
-        
-        if(branchCreate.name & len(branchCreate.name) < 1):
-            raise HTTPException(status_code=400, detail="2자 이상으로 지점 정책명을 작성해주세요.")
-        
-
         find_branch = await branch.execute(
             select(Branches).where(Branches.id == branch_id)
         )
@@ -276,15 +263,6 @@ async def update_policie(
     try:
         if token.role != "MSO 최고권한" | token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
-        
-        if(branchUpdate.name == None):
-            raise HTTPException(status_code=400, detail="지점 정책명 작성란이 누락되었습니다. 다시 작성해주세요.") 
-        
-        if(branchUpdate.policy_type == None):
-            raise HTTPException(status_code=400, detail="지점 정책 카테고리 작성란이 누락되었습니다. 다시 작성해주세요.")
-        
-        if(branchUpdate.name & len(branchUpdate.name) < 1):
-            raise HTTPException(status_code=400, detail="2자 이상으로 지점 정책명을 작성해주세요.")
 
         find_branch_policie_one = await branch.execute(
             select(BranchPolicies).where(
