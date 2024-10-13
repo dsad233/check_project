@@ -4,10 +4,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
 
-from app.api.routes.branch_policies.schema.branch_schema import (
-    BranchCreate,
-    BranchUpdate,
-)
+from app.api.routes.branch_policies.schema.branch_schema import (BranchCreate,
+                                                                 BranchUpdate)
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Branches, Users

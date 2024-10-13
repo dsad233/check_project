@@ -81,9 +81,11 @@ class Users(Base):
     last_career_end_date = Column(Date, nullable=True)
 
     role = Column(
-        Enum("MSO 최고권한", "최고관리자", "관리자", "사원", "퇴사자", name="user_role"),
+        Enum(
+            "MSO 최고권한", "최고관리자", "관리자", "사원", "퇴사자", name="user_role"
+        ),
         nullable=False,
-        default="사원"
+        default="사원",
     )
 
     created_at = Column(DateTime, default=datetime.now)
