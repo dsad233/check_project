@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, update
 
 from app.api.routes.closed_days.schema.closed_day_schema import ClosedDayCreate
 from app.core.database import async_session
@@ -49,6 +49,50 @@ async def get_closed_days():
             "data": closed_days,
         }
     except Exception as err:
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+# 휴무일 수정
+@router.patch("/{closed_day_id}")
+async def update_closed_day(closed_day_id: int, closed_day_update: ClosedDayUpdate):
+    try:
+        # 업데이트할 필드만 선택
+        update_data = closed_day_update.model_dump(exclude_unset=True)
+
+        if not update_data:
+            raise HTTPException(
+                status_code=400, detail="업데이트할 정보가 제공되지 않았습니다."
+            )
+
+        # 휴무일 존재 여부 확인
+        stmt = select(ClosedDays).where(ClosedDays.id == closed_day_id)
+        result = await db.execute(stmt)
+        closed_day = result.scalars().first()
+
+        if not closed_day:
+            raise HTTPException(
+                status_code=404, detail="해당 ID의 휴무일이 존재하지 않습니다."
+            )
+
+        # 휴무일 정보 업데이트
+        update_stmt = (
+            update(ClosedDays)
+            .where(ClosedDays.id == closed_day_id)
+            .values(**update_data)
+        )
+        await db.execute(update_stmt)
+        await db.commit()
+
+        return {
+            "message": "휴무일 정보가 성공적으로 업데이트되었습니다.",
+        }
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
         print("에러가 발생하였습니다.")
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
