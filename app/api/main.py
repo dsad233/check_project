@@ -11,7 +11,7 @@ from app.api.routes.users import users
 app = APIRouter()
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
-app.include_router(parts.router, prefix="/parts", tags=["Parts"])
+app.include_router(parts.router, prefix="/branches/{branch_id}/parts", tags=["Parts"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(
     branch_policies.router, prefix="/branch_policies", tags=["Branch_policies"]
