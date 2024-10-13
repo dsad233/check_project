@@ -9,26 +9,74 @@ from app.api.routes.parts_policy.schema.parts_policy_schema import (
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.models import Users
-from app.models.policies.branchpolicies import WorkPolicies
-from app.models.policies.partpolicies import PartWorkPolicies
+from app.models.policies.branchpolicies import WorkPolicies, PartWorkPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
 
-@router.get("/{part_id}")
-async def getPartWorkPolicy(
-    part_id: int, current_user: Users = Depends(validate_token)
+@router.get("")
+async def getPartWorkPolicies(
+    branch_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        query = select(PartWorkPolicies).where(PartWorkPolicies.part_id == part_id)
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ):
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
+        query = select(PartWorkPolicies).where(
+            (PartWorkPolicies.branch_id == branch_id)
+            & (PartWorkPolicies.deleted_yn == "N")
+        )
+        result = await db.execute(query)
+        part_work_policies = result.scalars().all()
+
+        if not part_work_policies:
+            raise HTTPException(
+                status_code=400, detail="존재하지 않는 부서 근무 정책입니다."
+            )
+
+        part_work_policy_responses = []
+        
+        for policy in part_work_policies:
+            part_work_policy_response = PartWorkPolicyResponse(
+                id=policy.id,
+                work_start_time=policy.work_start_time,
+                work_end_time=policy.work_end_time,
+                lunch_start_time=policy.lunch_start_time,
+                lunch_end_time=policy.lunch_end_time,
+                break_time_1=policy.break_time_1,
+                break_time_2=policy.break_time_2,
+            )
+            part_work_policy_responses.append(part_work_policy_response)
+            
+        return part_work_policy_responses
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/{part_id}")
+async def getPartWorkPolicy(
+    branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
+):
+    try:
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ):
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        
+        query = select(PartWorkPolicies).where(
+            (PartWorkPolicies.part_id == part_id)
+            & (PartWorkPolicies.branch_id == branch_id)
+            & (PartWorkPolicies.deleted_yn == "N")
+        )
         result = await db.execute(query)
         part_work_policy = result.scalars().one_or_none()
 
         if not part_work_policy:
-            raise HTTPException(
-                status_code=400, detail="존재하지 않는 부서 근무 정책입니다."
-            )
+            raise HTTPException(status_code=400, detail="존재하지 않는 부서 근무 정책입니다.")
 
         part_work_policy_response = PartWorkPolicyResponse(
             id=part_work_policy.id,
@@ -46,20 +94,29 @@ async def getPartWorkPolicy(
 
 @router.post("/{part_id}")
 async def createPartWorkPolicy(
+    branch_id: int,
     part_id: int,
     data: PartWorkPolicyCreate,
     current_user: Users = Depends(validate_token),
 ):
     try:
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ):
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
         part_work_policy_query = select(PartWorkPolicies).where(
-            PartWorkPolicies.part_id == part_id
+            (PartWorkPolicies.part_id == part_id)
+            & (PartWorkPolicies.branch_id == branch_id)
+            & (PartWorkPolicies.deleted_yn == "N")
         )
         result = await db.execute(part_work_policy_query)
         part_work_policy = result.scalars().one_or_none()
 
         if part_work_policy:
             raise HTTPException(
-                status_code=400, detail="이미 존재하는 부서 정책입니다."
+                status_code=400, detail="이미 존재하는 부서 근무 정책입니다."
             )
 
         work_policy_query = select(WorkPolicies).where(
@@ -95,15 +152,26 @@ async def createPartWorkPolicy(
 
 @router.patch("/{part_id}")
 async def updatePartWorkPolicy(
+    branch_id: int,
     part_id: int,
     data: PartWorkPolicyCreate,
     current_user: Users = Depends(validate_token),
 ):
     try:
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ):
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
         part_work_policy_query = (
             select(PartWorkPolicies)
             .options(selectinload(PartWorkPolicies.work_policy))
-            .where(PartWorkPolicies.part_id == part_id)
+            .where(
+                (PartWorkPolicies.part_id == part_id)
+                & (PartWorkPolicies.branch_id == branch_id)
+                & (PartWorkPolicies.deleted_yn == "N")
+            )
         )
         result = await db.execute(part_work_policy_query)
         part_work_policy = result.scalars().one_or_none()
@@ -137,10 +205,20 @@ async def updatePartWorkPolicy(
 
 @router.delete("/{part_id}")
 async def deletePartWorkPolicy(
-    part_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        query = delete(PartWorkPolicies).where(PartWorkPolicies.part_id == part_id)
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ):
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
+        query = delete(PartWorkPolicies).where(
+            (PartWorkPolicies.part_id == part_id)
+            & (PartWorkPolicies.branch_id == branch_id)
+            & (PartWorkPolicies.deleted_yn == "N")
+        )
         await db.execute(query)
         await db.commit()
 
