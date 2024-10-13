@@ -16,9 +16,7 @@ async def getParts(current_user: Users = Depends(validate_token)):
         # if current_user.role.name != 'MSO 최고권한' and current_user.role.name != '최고관리자':
         #     raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        query = select(Parts).where(
-            Parts.branch_id == current_user.branch_id, Parts.deleted_yn == "N"
-        )
+        query = select(Parts).where(Parts.branch_id == current_user.branch_id)
         result = await part_session.execute(query)
         parts = result.scalars().all()
 
@@ -67,29 +65,6 @@ async def createPart(
         await part_session.commit()
 
         return {"message": "부서 생성에 성공하였습니다."}
-    except Exception as err:
-        await part_session.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다")
-
-
-@router.delete("/{part_id}")
-async def deletePart(part_id: int, current_user: Users = Depends(validate_token)):
-    try:
-        # if current_user.role.name != 'MSO 최고권한' and current_user.role.name != '최고관리자' and current_user.branch_id != part_create.branch_id:
-        #     raise HTTPException(status_code=403, detail="권한이 없습니다.")
-
-        query = select(Parts).where(Parts.id == part_id, Parts.deleted_yn == "N")
-        result = await part_session.execute(query)
-        part = result.scalars().first()
-
-        if not part:
-            raise HTTPException(status_code=400, detail="존재하지 않는 부서입니다.")
-
-        part.deleted_yn = "Y"
-        await part_session.commit()
-
-        return {"message": "부서 삭제에 성공하였습니다."}
     except Exception as err:
         await part_session.rollback()
         print(err)

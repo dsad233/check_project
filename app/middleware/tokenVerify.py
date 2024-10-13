@@ -28,11 +28,13 @@ async def validate_token(req: Request):
         jwtVerify = jwtService.check_token_expired(token)
 
         userId = jwtVerify.get("id")
-        stmt = select(Users).where(Users.id == userId)
+        stmt = select(Users).where((Users.id == userId) & (Users.deleted_yn == "N"))
         result = await users.execute(stmt)
         findUser = result.scalar_one_or_none()
+
         if findUser == None:
             raise HTTPException(status_code=404, detail="유저가 존재하지 않습니다.")
+
         return findUser
     except HTTPException as http_err:
         print(f"HTTP 에러가 발생하였습니다: {http_err.detail}")
