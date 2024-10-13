@@ -3,7 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy import select, update
-from sqlalchemy.orm import load_only, joinedload
+from sqlalchemy.orm import joinedload, load_only
 
 from app.api.routes.auth.auth import hashPassword
 from app.api.routes.users.schema.userschema import UserUpdate
@@ -97,7 +97,7 @@ async def get_user_detail(id: int):
                     Users.deleted_yn,
                 ),
                 joinedload(Users.part),
-                joinedload(Users.branch)
+                joinedload(Users.branch),
             )
             .where((Users.id == id) & (Users.deleted_yn == "N"))
         )
