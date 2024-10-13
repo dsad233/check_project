@@ -1,6 +1,7 @@
 from datetime import date
 
 from pydantic_settings import BaseSettings
+from typing import Optional
 
 
 class BranchCreateEnum:
@@ -21,4 +22,4 @@ class BranchCreate(BaseSettings):
 class BranchUpdate(BaseSettings):
     name: str
     policy_type: BranchCreateEnum
-    effective_to: date
+    effective_to: Optional[date] = None
