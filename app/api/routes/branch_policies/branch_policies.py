@@ -25,7 +25,7 @@ async def create_policie(
     try:
         if token.role != "MSO 최고권한" | token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
-
+        
         find_branch = await branch.execute(
             select(Branches).where(Branches.id == branch_id)
         )
@@ -69,7 +69,7 @@ async def create_policie(
 async def get_all():
     try:
         find_branch_policies_all = await branch.execute(
-            select(BranchPolicies).where(BranchPolicies.deleted_yn == "N")
+            select(BranchPolicies).where(BranchPolicies.deleted_yn == "N").offset(0).limit(100)
         )
         result = find_branch_policies_all.scalars().all()
 
@@ -224,7 +224,7 @@ async def get_one_delete_list(
 ):
     try:
         if token.role != "MSO 최고권한" | token.role != "최고관리자":
-            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_branch_policie_deleted_one = await branch.execute(
             select(BranchPolicies).where(
@@ -278,9 +278,9 @@ async def update_policie(
                 status_code=404, detail="지점 정책 정보가 존재하지 않습니다."
             )
 
-        result.name = branchUpdate.name
-        result.policy_type = branchUpdate.policy_type
-        result.effective_to = date
+        result.name = branchUpdate.name if (branchUpdate.name != None) else result.name
+        result.policy_type = branchUpdate.policy_type if (branchUpdate.policy_type != None) else result.policy_type
+        result.effective_to = branchUpdate.effective_to if (branchUpdate.effective_to != None) else result.effective_to
 
         await branch.commit()
 
@@ -293,7 +293,7 @@ async def update_policie(
 
 
 # 지점 정책 마감일만 지정(수정)
-@router.patch("/{branch_id}/branch_policies/{id}")
+@router.patch("/{branch_id}/branch_policies/deadline/{id}")
 async def update_policie(
     branch_id: int, id: int, token=Annotated[Users, Depends(validate_token)]
 ):
@@ -357,10 +357,6 @@ async def delete_policie(
         raise HTTPException(
             status_code=500, detail="지점 정책 삭제에 에러가 발생하였습니다."
         )
-
-
-# if(token.role != 'MSO 최고권한' | token.role != '최고관리자'):
-#             raise HTTPException(status_code=403, detail='삭제 권한이 없습니다.')
 
 
 # 지점 정책 소프트 삭제

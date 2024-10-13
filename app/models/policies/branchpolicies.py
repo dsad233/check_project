@@ -114,7 +114,7 @@ class HolidayWorkPolicies(Base): #휴일근무 설정
     branch_policy = relationship("BranchPolicies", back_populates="holiday_work_policies")
 
 class WeekendWorkPolicies(Base): #휴일근무 설정
-    __tablename__ = "holiday_work_policies"
+    __tablename__ = "weekend_work_policies"
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
