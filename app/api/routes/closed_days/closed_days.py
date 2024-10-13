@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 
 from app.api.routes.closed_days.schema.closed_day_schema import ClosedDayCreate
 from app.core.database import async_session
@@ -30,6 +31,24 @@ async def create_closed_day(closed_day: ClosedDayCreate):
         raise http_err
     except Exception as err:
         await db.rollback()
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+# 휴일 목록 조회
+@router.get("")
+async def get_closed_days():
+    try:
+        stmt = select(ClosedDays)
+        result = await db.execute(stmt)
+        closed_days = result.scalars().all()
+
+        return {
+            "message": "휴무일 목록을 성공적으로 조회했습니다.",
+            "data": closed_days,
+        }
+    except Exception as err:
         print("에러가 발생하였습니다.")
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
