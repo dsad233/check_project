@@ -21,9 +21,11 @@ class PartWorkPolicies(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
     part = relationship("Parts", back_populates="part_work_policies")
     work_policy = relationship("WorkPolicies", back_populates="part_work_policies")
+    branch = relationship("Branches", back_populates="part_work_policies")
 
 
 class PartSalaryPolicies(Base):
@@ -41,8 +43,10 @@ class PartSalaryPolicies(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
     part = relationship("Parts", back_populates="part_salary_policies")
     salary_policy = relationship(
         "SalaryPolicies", back_populates="part_salary_policies"
     )
+    branch = relationship("Branches", back_populates="part_salary_policies")
