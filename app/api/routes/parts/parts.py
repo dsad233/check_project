@@ -41,7 +41,7 @@ async def getParts(branch_id: int, current_user: Users = Depends(validate_token)
         return {"message": "부서 조회에 성공하였습니다.", "data": parts_dtos}
     except Exception as err:
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다")
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.post("")
@@ -90,7 +90,7 @@ async def createPart(
     except Exception as err:
         await part_session.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다")
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.delete("/{part_id}")
@@ -121,7 +121,7 @@ async def deletePart(
     except Exception as err:
         await part_session.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다")
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.patch("/{part_id}")
@@ -176,4 +176,4 @@ async def updatePart(
     except Exception as err:
         await part_session.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다")
+        raise HTTPException(status_code=500, detail=str(err))

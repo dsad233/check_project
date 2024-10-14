@@ -16,7 +16,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(parts.router, prefix="/branches/{branch_id}/parts", tags=["Parts"])
 app.include_router(
     parts_policy.router,
-    prefix="/branches/{branch_id}/parts/policies",
+    prefix="/branches/{branch_id}/parts_policies",
     tags=["Parts_policies"],
 )
 app.include_router(users.router, prefix="/users", tags=["Users"])
