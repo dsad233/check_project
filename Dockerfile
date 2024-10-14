@@ -12,6 +12,7 @@ COPY ./app .
 # 필요한 패키지 설치
 RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir poetry
+RUN apt-get update && apt-get install -y build-essential
 
 # Poetry 설정 파일 복사
 COPY pyproject.toml poetry.lock /app/
