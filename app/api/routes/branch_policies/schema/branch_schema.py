@@ -1,12 +1,12 @@
 from datetime import date
-
+from enum import Enum
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 from typing import Optional
 from fastapi import HTTPException
 
 
-class BranchCreateEnum:
+class BranchCreateEnum(str, Enum):
     attendance = "근태"
     position = "직책"
     counseling_performance = "상담실적"
