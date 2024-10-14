@@ -15,6 +15,7 @@ COPY pyproject.toml poetry.lock /app/
 
 # 가상환경을 생성하지 않고 패키지 설치
 RUN poetry config virtualenvs.create false && \
+    poetry lock --no-update && \
     poetry install --no-interaction --no-ansi
 
 # 프로젝트 파일 복사
