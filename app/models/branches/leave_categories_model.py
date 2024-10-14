@@ -34,7 +34,6 @@ class LeaveCategories(Base):
     deleted_yn = Column(String(1), default="N")
 
 class LeaveCreate(BaseModel):
-    branch_id: int = Field(description="지점 ID")
     name: str = Field(description="휴무 명")
     leave_count: int = Field(description="차감 일수")
     is_paid: bool = Field(description="유급 여부")
