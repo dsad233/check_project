@@ -18,9 +18,8 @@ RUN apt-get update && apt-get install -y build-essential
 COPY pyproject.toml poetry.lock /app/
 
 # 가상환경을 생성하지 않고 패키지 설치
-RUN poetry config virtualenvs.create false
-
-RUN poetry lock --no-update && poetry install
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction --no-ansi
 
 # uvicorn을 통해 애플리케이션 실행
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
