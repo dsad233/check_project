@@ -8,6 +8,7 @@ from app.api.routes.users import users
 from app.api.routes.branches import branches
 from app.api.routes.salary_bracket import salary_bracket
 from app.api.routes.leave_category import leave_category
+from app.api.routes.commutes import commutes
 # from app.api.routes.annual_leaves import annual_leaves
 # from app.api.routes.overtimes import overtimes
 from app.api.routes.human_record_category import human_record_category
@@ -21,6 +22,7 @@ app.include_router(
     tags=["Parts_policies"],
 )
 app.include_router(users.router, prefix="/users", tags=["Users"])
+app.include_router(commutes.router, prefix="/commutes", tags=["Commutes"])
 app.include_router(
     branch_policies.router, prefix="/branches", tags=["Branch_policies"]
 )

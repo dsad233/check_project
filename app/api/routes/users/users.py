@@ -140,7 +140,7 @@ async def get_user_detail(id: int):
 async def update_user(id: int, user_update: UserUpdate):
     try:
         # 업데이트할 필드만 선택
-        update_data = user_update.dict(exclude_unset=True)
+        update_data = user_update.model_dump(exclude_unset=True)
 
         if not update_data:
             raise HTTPException(

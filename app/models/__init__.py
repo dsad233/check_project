@@ -50,6 +50,7 @@ LeaveHistories.leave_category = relationship("LeaveCategories", back_populates="
 
 Users.branch = relationship("Branches", back_populates="users")
 Users.part = relationship("Parts", back_populates="users")
+Users.commutes = relationship("Commutes", back_populates="users")
 
 Parts.branch = relationship("Branches", back_populates="parts")
 

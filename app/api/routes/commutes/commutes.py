@@ -1,24 +1,47 @@
+from datetime import date, datetime
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.api.routes.commutes.schema.commute_schema import CommuteCreate, CommuteResponse
+from app.api.routes.commutes.schema.commute_schema import CommuteUpdate
 from app.core.database import async_session
+from app.models.commutes.commutes_model import Commutes
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
 
-# 출퇴근 기록 생성
+# 출근 기록 생성
 @router.post("")
 async def create_clock_in(
-    commute: CommuteCreate,
     current_user_id: int = Depends(get_current_user_id)
 ):
     try:
+        # 현재 날짜의 시작과 끝 시간 계산
+        today = date.today()
+        today_start = datetime.combine(today, datetime.min.time())
+        today_end = datetime.combine(today, datetime.max.time())
+
+        # 같은 날짜에 이미 출근 기록이 있는지 확인
+        existing_commute = await db.execute(
+            select(Commutes).where(
+                Commutes.user_id == current_user_id,
+                Commutes.clock_in >= today_start,
+                Commutes.clock_in <= today_end
+            )
+        )
+        existing_commute = existing_commute.scalar_one_or_none()
+
+        if existing_commute:
+            return {
+                "message": "이미 오늘의 출근 기록이 존재합니다.",
+                "data": existing_commute,
+            }
+
+        # 새 출근 기록 생성
         new_commute = Commutes(
             user_id=current_user_id,
-            clock_in=commute.clock_in,
+            clock_in=func.now()  # 현재 시간으로 설정
         )
 
         db.add(new_commute)
@@ -69,6 +92,72 @@ async def get_commute_records(
         }
     
     except Exception as err:
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+# 출퇴근 기록 수정
+@router.patch("/{commute_id}")
+async def update_commute_record(
+    commute_id: int,
+    commute_update: CommuteUpdate,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    try:
+        # 업데이트할 필드만 선택
+        update_data = commute_update.model_dump(exclude_unset=True)
+
+        print(update_data)
+        print(commute_id)
+        print(current_user_id)
+
+        if not update_data:
+            raise HTTPException(
+                status_code=400, detail="업데이트할 정보가 제공되지 않았습니다."
+            )
+
+        # 출퇴근 기록 존재 여부 확인
+        stmt = select(Commutes).where(
+            (Commutes.id == commute_id) & 
+            (Commutes.user_id == current_user_id) & 
+            (Commutes.deleted_yn == "N")
+        )
+        result = await db.execute(stmt)
+        commute = result.scalar_one_or_none()
+
+        if not commute:
+            raise HTTPException(
+                status_code=404, detail="해당 출퇴근 기록을 찾을 수 없습니다."
+            )
+
+        # 퇴근 시간 유효성 검사
+        if 'clock_out' in update_data:
+            if update_data['clock_out'] <= commute.clock_in:
+                raise HTTPException(
+                    status_code=400, detail="퇴근 시간은 출근 시간보다 늦어야 합니다."
+                )
+            # 근무 시간 자동 계산
+            work_hours = (update_data['clock_out'] - commute.clock_in).total_seconds() / 3600
+            update_data['work_hours'] = round(work_hours, 2)
+
+        # 업데이트 데이터에 수정 시간 추가
+        update_data['updated_at'] = datetime.now()
+
+        # 출퇴근 기록 업데이트
+        update_stmt = update(Commutes).where(Commutes.id == commute_id).values(**update_data)
+        await db.execute(update_stmt)
+        await db.commit()
+
+        return {
+            "message": "출퇴근 기록이 성공적으로 수정되었습니다.",
+        }
+
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
         print("에러가 발생하였습니다.")
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
