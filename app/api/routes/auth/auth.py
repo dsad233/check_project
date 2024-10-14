@@ -9,7 +9,7 @@ from app.api.routes.auth.schema.authSchema import Login, Register
 from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Users
+from app.models.users.users_model import Users
 
 router = APIRouter()
 users = async_session()

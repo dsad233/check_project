@@ -6,7 +6,6 @@ from sqlalchemy.future import select
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Overtime
 
 # from app.api.routes.overtimes.schema.overtimeschema import OverTimeCrete, OverTimeEdit
 

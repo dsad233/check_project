@@ -8,8 +8,9 @@ from app.api.routes.branch_policies.schema.branch_schema import (BranchCreate,
                                                                  BranchUpdate)
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Branches, Users
-from app.models.policies.branchpolicies import BranchPolicies
+from app.models.branches.branches_model import Branches
+from app.models.users.users_model import Users
+from app.models.branches.branches_policies_model import BranchPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 branch = async_session()

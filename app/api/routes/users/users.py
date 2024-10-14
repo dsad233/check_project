@@ -9,7 +9,7 @@ from app.api.routes.auth.auth import hashPassword
 from app.api.routes.users.schema.userschema import UserUpdate
 from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Users
+from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()

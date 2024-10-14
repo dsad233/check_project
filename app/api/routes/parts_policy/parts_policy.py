@@ -10,9 +10,11 @@ from app.api.routes.parts_policy.schema.parts_policy_schema import (
 )
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Users
-from app.models.policies.branchpolicies import WorkPolicies, SalaryPolicies
-from app.models.policies.partpolicies import  PartWorkPolicies, PartSalaryPolicies
+from app.models.users.users_model import Users
+from app.models.branches.work_policies_model import WorkPolicies
+from app.models.branches.salary_policies_model import SalaryPolicies
+from app.models.parts.part_work_policies_model import PartWorkPolicies
+from app.models.parts.part_salary_policies_model import PartSalaryPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()

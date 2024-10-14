@@ -4,7 +4,6 @@ from sqlalchemy import func, select
 from app.middleware.tokenVerify import validate_token, get_current_user_id
 from app.api.routes.commutes.schema.commute_schema import CommuteCreate, CommuteResponse
 from app.core.database import async_session
-from app.models.models import Commutes
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
