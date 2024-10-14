@@ -47,7 +47,7 @@ class Parts(Base):
     __tablename__ = "parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False)
+    name = Column(String(255), nullable=False, unique=True)
     task = Column(String(500), nullable=True)
     is_doctor = Column(Boolean, default=False)
     required_certification = Column(String(500), nullable=True)

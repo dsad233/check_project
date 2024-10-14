@@ -29,9 +29,13 @@ async def getPartWorkPolicies(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        query = select(PartWorkPolicies).where(
+        query = (
+            select(PartWorkPolicies)
+            .options(selectinload(PartWorkPolicies.part))
+            .where(
             (PartWorkPolicies.branch_id == branch_id)
             & (PartWorkPolicies.deleted_yn == "N")
+            )
         )
         result = await db.execute(query)
         part_work_policies = result.scalars().all()
@@ -52,6 +56,7 @@ async def getPartWorkPolicies(
                 lunch_end_time=policy.lunch_end_time,
                 break_time_1=policy.break_time_1,
                 break_time_2=policy.break_time_2,
+                part_name=policy.part.name,
             )
             part_work_policy_responses.append(part_work_policy_response)
             
@@ -70,10 +75,14 @@ async def getPartWorkPolicy(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         
-        query = select(PartWorkPolicies).where(
+        query = (
+            select(PartWorkPolicies)
+            .options(selectinload(PartWorkPolicies.part))
+            .where(
             (PartWorkPolicies.part_id == part_id)
             & (PartWorkPolicies.branch_id == branch_id)
             & (PartWorkPolicies.deleted_yn == "N")
+            )
         )
         result = await db.execute(query)
         part_work_policy = result.scalars().one_or_none()
@@ -89,6 +98,7 @@ async def getPartWorkPolicy(
             lunch_end_time=part_work_policy.lunch_end_time,
             break_time_1=part_work_policy.break_time_1,
             break_time_2=part_work_policy.break_time_2,
+            part_name=part_work_policy.part.name,
         )
         return part_work_policy_response
     except Exception as e:
@@ -241,9 +251,13 @@ async def getPartSalaryPolicies(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        query = select(PartSalaryPolicies).where(
-            (PartSalaryPolicies.branch_id == branch_id)
-            & (PartSalaryPolicies.deleted_yn == "N")
+        query = (
+            select(PartSalaryPolicies)
+            .options(selectinload(PartSalaryPolicies.part))
+            .where(
+                (PartSalaryPolicies.branch_id == branch_id)
+                & (PartSalaryPolicies.deleted_yn == "N")
+            )
         )
         result = await db.execute(query)
         part_salary_policies = result.scalars().all()
@@ -258,6 +272,7 @@ async def getPartSalaryPolicies(
         for policy in part_salary_policies:
             part_salary_policy_response = PartSalaryPolicyResponse(
                 id=policy.id,
+                part_name=policy.part.name,
                 base_salary=policy.base_salary,
                 annual_leave_days=policy.annual_leave_days,
                 sick_leave_days=policy.sick_leave_days,
@@ -282,10 +297,14 @@ async def getPartSalaryPolicy(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         
-        query = select(PartSalaryPolicies).where(
-            (PartSalaryPolicies.part_id == part_id)
+        query = (
+            select(PartSalaryPolicies)
+            .options(selectinload(PartSalaryPolicies.part))
+            .where(
+                (PartSalaryPolicies.part_id == part_id)
             & (PartSalaryPolicies.branch_id == branch_id)
-            & (PartSalaryPolicies.deleted_yn == "N")
+                & (PartSalaryPolicies.deleted_yn == "N")
+            )
         )
         result = await db.execute(query)
         part_salary_policy = result.scalars().one_or_none()
@@ -295,6 +314,7 @@ async def getPartSalaryPolicy(
 
         part_salary_policy_response = PartSalaryPolicyResponse(
             id=part_salary_policy.id,
+            part_name=part_salary_policy.part.name,
             base_salary=part_salary_policy.base_salary,
             annual_leave_days=part_salary_policy.annual_leave_days,
             sick_leave_days=part_salary_policy.sick_leave_days,

@@ -13,6 +13,7 @@ class PartWorkPolicyCreate(BaseModel):
 
 class PartWorkPolicyResponse(BaseModel):
     id: int
+    part_name: str
     work_start_time: Optional[str] = None
     work_end_time: Optional[str] = None
     lunch_start_time: Optional[str] = None
@@ -22,6 +23,7 @@ class PartWorkPolicyResponse(BaseModel):
 
 class PartSalaryPolicyResponse(BaseModel):
     id: int
+    part_name: str
     base_salary: Optional[int] = None
     annual_leave_days: Optional[int] = None
     sick_leave_days: Optional[int] = None
