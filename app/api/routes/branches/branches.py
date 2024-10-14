@@ -17,9 +17,8 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/", response_model=BranchListResponse)
-async def read_branches(*, session: AsyncSession = Depends(get_db), page: int = 1) -> BranchListResponse:
+async def read_branches(*, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends()) -> BranchListResponse:
     count = await crud.count_branch_all(session=session)
-    search = BaseSearchDto(page=page)
     pagination = PaginationDto(total_record=count)
     branches = await crud.find_branch_all(session=session, offset=search.offset, limit=search.limit)
     
@@ -44,9 +43,8 @@ async def delete_branch(*, session: AsyncSession = Depends(get_db), branch_id: i
     await crud.delete_branch(session=session, branch=branch)
 
 @router.get("/deleted", response_model=BranchListResponse)
-async def read_deleted_branches(*, session: AsyncSession = Depends(get_db), page: int = 1) -> BranchListResponse:
+async def read_deleted_branches(*, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends()) -> BranchListResponse:
     count = await crud.count_branch_deleted_all(session=session)
-    search = BaseSearchDto(page=page)
     pagination = PaginationDto(total_record=count)
     branches = await crud.find_branch_deleted_all(session=session, offset=search.offset, limit=search.limit)
 

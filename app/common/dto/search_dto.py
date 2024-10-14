@@ -1,14 +1,13 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from datetime import datetime
 
 class BaseSearchDto(BaseModel):
-    page: int # 현재 페이지
-    offset: int # 출력 갯수
-    limit: int # 시작 행
+    page: int = Field(default=1, description="현재 페이지")
+    offset: int = Field(default=0, description="출력 갯수")
+    limit: int = Field(default=10, description="시작 행")
 
-    def __init__(self, page: int = 1, limit: int = 0, offset: int = 10):
-        self.page = page
-        self.offset = offset
+    def __init__(self, **data):
+        super().__init__(**data)
         self.limit = (self.page - 1) * self.offset
 
 class PostSearchDto(BaseSearchDto):
