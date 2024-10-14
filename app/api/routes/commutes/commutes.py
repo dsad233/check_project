@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, time
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select, update
@@ -12,7 +12,7 @@ db = async_session()
 
 
 # 출근 기록 생성
-@router.post("")
+@router.post("/clock-in")
 async def create_clock_in(
     current_user_id: int = Depends(get_current_user_id)
 ):
@@ -53,6 +53,64 @@ async def create_clock_in(
             "data": new_commute,
         }
     
+    except Exception as err:
+        await db.rollback()
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+# 퇴근 기록 생성 (기존의 출근 기록 수정)
+@router.post("/clock-out")
+async def create_clock_out(
+    current_user_id: int = Depends(get_current_user_id)
+):
+    try:
+        # 현재 날짜의 시작과 끝 시간 계산
+        today = date.today()
+        today_start = datetime.combine(today, time.min)
+        today_end = datetime.combine(today, time.max)
+
+        # 오늘의 출근 기록 조회
+        stmt = select(Commutes).where(
+            (Commutes.user_id == current_user_id) &
+            (Commutes.clock_in >= today_start) &
+            (Commutes.clock_in <= today_end) &
+            (Commutes.deleted_yn == "N")
+        )
+        result = await db.execute(stmt)
+        commute = result.scalar_one_or_none()
+
+        if not commute:
+            raise HTTPException(status_code=404, detail="오늘의 출근 기록을 찾을 수 없습니다.")
+
+        if commute.clock_out:
+            return {
+                "message": "이미 오늘의 퇴근 기록이 존재합니다.",
+                "data": commute,
+            }
+
+        # 현재 시간을 퇴근 시간으로 설정
+        now = datetime.now()
+        work_hours = (now - commute.clock_in).total_seconds() / 3600
+
+        # 출퇴근 기록 업데이트
+        update_data = {
+            "clock_out": now,
+            "work_hours": round(work_hours, 2),
+            "updated_at": now
+        }
+        update_stmt = update(Commutes).where(Commutes.id == commute.id).values(**update_data)
+        await db.execute(update_stmt)
+        await db.commit()
+
+        return {
+            "message": "퇴근 기록이 성공적으로 생성되었습니다."
+        }
+    
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
     except Exception as err:
         await db.rollback()
         print("에러가 발생하였습니다.")
@@ -151,6 +209,50 @@ async def update_commute_record(
 
         return {
             "message": "출퇴근 기록이 성공적으로 수정되었습니다.",
+        }
+
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+   
+
+# 출퇴근 기록 삭제
+@router.delete("/{commute_id}")
+async def delete_commute_record(
+    commute_id: int,
+    current_user_id: int = Depends(get_current_user_id)
+):
+    try:
+        # 출퇴근 기록 존재 여부 확인
+        stmt = select(Commutes).where(
+            (Commutes.id == commute_id) & 
+            (Commutes.user_id == current_user_id) & 
+            (Commutes.deleted_yn == "N")
+        )
+        result = await db.execute(stmt)
+        commute = result.scalar_one_or_none()
+
+        if not commute:
+            raise HTTPException(
+                status_code=404, detail="해당 출퇴근 기록을 찾을 수 없습니다."
+            )
+
+        # 출퇴근 기록 소프트 삭제
+        update_data = {
+            "deleted_yn": "Y",
+            "updated_at": datetime.now()
+        }
+        update_stmt = update(Commutes).where(Commutes.id == commute_id).values(**update_data)
+        await db.execute(update_stmt)
+        await db.commit()
+
+        return {
+            "message": "출퇴근 기록이 성공적으로 삭제되었습니다.",
         }
 
     except HTTPException as http_err:
