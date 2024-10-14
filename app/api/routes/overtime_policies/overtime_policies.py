@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
 
@@ -16,27 +16,65 @@ overtime = async_session()
 
 # overtime 전체 조회
 @router.get("/{branch_id}/branch_policies/{branch_policy_id}/overtime_policies")
-async def find_all(branch_id : int, branch_policy_id : int):
+async def find_overtime_all(branch_id : int, branch_policy_id : int):
     try:
-        overtimeall = await overtime.execute(select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id, OverTimePolicies.deleted_yn == "N").offset(0).limit(100))
-        result = overtimeall.scalars().all()
+        overtime_all = await overtime.execute(select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id, OverTimePolicies.branch_policy_id == branch_policy_id, OverTimePolicies.deleted_yn == "N").offset(0).limit(100))
+        result = overtime_all.scalars().all()
 
-        if len(overtimeall) == 0:
+        if len(overtime_all) == 0:
             return JSONResponse(
-                status_code=404, content="타임 데이터가 존재하지 않습니다."
+                status_code=404, content="오버타임 정책들이 존재하지 않습니다."
             )
 
         return {
-            "message": "오버타임 데이터 전체 조회에 성공하였습니다.",
-            "data": result,
+            "message": "성공적으로 오버타임 정책 전체 조회에 성공하였습니다.",
+            "data": result
         }
     except Exception as err:
-        print("에러가 발생하였습니다.")
         print(err)
+        raise HTTPException(status_code= 500, detail="오버타임 정책 전체 조회에 에러가 발생하였습니다.")
 
+# overtime 상세 조회
+@router.get("/{branch_id}/branch_policies/{branch_policy_id}/overtime_policies/{id}")
+async def find_overtime_one (branch_id : int, branch_policy_id : int, id : int):
+    try:
+        overtime_one = await overtime.execute(select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id, OverTimePolicies.branch_policy_id == branch_policy_id, OverTimePolicies.id == id, OverTimePolicies.deleted_yn == "N"))
+        result = overtime_one.scalar_one_or_none()
+
+        if result == None:
+            raise HTTPException(status_code=404, detail="오버타임 정책이 존재하지 않습니다.")
+        
+        return {
+            "message": "성공적으로 오버타임 정책 상세 조회에 성공하였습니다.",
+            "data": result
+        }
+    except Exception as err:
+        print(err)
+        raise HTTPException(status_code= 500, detail="오버타임 정책 상세 조회에 에러가 발생하였습니다.")
+    
+
+# overtime 상세 조회
+@router.get("/{branch_id}/branch_policies/{branch_policy_id}/overtime_policies/{id}")
+async def find_overtime_one (branch_id : int, branch_policy_id : int, id : int):
+    try:
+        overtime_one = await overtime.execute(select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id, OverTimePolicies.branch_policy_id == branch_policy_id, OverTimePolicies.id == id, OverTimePolicies.deleted_yn == "N"))
+        result = overtime_one.scalar_one_or_none()
+
+        if result == None:
+            raise HTTPException(status_code=404, detail="오버타임 정책이 존재하지 않습니다.")
+        
+        return {
+            "message": "성공적으로 오버타임 정책 상세 조회에 성공하였습니다.",
+            "data": result
+        }
+    except Exception as err:
+        print(err)
+        raise HTTPException(status_code= 500, detail="오버타임 정책 상세 조회에 에러가 발생하였습니다.")
+    
+      
 
 # overtime 지점애 따라 조회
-@router.get("/{spot}")
+@router.get("/{branch_id}/branch_policies/{branch_policy_id}/overtime_policies/{id}")
 async def find_spot(spot: str):
     try:
         find_spot = await overtime.execute(
