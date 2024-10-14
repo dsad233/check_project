@@ -3,12 +3,12 @@ from datetime import datetime
 
 class BaseSearchDto(BaseModel):
     page: int = Field(default=1, description="현재 페이지")
-    offset: int = Field(default=0, description="출력 갯수")
-    limit: int = Field(default=10, description="시작 행")
+    offset: int = Field(default=0, description="시작 행")
+    record_size: int = Field(default=10, description="출력 갯수")
 
     def __init__(self, **data):
         super().__init__(**data)
-        self.limit = (self.page - 1) * self.offset
+        self.offset = (self.page - 1) * self.record_size
 
 class PostSearchDto(BaseSearchDto):
     branch_id: int
