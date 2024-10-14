@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes.auth import auth
 from app.api.routes.branch_policies import branch_policies
+from app.api.routes.closed_days import closed_days
 from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
 from app.api.routes.users import users
@@ -24,6 +25,7 @@ app.include_router(
 )
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(commutes.router, prefix="/commutes", tags=["Commutes"])
+app.include_router(closed_days.router, prefix="/closed-days", tags=["Closed Days"])
 app.include_router(
     branch_policies.router, prefix="/branches", tags=["Branch_policies"]
 )

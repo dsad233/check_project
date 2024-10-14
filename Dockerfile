@@ -1,13 +1,13 @@
 # ProductOrder-BE/Dockerfile
 
 # Python 3.10 기반 이미지 사용
-FROM python:3.10
+FROM python:3.13
 
 # 작업 디렉토리 설정
 WORKDIR /app
 
 # 프로젝트 파일 복사
-COPY ./project_root /app
+COPY ./app .
 
 # 필요한 패키지 설치
 RUN pip install --no-cache-dir --upgrade pip

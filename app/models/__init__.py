@@ -1,6 +1,9 @@
 from app.core.database import Base
 from sqlalchemy.orm import relationship
 
+from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.commutes.commutes_model import Commutes
+
 # models.py에서 정의된 모델들
 from .users.users_model import Users
 from .parts.parts_model import Parts
@@ -35,6 +38,8 @@ Branches.rest_days = relationship("RestDays", back_populates="branch")
 Branches.parts = relationship("Parts", back_populates="branch")
 Branches.users = relationship("Users", back_populates="branch")
 Branches.board = relationship("Board", back_populates="branch")
+Branches.closed_days = relationship("ClosedDays", back_populates="branch")
+
 LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
 Parts.allowance_policies = relationship("AllowancePolicies", back_populates="part")
@@ -51,6 +56,7 @@ LeaveHistories.leave_category = relationship("LeaveCategories", back_populates="
 Users.branch = relationship("Branches", back_populates="users")
 Users.part = relationship("Parts", back_populates="users")
 Users.commutes = relationship("Commutes", back_populates="users")
+Commutes.users = relationship("Users", back_populates="commutes")
 
 Parts.branch = relationship("Branches", back_populates="parts")
 
@@ -66,4 +72,6 @@ DocumentPolicies.branch = relationship("Branches", back_populates="document_poli
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
 BranchPolicies.branch = relationship("Branches", back_populates="branch_policies")
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
+
 Board.branch = relationship("Branches", back_populates="board")
+ClosedDays.branch = relationship("Branches", back_populates="closed_days")
