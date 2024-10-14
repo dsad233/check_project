@@ -11,10 +11,10 @@ from app.api.routes.parts_policy.schema.parts_policy_schema import (
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.users.users_model import Users
-from app.models.branches.work_policies_model import WorkPolicies
-from app.models.branches.salary_policies_model import SalaryPolicies
-from app.models.parts.part_work_policies_model import PartWorkPolicies
-from app.models.parts.part_salary_policies_model import PartSalaryPolicies
+from app.models.parts.work_policies_model import WorkPolicies
+from app.models.parts.salary_policies_model import SalaryPolicies
+from app.models.parts.work_policies_model import WorkPolicies
+from app.models.parts.salary_policies_model import SalaryPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -32,11 +32,11 @@ async def getPartWorkPolicies(
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
         query = (
-            select(PartWorkPolicies)
-            .options(selectinload(PartWorkPolicies.part))
+            select(WorkPolicies)
+            .options(selectinload(WorkPolicies.part))
             .where(
-            (PartWorkPolicies.branch_id == branch_id)
-            & (PartWorkPolicies.deleted_yn == "N")
+            (WorkPolicies.branch_id == branch_id)
+            & (WorkPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(query)
@@ -78,12 +78,12 @@ async def getPartWorkPolicy(
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         
         query = (
-            select(PartWorkPolicies)
-            .options(selectinload(PartWorkPolicies.part))
+            select(WorkPolicies)
+            .options(selectinload(WorkPolicies.part))
             .where(
-            (PartWorkPolicies.part_id == part_id)
-            & (PartWorkPolicies.branch_id == branch_id)
-            & (PartWorkPolicies.deleted_yn == "N")
+            (WorkPolicies.part_id == part_id)
+            & (WorkPolicies.branch_id == branch_id)
+            & (WorkPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(query)
@@ -121,10 +121,10 @@ async def createPartWorkPolicy(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        part_work_policy_query = select(PartWorkPolicies).where(
-            (PartWorkPolicies.part_id == part_id)
-            & (PartWorkPolicies.branch_id == branch_id)
-            & (PartWorkPolicies.deleted_yn == "N")
+        part_work_policy_query = select(WorkPolicies).where(
+            (WorkPolicies.part_id == part_id)
+            & (WorkPolicies.branch_id == branch_id)
+            & (WorkPolicies.deleted_yn == "N")
         )
         result = await db.execute(part_work_policy_query)
         part_work_policy = result.scalars().one_or_none()
@@ -147,7 +147,7 @@ async def createPartWorkPolicy(
 
         # work_policy를 참조하며, 유효성을 판단하기
 
-        create_data = PartWorkPolicies(
+        create_data = WorkPolicies(
             part_id=part_id,
             branch_id=branch_id,
             work_policy_id=work_policy.id,
@@ -181,12 +181,12 @@ async def updatePartWorkPolicy(
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
         part_work_policy_query = (
-            select(PartWorkPolicies)
-            .options(selectinload(PartWorkPolicies.work_policy))
+            select(WorkPolicies)
+            .options(selectinload(WorkPolicies.work_policy))
             .where(
-                (PartWorkPolicies.part_id == part_id)
-                & (PartWorkPolicies.branch_id == branch_id)
-                & (PartWorkPolicies.deleted_yn == "N")
+                (WorkPolicies.part_id == part_id)
+                & (WorkPolicies.branch_id == branch_id)
+                & (WorkPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(part_work_policy_query)
@@ -230,10 +230,10 @@ async def deletePartWorkPolicy(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        query = delete(PartWorkPolicies).where(
-            (PartWorkPolicies.part_id == part_id)
-            & (PartWorkPolicies.branch_id == branch_id)
-            & (PartWorkPolicies.deleted_yn == "N")
+        query = delete(WorkPolicies).where(
+            (WorkPolicies.part_id == part_id)
+            & (WorkPolicies.branch_id == branch_id)
+            & (WorkPolicies.deleted_yn == "N")
         )
         await db.execute(query)
         await db.commit()
@@ -254,11 +254,11 @@ async def getPartSalaryPolicies(
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
         query = (
-            select(PartSalaryPolicies)
-            .options(selectinload(PartSalaryPolicies.part))
+            select(SalaryPolicies)
+            .options(selectinload(SalaryPolicies.part))
             .where(
-                (PartSalaryPolicies.branch_id == branch_id)
-                & (PartSalaryPolicies.deleted_yn == "N")
+                (SalaryPolicies.branch_id == branch_id)
+                & (SalaryPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(query)
@@ -300,12 +300,12 @@ async def getPartSalaryPolicy(
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         
         query = (
-            select(PartSalaryPolicies)
-            .options(selectinload(PartSalaryPolicies.part))
+            select(SalaryPolicies)
+            .options(selectinload(SalaryPolicies.part))
             .where(
-                (PartSalaryPolicies.part_id == part_id)
-            & (PartSalaryPolicies.branch_id == branch_id)
-                & (PartSalaryPolicies.deleted_yn == "N")
+                (SalaryPolicies.part_id == part_id)
+            & (SalaryPolicies.branch_id == branch_id)
+                & (SalaryPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(query)
@@ -342,10 +342,10 @@ async def createPartSalaryPolicy(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
         
-        part_salary_policy_query = select(PartSalaryPolicies).where(
-            (PartSalaryPolicies.part_id == part_id)
-            & (PartSalaryPolicies.branch_id == branch_id)
-            & (PartSalaryPolicies.deleted_yn == "N")
+        part_salary_policy_query = select(SalaryPolicies).where(
+            (SalaryPolicies.part_id == part_id)
+            & (SalaryPolicies.branch_id == branch_id)
+            & (SalaryPolicies.deleted_yn == "N")
         )
         result = await db.execute(part_salary_policy_query)
         part_salary_policy = result.scalars().one_or_none()
@@ -368,7 +368,7 @@ async def createPartSalaryPolicy(
 
         # work_policy를 참조하며, 유효성을 판단하기
 
-        create_data = PartSalaryPolicies(
+        create_data = SalaryPolicies(
             part_id=part_id,
             salary_policy_id=salary_policy.id,
             base_salary=data.base_salary,
@@ -400,12 +400,12 @@ async def updatePartSalaryPolicy(
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
         part_salary_policy_query = (
-            select(PartSalaryPolicies)
-            .options(selectinload(PartSalaryPolicies.salary_policy))
+            select(SalaryPolicies)
+            .options(selectinload(SalaryPolicies.salary_policy))
             .where(
-                (PartSalaryPolicies.part_id == part_id)
-                & (PartSalaryPolicies.branch_id == branch_id)
-                & (PartSalaryPolicies.deleted_yn == "N")
+                (SalaryPolicies.part_id == part_id)
+                & (SalaryPolicies.branch_id == branch_id)
+                & (SalaryPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(part_salary_policy_query)
@@ -449,10 +449,10 @@ async def deletePartSalaryPolicy(
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        query = delete(PartSalaryPolicies).where(
-            (PartSalaryPolicies.part_id == part_id)
-            & (PartSalaryPolicies.branch_id == branch_id)
-            & (PartSalaryPolicies.deleted_yn == "N")
+        query = delete(SalaryPolicies).where(
+            (SalaryPolicies.part_id == part_id)
+            & (SalaryPolicies.branch_id == branch_id)
+            & (SalaryPolicies.deleted_yn == "N")
         )
         await db.execute(query)
         await db.commit()

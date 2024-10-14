@@ -1,3 +1,4 @@
+
 from datetime import datetime
 
 from sqlalchemy import (
@@ -38,18 +39,3 @@ class BranchPolicies(Base): # 지점 설정 전체를 아우르는 테이블
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
-    # Relationships
-    branch = relationship("Branches", back_populates="branch_policies")
-    part_policies = relationship("PartPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    commute_policies = relationship("CommutePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    overtime_policies = relationship("OverTimePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    holiday_work_policies = relationship("HolidayWorkPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    weekend_work_policies = relationship("WeekendWorkPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    work_policies = relationship("WorkPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    allowance_policies = relationship("AllowancePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    salary_policies = relationship("SalaryPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    document_policies = relationship("DocumentPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    salary_brackets = relationship("SalaryBracket", back_populates="branch_policy", cascade="all, delete-orphan")

@@ -16,22 +16,23 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
-# 휴무일 테이블
-class RestDays(Base):
-    __tablename__ = "rest_days"
+
+class LeaveHistories(Base):
+    __tablename__ = "leave_histories"
     __table_args__ = (
-        Index('idx_rest_days_branch_id', 'branch_id'),
-        Index('idx_rest_days_date', 'date'),
-        UniqueConstraint('branch_id', 'date', name='uq_branch_part_date'),
+        Index('idx_leave_history_user_id', 'user_id'),
+        Index('idx_leave_history_date', 'date'),
+        UniqueConstraint('user_id', 'date', name='uq_user_date'),
     )
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    leave_category_id = Column(Integer, ForeignKey("leave_categories.id"), nullable=False)
     date = Column(Date, nullable=False)
-    rest_type = Column(Enum('공휴일', '주말', name='rest_day_type'), nullable=False)
+    is_paid = Column(Boolean, nullable=False)
     description = Column(String(255), nullable=True)
-    is_paid = Column(Boolean, default=False)  # 유급 휴일 여부
-    is_holiday_work_allowed = Column(Boolean, default=False)  # 휴일근무 허용 여부
+    is_approved = Column(Boolean, default=False)  # 승인 여부
+    is_leave_of_absence = Column(Boolean, default=False)  # 휴직 여부
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
