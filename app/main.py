@@ -4,7 +4,22 @@ from fastapi.openapi.utils import get_openapi
 from app.api import main
 from app.api.routes.auth import auth
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+origins = [
+    "https://workswave-frontend.vercel.app"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.include_router(auth.router, prefix="/api")
 
 
