@@ -12,13 +12,13 @@ async def create_branch(*, session: AsyncSession, branch_create: BranchCreate) -
     await session.refresh(db_obj)
     return db_obj
 
-async def find_branch_all(*, session: AsyncSession, skip: int = 0, limit: int = 10) -> list[Branches]:
-    statement = select(Branches).filter(Branches.deleted_yn == "N").offset(skip).limit(limit)
+async def find_branch_all(*, session: AsyncSession, offset: int = 0, limit: int = 10) -> list[Branches]:
+    statement = select(Branches).filter(Branches.deleted_yn == "N").offset(offset).limit(limit)
     result = await session.execute(statement)
     return result.scalars().all()
 
-async def find_branch_deleted_all(*, session: AsyncSession, skip: int = 0, limit: int = 10) -> list[Branches]:
-    statement = select(Branches).filter(Branches.deleted_yn == "Y").offset(skip).limit(limit)
+async def find_branch_deleted_all(*, session: AsyncSession, offset: int = 0, limit: int = 10) -> list[Branches]:
+    statement = select(Branches).filter(Branches.deleted_yn == "Y").offset(offset).limit(limit)
     result = await session.execute(statement)
     return result.scalars().all()
 

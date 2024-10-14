@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.curds.branches import crud
+from app.cruds.branches import crud
 from typing import Any
+from app.common.dto.pagination_dto import PaginationDto
+from app.common.dto.search_dto import BaseSearchDto
 
 from app.api.routes.branches.schema.branch_schema import BranchCreate, BranchDelete, BranchListResponse, BranchResponse
 from app.core.database import get_db
@@ -15,12 +17,13 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 @router.get("/", response_model=BranchListResponse)
-async def read_branches(*, session: AsyncSession = Depends(get_db), skip: int = 0, limit: int = 10) -> BranchListResponse:
+async def read_branches(*, session: AsyncSession = Depends(get_db), page: int = 1) -> BranchListResponse:
     count = await crud.count_branch_all(session=session)
-    logger.info(f"count: {count}")
-    branches = await crud.find_branch_all(session=session, skip=skip, limit=limit)
-    logger.info(f"branches: {branches}")
-    return BranchListResponse(data=branches, count=count)
+    search = BaseSearchDto(page=page)
+    pagination = PaginationDto(total_record=count)
+    branches = await crud.find_branch_all(session=session, offset=search.offset, limit=search.limit)
+    
+    return BranchListResponse(list=branches, pagination=pagination)
 
 @router.post("/", response_model=BranchResponse, status_code=201)
 async def create_branch(*, session: AsyncSession = Depends(get_db), branch_in: BranchCreate) -> BranchResponse:
@@ -41,7 +44,10 @@ async def delete_branch(*, session: AsyncSession = Depends(get_db), branch_id: i
     await crud.delete_branch(session=session, branch=branch)
 
 @router.get("/deleted", response_model=BranchListResponse)
-async def read_deleted_branches(*, session: AsyncSession = Depends(get_db), skip: int = 0, limit: int = 10) -> BranchListResponse:
+async def read_deleted_branches(*, session: AsyncSession = Depends(get_db), page: int = 1) -> BranchListResponse:
     count = await crud.count_branch_deleted_all(session=session)
-    branches = await crud.find_branch_deleted_all(session=session, skip=skip, limit=limit)
-    return BranchListResponse(data=branches, count=count)
+    search = BaseSearchDto(page=page)
+    pagination = PaginationDto(total_record=count)
+    branches = await crud.find_branch_deleted_all(session=session, offset=search.offset, limit=search.limit)
+
+    return BranchListResponse(list=branches, pagination=pagination)

@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
+from app.common.dto.pagination_dto import PaginationDto
 
 #     id = Column(Integer, primary_key=True, autoincrement=True)
 #     name = Column(String(255), nullable=False)
@@ -21,8 +22,8 @@ class BranchResponse(BaseModel):
         from_attributes = True
 
 class BranchListResponse(BaseModel):
-    data: list[BranchResponse]
-    count: int
+    list: list[BranchResponse]
+    pagination: PaginationDto
 
 class BranchDelete(BaseModel):
     id: int
