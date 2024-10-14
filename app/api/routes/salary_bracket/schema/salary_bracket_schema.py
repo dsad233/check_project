@@ -33,10 +33,17 @@ class SalaryBracketCreate(BaseModel):
     maximum_health_insurance: int
     income_tax: int
     local_income_tax: int
+    tax_brackets: list["TaxBracketCreate"]
 
-class TaxBracketResponse:
+class TaxBracketResponse(BaseModel):
     id: int
     salary_bracket_id: int
+    lower_limit: int
+    upper_limit: int
+    tax_rate: float
+    deduction: int
+    
+class TaxBracketCreate(BaseModel):
     lower_limit: int
     upper_limit: int
     tax_rate: float
