@@ -1,9 +1,8 @@
 from fastapi import APIRouter, HTTPException
-
-from app.api.routes.salary_bracket.schema.salary_bracket_schema import SalaryBracketResponse, SalaryBracketCreate, TaxBracketResponse
-from app.models.policies.branchpolicies import SalaryBracket, TaxBracket
-from app.core.database import async_session
 from sqlalchemy import select
+from app.models.salary.salary_bracket_model import SalaryBracket, TaxBracket
+from app.api.routes.salary_bracket.schema.salary_bracket_schema import SalaryBracketResponse, SalaryBracketCreate, TaxBracketResponse
+from app.core.database import async_session
 
 router = APIRouter()
 db = async_session()

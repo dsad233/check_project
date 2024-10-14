@@ -9,7 +9,8 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
-    Index
+    Index,
+    Float
 )
 from sqlalchemy.orm import relationship
 
@@ -20,26 +21,43 @@ from app.core.database import Base
 # 고정된 값들이 들어가게 됩니다.
 class SalaryBracket(Base):
     __tablename__ = "salary_brackets"
-    __table_args__ = (
-        Index('idx_part_policies_branch_id', 'branch_id'),
-        Index('idx_part_policies_branch_policy_id', 'branch_policy_id'),
-    )
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
-    base_salary = Column(Integer, nullable=False)
-    monthly_salary = Column(Integer, nullable=False)
-    daily_rate = Column(Integer, nullable=False)
-    hourly_rate = Column(Integer, nullable=False)
-    meal_allowance = Column(Integer, nullable=False)
-    national_pension = Column(Integer, nullable=False)
-    health_insurance = Column(Integer, nullable=False)
-    employment_insurance = Column(Integer, nullable=False)
-    income_tax = Column(Integer, nullable=False)
-    local_income_tax = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False) # 연도
+    minimum_hourly_rate = Column(Integer, nullable=False) # 최저 시급
+    minimum_monthly_rate = Column(Integer, nullable=False) # 최저 월급
+    
+    national_pension = Column(Integer, nullable=False) # 국민연금
+    health_insurance = Column(Integer, nullable=False) # 건강보험
+    employment_insurance = Column(Integer, nullable=False) # 고용보험
+    long_term_care_insurance = Column(Integer, nullable=False) # 장기요양보험
+    
+    minimun_pension_income = Column(Integer, nullable=False) # 연금소득 최저
+    maximum_pension_income = Column(Integer, nullable=False) # 연금소득 최대
+    maximum_national_pension = Column(Integer, nullable=False) # 국민연금 최대
+    minimum_health_insurance = Column(Integer, nullable=False) # 건강보험 최저
+    maximum_health_insurance = Column(Integer, nullable=False) # 건강보험 최대
+    
+    local_income_tax_rate = Column(Float, nullable=False) # 지방소득세 비율
     
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
 
-    branch = relationship("Branches", back_populates="salary_brackets")
-    branch_policy = relationship("BranchPolicies", back_populates="salary_brackets")
+    tax_brackets = relationship("TaxBracket", back_populates="salary_bracket")
+
+class TaxBracket(Base):
+    __tablename__ = "tax_brackets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    salary_bracket_id = Column(Integer, ForeignKey("salary_brackets.id"), nullable=False)
+    lower_limit = Column(Integer, nullable=False) # 구간 하한
+    upper_limit = Column(Integer, nullable=True) # 구간 상한 (최고 구간은 null)
+    tax_rate = Column(Float, nullable=False) # 세율
+    deduction = Column(Integer, nullable=False) # 누진공제액
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
+    salary_bracket = relationship("SalaryBracket", back_populates="tax_brackets")
