@@ -7,38 +7,41 @@ from app.models.models import Users
 
 users = async_session()
 
-
 async def validate_token(req: Request):
     try:
         header = req.headers.get("Authorization")
 
-        print(req.headers)
-
-        if header == None:
+        if header is None:
             raise HTTPException(status_code=401, detail="로그인을 진행해주세요.")
-        [tokenType, token] = header.split(" ")
+        
+        tokenType, token = header.split(" ")
 
         if tokenType != "Bearer":
-            raise HTTPException(
-                status_code=400, detail="토큰이 타입이 일치하지 않습니다."
-            )
-        if token == None:
+            raise HTTPException(status_code=400, detail="토큰 타입이 일치하지 않습니다.")
+        if token is None:
             raise HTTPException(status_code=400, detail="토큰이 존재하지 않습니다.")
+        
         jwtService = JWTService(None, JWTDecoder())
         jwtVerify = jwtService.check_token_expired(token)
 
-        userId = jwtVerify.get("id")
-        stmt = select(Users).where((Users.id == userId) & (Users.deleted_yn == "N"))
+        user_id = jwtVerify.get("id")
+        stmt = select(Users).where((Users.id == user_id) & (Users.deleted_yn == "N"))
         result = await users.execute(stmt)
-        findUser = result.scalar_one_or_none()
+        find_user = result.scalar_one_or_none()
 
-        if findUser == None:
+        if find_user is None:
             raise HTTPException(status_code=404, detail="유저가 존재하지 않습니다.")
 
-        return findUser
+        # 요청 객체에 사용자 ID를 추가
+        req.state.user_id = user_id
+
     except HTTPException as http_err:
         print(f"HTTP 에러가 발생하였습니다: {http_err.detail}")
-        raise  # 이 부분이 중요합니다. 예외를 다시 발생시켜 상위 호출자에게 전달합니다.
+        raise
     except Exception as err:
         print(f"예상치 못한 에러가 발생하였습니다: {str(err)}")
         raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다.")
+
+# 현재 사용자 ID를 가져오는 함수
+async def get_current_user_id(req: Request):
+    return req.state.user_id
