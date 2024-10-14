@@ -65,7 +65,7 @@ async def register(register: Register):
 
 # 로그인
 @router.post("/login")
-async def login(login: Login):
+async def login(login: Login, res : Response):
     try:
         stmt = select(Users).where(
             (Users.email == login.email) & (Users.deleted_yn == "N")
@@ -84,6 +84,8 @@ async def login(login: Login):
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
         jwtToken = jwt_service._create_token(data={"id": findUser.id})
+
+        res.headers["Authorization"] = jwtToken
 
         # 토큰을 응답 본문에 포함시켜 반환
         return JSONResponse(
