@@ -34,6 +34,13 @@ class Branches(Base):
     work_policies = relationship("WorkPolicies", back_populates="branch")
     salary_policies = relationship("SalaryPolicies", back_populates="branch")
     part_policies = relationship("PartPolicies", back_populates="branch")
+    commute_policies = relationship("CommutePolicies", back_populates="branch")
+    overtime_policies = relationship("OverTimePolicies", back_populates="branch")
+    auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
+    holiday_work_policies = relationship("HolidayWorkPolicies", back_populates="branch")
+    weekend_work_policies = relationship("WeekendWorkPolicies", back_populates="branch")
+    allowance_policies = relationship("AllowancePolicies", back_populates="branch")
+    hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="branch")
 
 
 class Parts(Base):
@@ -56,6 +63,7 @@ class Parts(Base):
     part_policies = relationship("PartPolicies", back_populates="part")
     part_work_policies = relationship("PartWorkPolicies", back_populates="part")
     part_salary_policies = relationship("PartSalaryPolicies", back_populates="part")
+    hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="part")
 
 
 class Users(Base):
