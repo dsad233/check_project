@@ -7,13 +7,14 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index
 )
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
 
 # 문서 설정 관련 테이블 #
 class DocumentPolicies(Base):

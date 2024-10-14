@@ -1,5 +1,7 @@
 from datetime import datetime
-from typing import List 
+from typing import List
+
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -7,14 +9,14 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index
 )
 from sqlalchemy.orm import relationship
-from app.core.database import Base
-from pydantic import BaseModel, Field, field_validator
+
 from app.common.dto.pagination_dto import PaginationDto
+from app.core.database import Base
 
 
 class Branches(Base):
@@ -30,7 +32,7 @@ class Branches(Base):
     corporate_seal = Column(String(255), nullable=False)
     nameplate = Column(String(255), nullable=False)
     mail_address = Column(String(255), nullable=False)
-    
+
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
@@ -46,6 +48,7 @@ class BranchCreate(BaseModel):
     corporate_seal: str = Field(description="법인 도장")
     nameplate: str = Field(description="명판")
     mail_address: str = Field(description="메일 주소")
+
 
 class BranchResponse(BaseModel):
     id: int = Field(description="지점 아이디")
@@ -65,9 +68,11 @@ class BranchResponse(BaseModel):
     class Config:
         from_attributes = True
 
+
 class BranchListResponse(BaseModel):
     list: List[BranchResponse] = Field(description="지점 목록")
     pagination: PaginationDto = Field(description="페이지네이션")
+
 
 class BranchDelete(BaseModel):
     id: int = Field(description="지점 아이디")

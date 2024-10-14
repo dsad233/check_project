@@ -7,15 +7,16 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index
 )
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 
-class HolidayWorkPolicies(Base): #휴무일 근무 여부 설정
+
+class HolidayWorkPolicies(Base):  # 휴무일 근무 여부 설정
     __tablename__ = "holiday_work_policies"
     # __table_args__ = (
     #     Index('idx_part_policies_branch_id', 'branch_id'),

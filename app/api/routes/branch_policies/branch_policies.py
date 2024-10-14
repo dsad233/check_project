@@ -4,13 +4,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
 
-from app.api.routes.branch_policies.schema.branch_schema import (BranchCreate,
-                                                                 BranchUpdate)
+from app.api.routes.branch_policies.schema.branch_schema import (
+    BranchCreate,
+    BranchUpdate,
+)
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.branches.branches_model import Branches
-from app.models.users.users_model import Users
 from app.models.branches.branches_policies_model import BranchPolicies
+from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 branch = async_session()
@@ -26,7 +28,7 @@ async def create_policie(
     try:
         if token.role != "MSO 최고권한" | token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
-        
+
         find_branch = await branch.execute(
             select(Branches).where(Branches.id == branch_id)
         )
@@ -70,7 +72,10 @@ async def create_policie(
 async def get_all():
     try:
         find_branch_policies_all = await branch.execute(
-            select(BranchPolicies).where(BranchPolicies.deleted_yn == "N").offset(0).limit(100)
+            select(BranchPolicies)
+            .where(BranchPolicies.deleted_yn == "N")
+            .offset(0)
+            .limit(100)
         )
         result = find_branch_policies_all.scalars().all()
 
@@ -280,8 +285,16 @@ async def update_policie(
             )
 
         result.name = branchUpdate.name if (branchUpdate.name != None) else result.name
-        result.policy_type = branchUpdate.policy_type if (branchUpdate.policy_type != None) else result.policy_type
-        result.effective_to = branchUpdate.effective_to if (branchUpdate.effective_to != None) else result.effective_to
+        result.policy_type = (
+            branchUpdate.policy_type
+            if (branchUpdate.policy_type != None)
+            else result.policy_type
+        )
+        result.effective_to = (
+            branchUpdate.effective_to
+            if (branchUpdate.effective_to != None)
+            else result.effective_to
+        )
 
         await branch.commit()
 

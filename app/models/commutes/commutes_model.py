@@ -1,7 +1,10 @@
-from sqlalchemy import Column, Integer, DateTime, Float, String, ForeignKey
-from sqlalchemy.orm import relationship
-from app.core.database import Base
 from datetime import UTC, datetime
+
+from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String
+from sqlalchemy.orm import relationship
+
+from app.core.database import Base
+
 
 class Commutes(Base):
     __tablename__ = "commutes"
@@ -13,4 +16,4 @@ class Commutes(Base):
     work_hours = Column(Float)
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-    deleted_yn = Column(String(1), default='N')
+    deleted_yn = Column(String(1), default="N")

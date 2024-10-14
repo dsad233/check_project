@@ -1,5 +1,7 @@
 from datetime import datetime
+from typing import Optional
 
+from pydantic import BaseModel, Field
 from sqlalchemy import (
     Boolean,
     Column,
@@ -7,16 +9,15 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index
 )
 from sqlalchemy.orm import relationship
-from typing import Optional
 
 from app.core.database import Base
 
-from pydantic import BaseModel, Field
+
 class Parts(Base):
     __tablename__ = "parts"
 
@@ -28,11 +29,14 @@ class Parts(Base):
     leave_granting_authority = Column(Boolean, default=False)
 
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    
+
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    deleted_yn = Column(String(1), default="N")    # annual_leaves = relationship("AnnualLeave", back_populates="part")
-    
+    deleted_yn = Column(
+        String(1), default="N"
+    )  # annual_leaves = relationship("AnnualLeave", back_populates="part")
+
+
 class PartCreate(BaseModel):
     name: str = Field(..., min_length=1, description="파트 이름")
     task: str = Field(..., min_length=1, description="파트 업무")

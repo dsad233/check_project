@@ -1,5 +1,6 @@
-from pydantic import BaseModel
 from typing import Optional
+
+from pydantic import BaseModel
 
 
 class PartWorkPolicyCreate(BaseModel):
@@ -11,6 +12,7 @@ class PartWorkPolicyCreate(BaseModel):
     break_time_1: Optional[str] = None
     break_time_2: Optional[str] = None
 
+
 class PartWorkPolicyResponse(BaseModel):
     id: int
     part_name: str
@@ -21,6 +23,7 @@ class PartWorkPolicyResponse(BaseModel):
     break_time_1: Optional[str] = None
     break_time_2: Optional[str] = None
 
+
 class PartSalaryPolicyResponse(BaseModel):
     id: int
     part_name: str
@@ -30,7 +33,8 @@ class PartSalaryPolicyResponse(BaseModel):
     overtime_rate: Optional[float] = None
     night_work_allowance: Optional[int] = None
     holiday_work_allowance: Optional[int] = None
-    
+
+
 class PartSalaryPolicyCreate(BaseModel):
     base_salary: Optional[int] = None
     annual_leave_days: Optional[int] = None

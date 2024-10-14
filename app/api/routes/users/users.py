@@ -17,16 +17,15 @@ db = async_session()
 
 # 유저 전체 조회
 @router.get("")
-async def get_users(
-    skip: int = Query(0, ge=0),
-    limit: int = Query(10, ge=1, le=100)
-):
+async def get_users(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=100)):
     try:
         # 전체 사용자 수 조회
-        count_query = select(func.count()).select_from(Users).where(Users.deleted_yn == "N")
+        count_query = (
+            select(func.count()).select_from(Users).where(Users.deleted_yn == "N")
+        )
         total_count = await db.execute(count_query)
         total_count = total_count.scalar_one()
-        
+
         # password를 제외한 모든 컬럼 선택
         stmt = (
             select(Users)
@@ -72,7 +71,7 @@ async def get_users(
             "data": users,
             "total": total_count,
             "skip": skip,
-            "limit": limit
+            "limit": limit,
         }
     except Exception as err:
         print("에러가 발생하였습니다.")

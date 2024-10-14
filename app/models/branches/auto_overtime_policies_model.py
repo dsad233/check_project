@@ -7,13 +7,14 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index
 )
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
 
 class AutoOvertimePolicies(Base):
     __tablename__ = "auto_overtime_policies"
@@ -23,12 +24,9 @@ class AutoOvertimePolicies(Base):
     # )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    role = Column(
-        Enum("최고관리자", "관리자", name="user_role"),
-        nullable=False
-    )
+    role = Column(Enum("최고관리자", "관리자", name="user_role"), nullable=False)
     is_auto_applied = Column(Boolean, default=False)
-    
+
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
