@@ -3,9 +3,11 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, update
 
-from app.api.routes.closed_days.schema.closed_day_schema import ClosedDayCreate
+from app.api.routes.closed_days.schema.closed_day_schema import ClosedDayCreate, ClosedDayUpdate
 from app.core.database import async_session
-from app.middleware.tokenVerify import validate_token
+from app.middleware.tokenVerify import get_current_user_id, validate_token
+from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -13,9 +15,14 @@ db = async_session()
 
 # 휴일 생성
 @router.post("")
-async def create_closed_day(closed_day: ClosedDayCreate):
+async def create_closed_day(closed_day: ClosedDayCreate, current_user_id: dict = Depends(get_current_user_id)):
     try:
+        stmt = select(Users).where(Users.id == current_user_id)
+        result = await db.execute(stmt)
+        user = result.scalars().first()
+
         new_closed_day = ClosedDays(
+            branch_id=user.branch_id,
             closed_day_date=closed_day.closed_day_date,
             memo=closed_day.memo,
         )
