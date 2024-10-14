@@ -12,6 +12,11 @@ uvicorn app.main:app --reload
 * 운영
 ```shell
 # 리눅스
-MODE=prod uvicorn app.main:app --reload
+MODE=prod uvicorn app.main:app --host 0.0.0.0 --port 8000
 
+```
+
+public ip: 
+```shell
+52.78.246.46
 ```
