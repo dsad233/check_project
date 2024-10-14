@@ -11,7 +11,7 @@ from app.api.routes.leave_category import leave_category
 from app.api.routes.commutes import commutes
 # from app.api.routes.annual_leaves import annual_leaves
 # from app.api.routes.overtimes import overtimes
-from app.api.routes.human_record_category import human_record_category
+from app.api.routes.board import board
 
 app = APIRouter()
 
@@ -30,7 +30,7 @@ app.include_router(
 app.include_router(branches.router, prefix="/branches", tags=["Branches"])
 app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-categories", tags=["Leave Categories"])
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
-app.include_router(human_record_category.router, prefix='/branches/{branch_id}/hr-categories', tags=['HR Categories'])
+app.include_router(board.router, prefix='/branches/{branch_id}/board', tags=['Board'])
 
 @app.get("/health")
 def health_check():
