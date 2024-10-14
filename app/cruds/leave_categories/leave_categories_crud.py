@@ -5,8 +5,8 @@ from datetime import datetime
 from app.models.branches.leave_categories_model import LeaveCategories, LeaveCreate
 from fastapi import Depends
 
-async def create_leave_category(*, session: AsyncSession, leave_create: LeaveCreate) -> LeaveCategories:
-    db_obj = LeaveCategories(**leave_create.model_dump())
+async def create_leave_category(*, branch_id: int, session: AsyncSession, leave_create: LeaveCreate) -> LeaveCategories:
+    db_obj = LeaveCategories( branch_id=branch_id, **leave_create.model_dump())
     session.add(db_obj)
     await session.commit()
     await session.refresh(db_obj)
