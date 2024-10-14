@@ -36,12 +36,27 @@ class CommuteBase(BaseModel):
         return v
 
 
-class CommuteCreate(CommuteBase):
-    user_id: int = Field(..., description="사용자 ID")
-    clock_in: datetime = Field(..., description="출근 시간")
+class CommuteUpdate(BaseModel):
+    clock_out: Optional[datetime] = Field(None, description="퇴근 시간")
+    work_hours: Optional[float] = Field(None, description="근무 시간")
 
-    class Config:
-        from_attributes = True
+    @field_validator("clock_out")
+    def validate_clock_out(cls, v):
+        if v > datetime.now():
+            raise ValueError("퇴근 시간은 현재 시간보다 늦을 수 없습니다.")
+        return v
+
+    @field_validator("work_hours")
+    def validate_work_hours(cls, v):
+        if v is not None and v < 0:
+            raise ValueError("근무 시간은 0 이상이어야 합니다.")
+        return v
+
+    @field_validator('*')
+    def check_at_least_one_field(cls, v, values):
+        if not v and not any(values.data.values()):
+            raise ValueError("적어도 하나의 필드(퇴근 시간 또는 근무 시간)는 제공되어야 합니다.")
+        return v
 
 
 class CommuteClockOut(BaseModel):
