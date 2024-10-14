@@ -15,10 +15,19 @@ COPY pyproject.toml poetry.lock /app/
 
 # 가상환경을 생성하지 않고 패키지 설치
 RUN poetry config virtualenvs.create false && \
+    poetry lock --no-update && \
     poetry install --no-interaction --no-ansi
 
+COPY . .# 비루트 사용자 생성 및 전환
+RUN adduser --disabled-password --gecos '' appuserUSER appuser# uvicorn을 통해 애플리케이션 실행
+
+
 # 프로젝트 파일 복사
-COPY ./app .
+COPY ./app
 
 # uvicorn을 통해 애플리케이션 실행
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+
+
