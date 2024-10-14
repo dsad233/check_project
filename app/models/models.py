@@ -9,12 +9,12 @@ from sqlalchemy import (
     ForeignKey,
     Integer,
     String,
+    Index,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
-from app.models.policies.branchpolicies import BranchPolicies
-
 
 class Branches(Base):
     __tablename__ = "branches"
@@ -41,17 +41,18 @@ class Branches(Base):
     weekend_work_policies = relationship("WeekendWorkPolicies", back_populates="branch")
     allowance_policies = relationship("AllowancePolicies", back_populates="branch")
     hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="branch")
-
+    rest_days = relationship("RestDays", back_populates="branch")
+    annual_leaves = relationship("AnnualLeave", back_populates="branch")
 
 class Parts(Base):
     __tablename__ = "parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String(255), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
     task = Column(String(500), nullable=True)
     is_doctor = Column(Boolean, default=False)
-    required_certification = Column(String(500), nullable=True)
-    leave_granting_authority = Column(String(500), nullable=True)
+    required_certification = Column(Boolean, default=False)
+    leave_granting_authority = Column(Boolean, default=False)
 
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     created_at = Column(DateTime, default=datetime.now)
@@ -64,7 +65,8 @@ class Parts(Base):
     part_work_policies = relationship("PartWorkPolicies", back_populates="part")
     part_salary_policies = relationship("PartSalaryPolicies", back_populates="part")
     hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="part")
-
+    rest_days = relationship("RestDays", back_populates="part")
+    annual_leaves = relationship("AnnualLeave", back_populates="part")
 
 class Users(Base):
     __tablename__ = "users"
@@ -102,3 +104,54 @@ class Users(Base):
 
     part = relationship("Parts", back_populates="users")
     branch = relationship("Branches", back_populates="users")
+    annual_leaves = relationship("AnnualLeave", back_populates="user")
+
+#________________________________________________________________________________________#
+# 휴무일 테이블
+class RestDays(Base):
+    __tablename__ = "rest_days"
+    __table_args__ = (
+        Index('idx_rest_days_branch_id', 'branch_id'),
+        Index('idx_rest_days_part_id', 'part_id'),
+        Index('idx_rest_days_date', 'date'),
+        UniqueConstraint('branch_id', 'part_id', 'date', name='uq_branch_part_date'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    rest_type = Column(Enum('공휴일', '주말', name='rest_day_type'), nullable=False)
+    description = Column(String(255), nullable=True)
+    is_paid = Column(Boolean, default=False)  # 유급 휴일 여부
+    is_holiday_work_allowed = Column(Boolean, default=False)  # 휴일근무 허용 여부
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
+    branch = relationship("Branches", back_populates="rest_days")
+    part = relationship("Parts", back_populates="rest_days")
+
+#________________________________________________________________________________________#
+# 연차 테이블   
+class AnnualLeave(Base):
+    __tablename__ = "annual_leave"
+    __table_args__ = (
+        Index('idx_annual_leave_user_id', 'user_id'),
+        Index('idx_annual_leave_date', 'date'),
+        UniqueConstraint('user_id', 'date', name='uq_user_date'),
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    date = Column(Date, nullable=False)
+    leave_type = Column(Enum('유급휴가', '유급 오전반차', '유급 오후반차', '무급휴가', '무급 오전반차', '무급 오후반차', name='leave_type'), nullable=False)
+    is_paid = Column(Boolean, nullable=False)
+    description = Column(String(255), nullable=True)
+    is_approved = Column(Boolean, default=False)  # 승인 여부
+    is_leave_of_absence = Column(Boolean, default=False)  # 휴직 여부
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
+    user = relationship("Users", back_populates="annual_leaves")
