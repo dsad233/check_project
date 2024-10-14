@@ -15,10 +15,10 @@ overtime = async_session()
 
 
 # overtime 전체 조회
-@router.get("")
-async def find_all():
+@router.get("/{branch_id}/branch_policies/{branch_policy_id}/overtime_policies")
+async def find_all(branch_id : int, branch_policy_id : int):
     try:
-        overtimeall = await overtime.execute(select(OverTimePolicies).offset(0).limit(100))
+        overtimeall = await overtime.execute(select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id, OverTimePolicies.deleted_yn == "N").offset(0).limit(100))
         result = overtimeall.scalars().all()
 
         if len(overtimeall) == 0:
