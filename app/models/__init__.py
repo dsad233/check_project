@@ -24,7 +24,7 @@ from .branches.document_policies_model import DocumentPolicies
 from .branches.rest_days_model import RestDays
 from .users.leave_histories_model import LeaveHistories
 from .branches.leave_categories_model import LeaveCategories
-from .branches.human_record_category_model import HumanRecordCategory
+from .branches.board_model import Board
 # 여기서 관계를 설정합니다
 # 일 대 다 관계
 Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
@@ -37,8 +37,9 @@ Branches.overtime_policies = relationship("OverTimePolicies", back_populates="br
 Branches.rest_days = relationship("RestDays", back_populates="branch")
 Branches.parts = relationship("Parts", back_populates="branch")
 Branches.users = relationship("Users", back_populates="branch")
-Branches.human_record_category = relationship("HumanRecordCategory", back_populates="branch")
+Branches.board = relationship("Board", back_populates="branch")
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
+
 LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
 Parts.allowance_policies = relationship("AllowancePolicies", back_populates="part")
@@ -71,5 +72,6 @@ DocumentPolicies.branch = relationship("Branches", back_populates="document_poli
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
 BranchPolicies.branch = relationship("Branches", back_populates="branch_policies")
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
-HumanRecordCategory.branch = relationship("Branches", back_populates="human_record_category")
+
+Board.branch = relationship("Branches", back_populates="board")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
