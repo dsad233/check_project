@@ -30,7 +30,7 @@ app.include_router(
 app.include_router(branches.router, prefix="/branches", tags=["Branches"])
 app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-categories", tags=["Leave Categories"])
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
-app.include_router(board.router, prefix='/branches/{branch_id}/board', tags=['Board'])
+app.include_router(board.router, prefix='/branches/{branch_id}/boards', tags=['Board'])
 
 @app.get("/health")
 def health_check():
