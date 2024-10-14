@@ -1,12 +1,18 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.models.models import Branches
 from sqlalchemy import select, func
 from datetime import datetime
-from app.api.routes.branches.schema.branch_schema import BranchCreate, BranchDelete, BranchListResponse, BranchResponse
+from app.models.branches.branches_model import BranchCreate, BranchResponse, BranchListResponse, BranchDelete, Branches
 
 async def create_branch(*, session: AsyncSession, branch_create: BranchCreate) -> Branches:
-    db_obj = Branches(**branch_create.model_dump())
+     # 이름 중복 확인
+    stmt = select(Branches).where(Branches.name == branch_create.name)
+    result = await session.execute(stmt)
+    existing_branch = result.scalar_one_or_none()
 
+    if existing_branch:
+        raise ValueError(f"지점 이름 '{branch_create.name}'은(는) 이미 존재합니다.")
+    
+    db_obj = Branches(**branch_create.model_dump())
     session.add(db_obj)
     await session.commit()
     await session.refresh(db_obj)

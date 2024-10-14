@@ -4,7 +4,11 @@ from sqlalchemy import select
 from app.api.routes.parts.schema.parts_schema import PartCreate, PartResponse
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Branches, Parts, Users
+from app.models.users.users_model import Users
+
+from app.models.parts.parts_model import Parts
+
+from app.models.branches.branches_model import Branches
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 part_session = async_session()

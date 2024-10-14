@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.models.models import Users
-from app.models.policies.branchpolicies import DocumentPolicies
+from app.models.users.users_model import Users
+from app.models.branches.document_policies_model import DocumentPolicies
 from sqlalchemy.future import select
 from typing import Annotated
 

@@ -3,7 +3,7 @@ from sqlalchemy import select
 
 from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTService
-from app.models.models import Users
+from app.models.users.users_model import Users
 
 users = async_session()
 

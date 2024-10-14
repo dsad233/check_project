@@ -10,7 +10,8 @@ from app.api.routes.annual_leaves.schema.annual_leave_schema import (
 )
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.models.models import AnnualLeave, Users
+from app.models.users.users_model import Users
+from app.models.branches.annual_leave_model import AnnualLeave
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 annualleaves = async_session()
