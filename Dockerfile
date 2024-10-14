@@ -1,7 +1,7 @@
 # ProductOrder-BE/Dockerfile
 
-# Python 3.10 기반 이미지 사용
-FROM python:3.10
+# Python 3.13 기반 이미지 사용
+FROM python:3.13
 
 # 작업 디렉토리 설정
 WORKDIR /app
