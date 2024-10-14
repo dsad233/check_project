@@ -10,7 +10,6 @@ db = async_session()
 
 @router.get("/", response_model=list[HumanRecordCategoryResponse])
 async def get_human_record_category(branch_id: int, current_user_id: int = Depends(get_current_user_id)):
-    
     try:
         user_query = select(Users).where(Users.id == current_user_id)
         user_result = await db.execute(user_query)
