@@ -1,13 +1,13 @@
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
 from typing import List
 
-from app.core.database import async_session
-from app.middleware.tokenVerify import validate_token, get_current_user_id
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import select
 
-from app.models.users.users_model import Users
-from app.models.parts.parts_model import Parts, PartCreate, PartUpdate, PartResponse
+from app.core.database import async_session
+from app.middleware.tokenVerify import get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
+from app.models.parts.parts_model import PartCreate, PartResponse, Parts, PartUpdate
+from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -16,12 +16,14 @@ db = async_session()
 @router.get("", response_model=list[PartResponse])
 async def getParts(branch_id: int, current_user_id: int = Depends(get_current_user_id)):
     try:
-        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_query = select(Users).where(
+            Users.id == current_user_id, Users.deleted_yn == "N"
+        )
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ['MSO 최고권한', '최고관리자'] or (
-            user.role.strip() == '최고관리자' and user.branch_id != branch_id
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            user.role.strip() == "최고관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -57,16 +59,20 @@ async def createPart(
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
-        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_query = select(Users).where(
+            Users.id == current_user_id, Users.deleted_yn == "N"
+        )
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ['MSO 최고권한', '최고관리자'] or (
-            user.role.strip() == '최고관리자' and user.branch_id != branch_id
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            user.role.strip() == "최고관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
-        branch_query = select(Branches).where(Branches.id == branch_id, Branches.deleted_yn == 'N')
+        branch_query = select(Branches).where(
+            Branches.id == branch_id, Branches.deleted_yn == "N"
+        )
         branch_result = await db.execute(branch_query)
         branch = branch_result.scalar_one_or_none()
 
@@ -106,12 +112,14 @@ async def deletePart(
     branch_id: int, part_id: int, current_user_id: int = Depends(get_current_user_id)
 ):
     try:
-        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_query = select(Users).where(
+            Users.id == current_user_id, Users.deleted_yn == "N"
+        )
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ['MSO 최고권한', '최고관리자'] or (
-            user.role.strip() == '최고관리자' and user.branch_id != branch_id
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            user.role.strip() == "최고관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
@@ -143,12 +151,14 @@ async def updatePart(
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
-        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_query = select(Users).where(
+            Users.id == current_user_id, Users.deleted_yn == "N"
+        )
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ['MSO 최고권한', '최고관리자'] or (
-            user.role.strip() == '최고관리자' and user.branch_id != branch_id
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+            user.role.strip() == "최고관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 

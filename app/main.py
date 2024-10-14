@@ -1,16 +1,13 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 
 from app.api import main
 from app.api.routes.auth import auth
 
-from fastapi.middleware.cors import CORSMiddleware
-
 app = FastAPI()
 
-origins = [
-    "https://workswave-frontend.vercel.app"
-]
+origins = ["https://workswave-frontend.vercel.app"]
 
 app.add_middleware(
     CORSMiddleware,

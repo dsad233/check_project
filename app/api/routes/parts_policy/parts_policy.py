@@ -3,18 +3,16 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 
 from app.api.routes.parts_policy.schema.parts_policy_schema import (
-    PartWorkPolicyCreate,
-    PartWorkPolicyResponse,
     PartSalaryPolicyCreate,
     PartSalaryPolicyResponse,
+    PartWorkPolicyCreate,
+    PartWorkPolicyResponse,
 )
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
+from app.models.parts.salary_policies_model import SalaryPolicies
+from app.models.parts.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
-from app.models.parts.work_policies_model import WorkPolicies
-from app.models.parts.salary_policies_model import SalaryPolicies
-from app.models.parts.work_policies_model import WorkPolicies
-from app.models.parts.salary_policies_model import SalaryPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -35,8 +33,7 @@ async def getPartWorkPolicies(
             select(WorkPolicies)
             .options(selectinload(WorkPolicies.part))
             .where(
-            (WorkPolicies.branch_id == branch_id)
-            & (WorkPolicies.deleted_yn == "N")
+                (WorkPolicies.branch_id == branch_id) & (WorkPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(query)
@@ -48,7 +45,7 @@ async def getPartWorkPolicies(
             )
 
         part_work_policy_responses = []
-        
+
         for policy in part_work_policies:
             part_work_policy_response = PartWorkPolicyResponse(
                 id=policy.id,
@@ -61,10 +58,11 @@ async def getPartWorkPolicies(
                 part_name=policy.part.name,
             )
             part_work_policy_responses.append(part_work_policy_response)
-            
+
         return part_work_policy_responses
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/{part_id}/workpolicies")
 async def getPartWorkPolicy(
@@ -76,21 +74,23 @@ async def getPartWorkPolicy(
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
-        
+
         query = (
             select(WorkPolicies)
             .options(selectinload(WorkPolicies.part))
             .where(
-            (WorkPolicies.part_id == part_id)
-            & (WorkPolicies.branch_id == branch_id)
-            & (WorkPolicies.deleted_yn == "N")
+                (WorkPolicies.part_id == part_id)
+                & (WorkPolicies.branch_id == branch_id)
+                & (WorkPolicies.deleted_yn == "N")
             )
         )
         result = await db.execute(query)
         part_work_policy = result.scalars().one_or_none()
 
         if not part_work_policy:
-            raise HTTPException(status_code=400, detail="존재하지 않는 부서 근무 정책입니다.")
+            raise HTTPException(
+                status_code=400, detail="존재하지 않는 부서 근무 정책입니다."
+            )
 
         part_work_policy_response = PartWorkPolicyResponse(
             id=part_work_policy.id,
@@ -242,6 +242,7 @@ async def deletePartWorkPolicy(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/salarypolicies")
 async def getPartSalaryPolicies(
     branch_id: int, current_user: Users = Depends(validate_token)
@@ -270,7 +271,7 @@ async def getPartSalaryPolicies(
             )
 
         part_salary_policy_responses = []
-        
+
         for policy in part_salary_policies:
             part_salary_policy_response = PartSalaryPolicyResponse(
                 id=policy.id,
@@ -283,11 +284,12 @@ async def getPartSalaryPolicies(
                 holiday_work_allowance=policy.holiday_work_allowance,
             )
             part_salary_policy_responses.append(part_salary_policy_response)
-            
+
         return part_salary_policy_responses
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    
+
+
 @router.get("/{part_id}/salarypolicies")
 async def getPartSalaryPolicy(
     branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
@@ -298,13 +300,13 @@ async def getPartSalaryPolicy(
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
-        
+
         query = (
             select(SalaryPolicies)
             .options(selectinload(SalaryPolicies.part))
             .where(
                 (SalaryPolicies.part_id == part_id)
-            & (SalaryPolicies.branch_id == branch_id)
+                & (SalaryPolicies.branch_id == branch_id)
                 & (SalaryPolicies.deleted_yn == "N")
             )
         )
@@ -312,7 +314,9 @@ async def getPartSalaryPolicy(
         part_salary_policy = result.scalars().one_or_none()
 
         if not part_salary_policy:
-            raise HTTPException(status_code=400, detail="존재하지 않는 부서 근무 정책입니다.")
+            raise HTTPException(
+                status_code=400, detail="존재하지 않는 부서 근무 정책입니다."
+            )
 
         part_salary_policy_response = PartSalaryPolicyResponse(
             id=part_salary_policy.id,
@@ -328,6 +332,7 @@ async def getPartSalaryPolicy(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/{part_id}/salarypolicies")
 async def createPartSalaryPolicy(
     branch_id: int,
@@ -341,7 +346,7 @@ async def createPartSalaryPolicy(
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
-        
+
         part_salary_policy_query = select(SalaryPolicies).where(
             (SalaryPolicies.part_id == part_id)
             & (SalaryPolicies.branch_id == branch_id)
@@ -384,6 +389,7 @@ async def createPartSalaryPolicy(
         return {"message": "부서 급여 정책 생성에 성공하였습니다."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.patch("/{part_id}/salarypolicies")
 async def updatePartSalaryPolicy(

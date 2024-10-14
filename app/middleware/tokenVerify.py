@@ -7,20 +7,23 @@ from app.models.users.users_model import Users
 
 users = async_session()
 
+
 async def validate_token(req: Request):
     try:
         header = req.headers.get("Authorization")
 
         if header is None:
             raise HTTPException(status_code=401, detail="로그인을 진행해주세요.")
-        
+
         tokenType, token = header.split(" ")
 
         if tokenType != "Bearer":
-            raise HTTPException(status_code=400, detail="토큰 타입이 일치하지 않습니다.")
+            raise HTTPException(
+                status_code=400, detail="토큰 타입이 일치하지 않습니다."
+            )
         if token is None:
             raise HTTPException(status_code=400, detail="토큰이 존재하지 않습니다.")
-        
+
         jwtService = JWTService(None, JWTDecoder())
         jwtVerify = jwtService.check_token_expired(token)
 
@@ -41,6 +44,7 @@ async def validate_token(req: Request):
     except Exception as err:
         print(f"예상치 못한 에러가 발생하였습니다: {str(err)}")
         raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다.")
+
 
 # 현재 사용자 ID를 가져오는 함수
 async def get_current_user_id(req: Request):

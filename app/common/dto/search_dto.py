@@ -1,5 +1,7 @@
-from pydantic import BaseModel, Field
 from datetime import datetime
+
+from pydantic import BaseModel, Field
+
 
 class BaseSearchDto(BaseModel):
     page: int = Field(default=1, description="현재 페이지")
@@ -10,15 +12,18 @@ class BaseSearchDto(BaseModel):
         super().__init__(**data)
         self.offset = (self.page - 1) * self.record_size
 
+
 class PostSearchDto(BaseSearchDto):
     branch_id: int
     name: str
     phone_number: str
 
+
 class PostSearchDto(BaseSearchDto):
     branch_id: int
     search_type: str
     keyword: str
+
 
 class LeaveSearchDto(BaseSearchDto):
     branch_id: int
@@ -27,12 +32,14 @@ class LeaveSearchDto(BaseSearchDto):
     name: str
     phone_number: str
 
+
 class OTSearchDto(BaseSearchDto):
     branch_id: int
     category_id: int
     status: str
     name: str
     phone_number: str
+
 
 class WorkSearchDto(BaseSearchDto):
     branch_id: int
@@ -41,12 +48,14 @@ class WorkSearchDto(BaseSearchDto):
     name: str
     phone_number: str
 
+
 class DocumentSearchDto(BaseSearchDto):
     branch_id: int
     category_id: int
     status: str
     name: str
     phone_number: str
+
 
 class PaySearchDto(BaseSearchDto):
     branch_id: int

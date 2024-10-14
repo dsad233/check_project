@@ -6,15 +6,16 @@ from sqlalchemy import (
     Date,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index,
-    Float
 )
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
 
 class SalaryPolicies(Base):
     __tablename__ = "salary_policies"

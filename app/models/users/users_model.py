@@ -7,13 +7,14 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
-    Index
 )
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+
 
 class Users(Base):
     __tablename__ = "users"

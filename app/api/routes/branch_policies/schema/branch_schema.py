@@ -1,9 +1,10 @@
 from datetime import date
 from enum import Enum
+from typing import Optional
+
+from fastapi import HTTPException
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
-from typing import Optional
-from fastapi import HTTPException
 
 
 class BranchCreateEnum(str, Enum):
@@ -23,31 +24,41 @@ class BranchCreate(BaseSettings):
     @field_validator("name")
     @classmethod
     def name_none_check(cls, name):
-        if(name == None):
-            raise HTTPException(status_code=400, detail="지점 정책명 작성란이 누락되었습니다. 다시 작성해주세요.")
+        if name == None:
+            raise HTTPException(
+                status_code=400,
+                detail="지점 정책명 작성란이 누락되었습니다. 다시 작성해주세요.",
+            )
         return name
 
     @field_validator("name")
     @classmethod
     def name_len_check(cls, name_len):
-        if(len(name_len.strip()) < 1):
-            raise HTTPException(status_code=400, detail="2자 이상으로 지점 정책명을 작성해주세요.")
+        if len(name_len.strip()) < 1:
+            raise HTTPException(
+                status_code=400, detail="2자 이상으로 지점 정책명을 작성해주세요."
+            )
         return name_len
-    
+
     @field_validator("policy_type")
     @classmethod
     def name_not_none_check(cls, type):
-        if(type == None):
-            raise HTTPException(status_code=400, detail="지점 정책 카테고리 작성란이 누락되었습니다. 다시 작성해주세요.")
+        if type == None:
+            raise HTTPException(
+                status_code=400,
+                detail="지점 정책 카테고리 작성란이 누락되었습니다. 다시 작성해주세요.",
+            )
         return type
 
     @field_validator("effective_from")
     @classmethod
     def effective_from_not_none_check(cls, start_date):
-        if(start_date == None):
-            raise HTTPException(status_code=400, detail="지점 정책 시작일란이 누락되었습니다. 다시 작성해주세요.")
+        if start_date == None:
+            raise HTTPException(
+                status_code=400,
+                detail="지점 정책 시작일란이 누락되었습니다. 다시 작성해주세요.",
+            )
         return start_date
-
 
 
 class BranchUpdate(BaseSettings):
@@ -55,17 +66,21 @@ class BranchUpdate(BaseSettings):
     policy_type: BranchCreateEnum
     effective_to: Optional[date] = None
 
-
     @field_validator("name")
     @classmethod
     def name_none_check(cls, name):
-        if(name == None):
-            raise HTTPException(status_code=400, detail="지점 정책명 작성란이 누락되었습니다. 다시 작성해주세요.")
+        if name == None:
+            raise HTTPException(
+                status_code=400,
+                detail="지점 정책명 작성란이 누락되었습니다. 다시 작성해주세요.",
+            )
         return name
-    
+
     @field_validator("name")
     @classmethod
     def name_len_check(cls, name_len):
-        if(len(name_len.strip()) < 1):
-            raise HTTPException(status_code=400, detail="2자 이상으로 지점 정책명을 작성해주세요.")
+        if len(name_len.strip()) < 1:
+            raise HTTPException(
+                status_code=400, detail="2자 이상으로 지점 정책명을 작성해주세요."
+            )
         return name_len
