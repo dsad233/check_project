@@ -57,14 +57,3 @@ class CommuteUpdate(BaseModel):
         if not v and not any(values.data.values()):
             raise ValueError("적어도 하나의 필드(퇴근 시간 또는 근무 시간)는 제공되어야 합니다.")
         return v
-
-
-class CommuteClockOut(BaseModel):
-    clock_out: datetime = Field(..., description="퇴근 시간")
-
-    @field_validator("clock_out")
-    @classmethod
-    def validate_clock_out(cls, v):
-        if v <= datetime.now():
-            return v
-        raise ValueError("퇴근 시간은 현재 시간보다 늦을 수 없습니다.")
