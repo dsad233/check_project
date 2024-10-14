@@ -19,9 +19,11 @@ async def get_board(branch_id: int):
             id=board.id,
             category_name=board.category_name,
             description=board.description,
-            read_authority=board.read_authority,
-            write_authority=board.write_authority,
-            notice_authority=board.notice_authority,
+            
+            read_authority=board.read_authority.strip(),
+            write_authority=board.write_authority.strip(),
+            notice_authority=board.notice_authority.strip(),
+            
             part_division=board.part_division,
             allow_comment=board.allow_comment
         ) for board in boards]
@@ -51,7 +53,11 @@ async def create_board(branch_id: int, create_dto: BoardCreate, current_user_id:
         new_board = Board(
             branch_id=branch_id,
             category_name=create_dto.category_name,
-            division=create_dto.division
+            read_authority=create_dto.read_authority,
+            write_authority=create_dto.write_authority,
+            notice_authority=create_dto.notice_authority,
+            part_division=create_dto.part_division,
+            allow_comment=create_dto.allow_comment
         )
         
         db.add(new_board)
@@ -62,8 +68,8 @@ async def create_board(branch_id: int, create_dto: BoardCreate, current_user_id:
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
     
-@router.patch("/{category_id}")
-async def update_board(branch_id: int, category_id: int, update_dto: BoardUpdate, current_user_id: int = Depends(get_current_user_id)):
+@router.patch("/{board_id}")
+async def update_board(branch_id: int, board_id: int, update_dto: BoardUpdate, current_user_id: int = Depends(get_current_user_id)):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
         user_result = await db.execute(user_query)
@@ -73,14 +79,14 @@ async def update_board(branch_id: int, category_id: int, update_dto: BoardUpdate
             raise HTTPException(status_code=403, detail="Not enough permissions")
         
         if update_dto.category_name:
-            validate_query = select(Board).where(Board.category_name == update_dto.category_name, Board.branch_id == branch_id, Board.deleted_yn == 'N', Board.id != category_id)
+            validate_query = select(Board).where(Board.category_name == update_dto.category_name, Board.branch_id == branch_id, Board.deleted_yn == 'N', Board.id != board_id)
             validate_result = await db.execute(validate_query)
             validate_category = validate_result.scalar_one_or_none()
             
             if validate_category:
                 raise HTTPException(status_code=400, detail="Board already exists")
         
-        board_query = select(Board).where(Board.id == category_id, Board.branch_id == branch_id, Board.deleted_yn == 'N')
+        board_query = select(Board).where(Board.id == board_id, Board.branch_id == branch_id, Board.deleted_yn == 'N')
         board_result = await db.execute(board_query)
         board = board_result.scalar_one_or_none()
         
@@ -89,8 +95,19 @@ async def update_board(branch_id: int, category_id: int, update_dto: BoardUpdate
         
         if update_dto.category_name:
             board.category_name = update_dto.category_name
-        if update_dto.division != board.division:
-            board.division = update_dto.division
+        if update_dto.description != board.description:
+            board.description = update_dto.description
+        
+        if update_dto.read_authority:
+            board.read_authority = update_dto.read_authority
+        if update_dto.write_authority:
+            board.write_authority = update_dto.write_authority
+        if update_dto.notice_authority:
+            board.notice_authority = update_dto.notice_authority
+        if update_dto.part_division != board.part_division:
+            board.part_division = update_dto.part_division
+        if update_dto.allow_comment != board.allow_comment:
+            board.allow_comment = update_dto.allow_comment
         
         await db.commit()
         
@@ -99,8 +116,8 @@ async def update_board(branch_id: int, category_id: int, update_dto: BoardUpdate
         print(e)
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/{category_id}")
-async def delete_board(branch_id: int, category_id: int, current_user_id: int = Depends(get_current_user_id)):
+@router.delete("/{board_id}")
+async def delete_board(branch_id: int, board_id: int, current_user_id: int = Depends(get_current_user_id)):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
         user_result = await db.execute(user_query)
@@ -109,7 +126,7 @@ async def delete_board(branch_id: int, category_id: int, current_user_id: int = 
         if user.role.strip() not in ['MSO 최고권한', '최고관리자']:
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
-        board_query = select(Board).where(Board.id == category_id, Board.branch_id == branch_id, Board.deleted_yn == 'N')
+        board_query = select(Board).where(Board.id == board_id, Board.branch_id == branch_id, Board.deleted_yn == 'N')
         board_result = await db.execute(board_query)
         board = board_result.scalar_one_or_none()
         

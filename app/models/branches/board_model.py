@@ -57,8 +57,15 @@ class BoardCreate(BaseModel):
     allow_comment: Optional[bool]
 
 class BoardUpdate(BaseModel):
-    category_name: Optional[str]
-    division: Optional[bool]
+    category_name: str
+    description: Optional[str]
+    
+    read_authority: Optional[str]
+    write_authority: Optional[str]
+    notice_authority: Optional[str]
+    
+    part_division: Optional[bool]
+    allow_comment: Optional[bool]
 
 class BoardResponse(BaseModel):
     id: int
