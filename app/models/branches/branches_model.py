@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from typing import List 
 from sqlalchemy import (
     Boolean,
     Column,
@@ -12,8 +12,9 @@ from sqlalchemy import (
     Index
 )
 from sqlalchemy.orm import relationship
-
 from app.core.database import Base
+from pydantic import BaseModel, Field, field_validator
+from app.common.dto.pagination_dto import PaginationDto
 
 
 class Branches(Base):
@@ -49,3 +50,39 @@ class Branches(Base):
     weekend_work_policies = relationship("WeekendWorkPolicies", back_populates="branch")
     allowance_policies = relationship("AllowancePolicies", back_populates="branch")
     hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="branch")
+
+class BranchCreate(BaseModel):
+    code: str = Field(description="지점 코드")
+    name: str = Field(description="지점 이름")
+    representative_name: str = Field(description="대표 원장 이름")
+    registration_number: str = Field(description="사업자번호")
+    call_number: str = Field(description="전화번호")
+    address: str = Field(description="지점 주소")
+    corporate_seal: str = Field(description="법인 도장")
+    nameplate: str = Field(description="명판")
+    mail_address: str = Field(description="메일 주소")
+
+class BranchResponse(BaseModel):
+    id: int = Field(description="지점 아이디")
+    code: str = Field(description="지점 코드")
+    name: str = Field(description="지점 이름")
+    representative_name: str = Field(description="대표 원장 이름")
+    registration_number: str = Field(description="사업자번호")
+    call_number: str = Field(description="전화번호")
+    address: str = Field(description="지점 주소")
+    corporate_seal: str = Field(description="법인 도장")
+    nameplate: str = Field(description="명판")
+    mail_address: str = Field(description="메일 주소")
+    created_at: datetime = Field(description="생성 일자")
+    updated_at: datetime = Field(description="수정 일자")
+    deleted_yn: str = Field(description="삭제 여부")
+
+    class Config:
+        from_attributes = True
+
+class BranchListResponse(BaseModel):
+    list: List[BranchResponse] = Field(description="지점 목록")
+    pagination: PaginationDto = Field(description="페이지네이션")
+
+class BranchDelete(BaseModel):
+    id: int = Field(description="지점 아이디")

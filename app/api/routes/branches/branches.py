@@ -5,7 +5,7 @@ from typing import Any
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 
-from app.api.routes.branches.schema.branch_schema import BranchCreate, BranchDelete, BranchListResponse, BranchResponse
+from app.models.branches.branches_model import BranchCreate, BranchDelete, BranchListResponse, BranchResponse
 from app.core.database import get_db
 from app.middleware.tokenVerify import validate_token
 
