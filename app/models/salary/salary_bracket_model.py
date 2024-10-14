@@ -9,6 +9,7 @@ from sqlalchemy import (
     String,
     Float
 )
+from pydantic import field_validator
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
@@ -89,8 +90,14 @@ class SalaryBracketCreate(BaseModel):
     maximum_national_pension: float
     minimum_health_insurance: float
     maximum_health_insurance: float
-    local_income_tax_rate: float
+    local_income_tax_rate: float 
     tax_brackets: list["TaxBracketCreate"]
+    
+    @field_validator('local_income_tax_rate', 'health_insurance', 'employment_insurance', 'long_term_care_insurance')
+    def validate_rate(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError('비율은 항상 0부터 100입니다.')
+        return v
 
 class TaxBracketResponse(BaseModel):
     id: int
@@ -105,3 +112,9 @@ class TaxBracketCreate(BaseModel):
     upper_limit: float
     tax_rate: float
     deduction: float
+    
+    @field_validator('tax_rate')
+    def validate_rate(cls, v):
+        if v < 0 or v > 100:
+            raise ValueError('비율은 항상 0부터 100입니다.')
+        return v

@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select
 from app.models.salary.salary_bracket_model import SalaryBracket, TaxBracket, SalaryBracketResponse, TaxBracketResponse, SalaryBracketCreate
 from app.core.database import async_session
+from app.middleware.tokenVerify import validate_token
+from app.models.users.users_model import Users
 
 router = APIRouter()
 db = async_session()
@@ -14,8 +16,8 @@ async def get_salary_bracket(year: int):
         salary_bracket = result.scalar_one_or_none()
         
         if salary_bracket is None:
-                raise HTTPException(status_code=404, detail="Salary bracket not found")
-            
+            raise HTTPException(status_code=404, detail="Salary bracket not found")
+        
         tax_brackets_query = select(TaxBracket).where(TaxBracket.salary_bracket_id == salary_bracket.id)
         tax_brackets_result = await db.execute(tax_brackets_query)
         tax_brackets_all = tax_brackets_result.scalars().all()
@@ -29,7 +31,6 @@ async def get_salary_bracket(year: int):
             deduction=tax_bracket.deduction,
         ) for tax_bracket in tax_brackets_all]
         
-        print(tax_brackets_response)
         return SalaryBracketResponse(
             id=salary_bracket.id,
             year=salary_bracket.year,
@@ -56,7 +57,10 @@ async def get_salary_bracket(year: int):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/{year}")
-async def create_salary_bracket(year: int, salary_bracket_create: SalaryBracketCreate):
+async def create_salary_bracket(year: int, salary_bracket_create: SalaryBracketCreate, current_user: Users = Depends(validate_token)):
+    if current_user.role.strip() != "MSO 최고권한":
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
+    
     async with async_session() as session:
         async with session.begin():
             try:
@@ -106,6 +110,26 @@ async def create_salary_bracket(year: int, salary_bracket_create: SalaryBracketC
                 print(e)
                 raise HTTPException(status_code=500, detail=str(e))
 
-# @router.put("/salary_bracket/{year}", response_model=SalaryBracketResponse)
-# async def update_salary_bracket(year: int, salary_bracket: SalaryBracketUpdate):
-#     return await SalaryBracket.update_salary_bracket(year, salary_bracket)
+@router.delete("/{year}")
+async def delete_salary_bracket(year: int, current_user: Users = Depends(validate_token)):
+    if current_user.role.strip() != "MSO 최고권한":
+        raise HTTPException(status_code=403, detail="권한이 없습니다.")
+    
+    async with async_session() as session:
+        async with session.begin():
+            try:
+                query = select(SalaryBracket).where(SalaryBracket.year == year, SalaryBracket.deleted_yn == 'N')
+                result = await session.execute(query)
+                salary_bracket = result.scalar_one_or_none()
+                
+                if salary_bracket is None:
+                    raise HTTPException(status_code=404, detail="Salary bracket not found")
+                
+                salary_bracket.deleted_yn = 'Y'
+                await session.commit()
+                
+                return {"message": "Salary bracket deleted successfully"}
+            except Exception as e:
+                await session.rollback()
+                print(e)
+                raise HTTPException(status_code=500, detail=str(e))
