@@ -9,7 +9,7 @@ from app.api.routes.branches import branches
 from app.api.routes.salary_bracket import salary_bracket
 # from app.api.routes.annual_leaves import annual_leaves
 # from app.api.routes.overtimes import overtimes
-
+from app.api.routes.human_record_category import human_record_category
 app = APIRouter()
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -25,5 +25,6 @@ app.include_router(
 )
 app.include_router(branches.router, prefix="/branches", tags=["Branches"])
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
+app.include_router(human_record_category.router, prefix='/branches/{branch_id}/hr-categories', tags=['HR Categories'])
 # app.include_router(annual_leaves.router, prefix='/annual-leaves', tags=['Annual Leaves'])
 # app.include_router(overtimes.router, prefix='/overtime', tags=['Overtime'])
