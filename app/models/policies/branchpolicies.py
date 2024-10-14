@@ -40,21 +40,6 @@ class BranchPolicies(Base): # 지점 설정 전체를 아우르는 테이블
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
-    # Relationships
-    branch = relationship("Branches", back_populates="branch_policies")
-    part_policies = relationship("PartPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    commute_policies = relationship("CommutePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    overtime_policies = relationship("OverTimePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    holiday_work_policies = relationship("HolidayWorkPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    weekend_work_policies = relationship("WeekendWorkPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    work_policies = relationship("WorkPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    allowance_policies = relationship("AllowancePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    salary_policies = relationship("SalaryPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    hourly_wage_policies = relationship("HourlyWagePolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    document_policies = relationship("DocumentPolicies", back_populates="branch_policy", cascade="all, delete-orphan")
-    salary_brackets = relationship("SalaryBracket", back_populates="branch_policy", cascade="all, delete-orphan")
-
 #________________________________________________________________________________________#
 # 근무설정 관련 테이블
 class PartPolicies(Base): #파트 기본설정
@@ -89,7 +74,6 @@ class CommutePolicies(Base): #출퇴근 설정 (출퇴 사용여부 설정 / IP 
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     do_commute = Column(Boolean, default=False)
     allowed_ip_commute = Column(String(255), nullable=True) # 여러 아이피 주소를 쉼표로 구분해서 저장
     created_at = Column(DateTime, default=datetime.now)
@@ -108,7 +92,6 @@ class OverTimePolicies(Base): #연장근무 설정
     
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     name = Column(String(255), nullable=False)  # 예: 의사, 간호사...
     
     # 연장근무 당 지급 금액 설정
@@ -132,7 +115,6 @@ class AutoOvertimePolicies(Base):
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     role = Column(
         Enum("최고관리자", "관리자", name="user_role"),
         nullable=False
@@ -143,7 +125,6 @@ class AutoOvertimePolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="auto_overtime_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="auto_overtime_policies")
 
 class HolidayWorkPolicies(Base): #휴무일 근무 여부 설정
     __tablename__ = "holiday_work_policies"
@@ -153,14 +134,12 @@ class HolidayWorkPolicies(Base): #휴무일 근무 여부 설정
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     do_holiday_work = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="holiday_work_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="holiday_work_policies")
 
 class WeekendWorkPolicies(Base): #주말 근무 여부 설정
     __tablename__ = "weekend_work_policies"
@@ -170,14 +149,12 @@ class WeekendWorkPolicies(Base): #주말 근무 여부 설정
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     do_weekend_work = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="weekend_work_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="weekend_work_policies")
 
 class WorkPolicies(Base): #근로기본 설정
     __tablename__ = "work_policies"
@@ -187,7 +164,6 @@ class WorkPolicies(Base): #근로기본 설정
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     weekly_work_days = Column(Integer, nullable=False)  # 주 근무일수
     
     # 평일 설정
@@ -218,20 +194,16 @@ class WorkPolicies(Base): #근로기본 설정
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="work_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="work_policies")
     part_work_policies = relationship("PartWorkPolicies", back_populates="work_policy")
 
 class AllowancePolicies(Base):
     __tablename__ = "allowance_policies"
     __table_args__ = (
         Index('idx_part_policies_branch_id', 'branch_id'),
-        Index('idx_part_policies_branch_policy_id', 'branch_policy_id'),
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
 
-    
     comprehensive_overtime = Column(Boolean, default=False) # 포괄산정 연장근무수당
     annual_leave = Column(Boolean, default=False) # 연차수당
     holiday_work = Column(Boolean, default=False) # 휴일수당
@@ -243,7 +215,6 @@ class AllowancePolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="allowance_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="allowance_policies")
 
 #________________________________________________________________________________________#
 #________________________________________________________________________________________#
@@ -257,7 +228,6 @@ class SalaryPolicies(Base):
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     base_salary = Column(Integer, nullable=False)
     meal_allowance = Column(Integer, nullable=True)
     position_allowance = Column(Integer, nullable=True)
@@ -272,7 +242,6 @@ class SalaryPolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="salary_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="salary_policies")
     part_salary_policies = relationship(
         "PartSalaryPolicies", back_populates="salary_policy"
     )
@@ -288,7 +257,6 @@ class HourlyWagePolicies(Base):
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     
     work_start_time = Column(Time, nullable=False)
@@ -308,7 +276,6 @@ class HourlyWagePolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="hourly_wage_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="hourly_wage_policies")
     part = relationship("Parts", back_populates="hourly_wage_policies")
 
 #________________________________________________________________________________________#
@@ -322,7 +289,6 @@ class DocumentPolicies(Base):
     )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
     document_type = Column(String(255), nullable=False)
     can_view = Column(Boolean, default=False)
     can_edit = Column(Boolean, default=False)
@@ -332,7 +298,6 @@ class DocumentPolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     branch = relationship("Branches", back_populates="document_policies")
-    branch_policy = relationship("BranchPolicies", back_populates="document_policies")
 
 #________________________________________________________________________________________#
 #________________________________________________________________________________________#
@@ -341,26 +306,43 @@ class DocumentPolicies(Base):
 # 고정된 값들이 들어가게 됩니다.
 class SalaryBracket(Base):
     __tablename__ = "salary_brackets"
-    __table_args__ = (
-        Index('idx_part_policies_branch_id', 'branch_id'),
-        Index('idx_part_policies_branch_policy_id', 'branch_policy_id'),
-    )
+
     id = Column(Integer, primary_key=True, autoincrement=True)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    branch_policy_id = Column(Integer, ForeignKey("branch_policies.id"), nullable=False)
-    base_salary = Column(Integer, nullable=False)
-    monthly_salary = Column(Integer, nullable=False)
-    daily_rate = Column(Integer, nullable=False)
-    hourly_rate = Column(Integer, nullable=False)
-    meal_allowance = Column(Integer, nullable=False)
-    national_pension = Column(Integer, nullable=False)
-    health_insurance = Column(Integer, nullable=False)
-    employment_insurance = Column(Integer, nullable=False)
-    income_tax = Column(Integer, nullable=False)
-    local_income_tax = Column(Integer, nullable=False)
+    year = Column(Integer, nullable=False) # 연도
+    minimum_hourly_rate = Column(Integer, nullable=False) # 최저 시급
+    minimum_monthly_rate = Column(Integer, nullable=False) # 최저 월급
+    
+    national_pension = Column(Integer, nullable=False) # 국민연금
+    health_insurance = Column(Integer, nullable=False) # 건강보험
+    employment_insurance = Column(Integer, nullable=False) # 고용보험
+    long_term_care_insurance = Column(Integer, nullable=False) # 장기요양보험
+    
+    minimun_pension_income = Column(Integer, nullable=False) # 연금소득 최저
+    maximum_pension_income = Column(Integer, nullable=False) # 연금소득 최대
+    maximum_national_pension = Column(Integer, nullable=False) # 국민연금 최대
+    minimum_health_insurance = Column(Integer, nullable=False) # 건강보험 최저
+    maximum_health_insurance = Column(Integer, nullable=False) # 건강보험 최대
+    
+    local_income_tax_rate = Column(Float, nullable=False) # 지방소득세 비율
     
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
 
-    branch = relationship("Branches", back_populates="salary_brackets")
-    branch_policy = relationship("BranchPolicies", back_populates="salary_brackets")
+    tax_brackets = relationship("TaxBracket", back_populates="salary_bracket")
+
+class TaxBracket(Base):
+    __tablename__ = "tax_brackets"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    salary_bracket_id = Column(Integer, ForeignKey("salary_brackets.id"), nullable=False)
+    lower_limit = Column(Integer, nullable=False) # 구간 하한
+    upper_limit = Column(Integer, nullable=True) # 구간 상한 (최고 구간은 null)
+    tax_rate = Column(Float, nullable=False) # 세율
+    deduction = Column(Integer, nullable=False) # 누진공제액
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
+    salary_bracket = relationship("SalaryBracket", back_populates="tax_brackets")
