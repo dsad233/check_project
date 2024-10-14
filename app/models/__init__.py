@@ -2,18 +2,28 @@ from app.core.database import Base
 from sqlalchemy.orm import relationship
 
 # models.py에서 정의된 모델들
-from .models import Branches, Parts, Users
+from .users.users_model import Users
+from .parts.parts_model import Parts
+from .branches.branches_model import Branches
 
 # policies/branchpolicies.py에서 정의된 모델들
-from .policies.branchpolicies import (
-    BranchPolicies, PartPolicies, CommutePolicies, OverTimePolicies,
-    AutoOvertimePolicies, HolidayWorkPolicies, WeekendWorkPolicies,
-    WorkPolicies, AllowancePolicies, SalaryPolicies, HourlyWagePolicies,
-    DocumentPolicies, SalaryBracket
-)
-
-# policies/partpolicies.py에서 정의된 모델들
-from .policies.partpolicies import PartWorkPolicies, PartSalaryPolicies
+from .parts.part_salary_policies_model import PartSalaryPolicies
+from .parts.part_work_policies_model import PartWorkPolicies
+from .branches.branches_policies_model import BranchPolicies
+from .branches.commute_policies_model import CommutePolicies
+from .branches.overtime_policies_model import OverTimePolicies
+from .branches.auto_overtime_policies_model import AutoOvertimePolicies
+from .branches.holiday_work_policies_model import HolidayWorkPolicies
+from .branches.weekend_work_policies_model import WeekendWorkPolicies
+from .branches.work_policies_model import WorkPolicies
+from .branches.allowance_policies_model import AllowancePolicies
+from .branches.salary_policies_model import SalaryPolicies
+from .salary.salary_bracket_model import SalaryBracket
+from .branches.document_policies_model import DocumentPolicies
+from .branches.hourly_wage_policies_model import HourlyWagePolicies
+from .branches.part_policies_model import PartPolicies
+from .branches.rest_days_model import RestDays
+from .branches.annual_leave_model import AnnualLeave
 
 # 여기서 관계를 설정합니다
 Branches.branch_policies = relationship("BranchPolicies", back_populates="branch")
