@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
-from app.api.routes.parts.schema.parts_schema import PartCreate, PartResponse
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.models.users.users_model import Users
 
-from app.models.parts.parts_model import Parts
+from app.models.parts.parts_model import Parts, PartCreate, PartUpdate, PartResponse
 
 from app.models.branches.branches_model import Branches
 
@@ -14,7 +13,7 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 part_session = async_session()
 
 
-@router.get("")
+@router.get("", response_model=list[PartResponse])
 async def getParts(branch_id: int, current_user: Users = Depends(validate_token)):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
@@ -85,7 +84,6 @@ async def createPart(
             task=part_create.task,
             is_doctor=part_create.is_doctor,
             required_certification=part_create.required_certification,
-            leave_granting_authority=part_create.leave_granting_authority,
         )
         part_session.add(create)
         await part_session.commit()
@@ -132,7 +130,7 @@ async def deletePart(
 async def updatePart(
     branch_id: int,
     part_id: int,
-    part_update: PartCreate,
+    part_update: PartUpdate,
     current_user: Users = Depends(validate_token),
 ):
     try:
@@ -172,8 +170,6 @@ async def updatePart(
             part.is_doctor = part_update.is_doctor
         if part_update.required_certification:
             part.required_certification = part_update.required_certification
-        if part_update.leave_granting_authority:
-            part.leave_granting_authority = part_update.leave_granting_authority
 
         await part_session.commit()
         return {"message": "부서 수정에 성공하였습니다."}

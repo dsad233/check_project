@@ -12,9 +12,11 @@ from sqlalchemy import (
     Index
 )
 from sqlalchemy.orm import relationship
+from typing import Optional
 
 from app.core.database import Base
 
+from pydantic import BaseModel, Field
 class Parts(Base):
     __tablename__ = "parts"
 
@@ -29,4 +31,26 @@ class Parts(Base):
     
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    deleted_yn = Column(String(1), default="N")
+    deleted_yn = Column(String(1), default="N")    # annual_leaves = relationship("AnnualLeave", back_populates="part")
+    
+class PartCreate(BaseModel):
+    name: str = Field(..., min_length=1, description="파트 이름")
+    task: str = Field(..., min_length=1, description="파트 업무")
+    is_doctor: bool
+    required_certification: bool
+
+
+class PartUpdate(BaseModel):
+    name: Optional[str] = None
+    task: Optional[str] = None
+    is_doctor: Optional[bool] = None
+    required_certification: Optional[bool] = None
+
+
+class PartResponse(BaseModel):
+    id: int
+    name: str
+    task: Optional[str] = None
+    is_doctor: bool
+    required_certification: bool
+    leave_granting_authority: bool
