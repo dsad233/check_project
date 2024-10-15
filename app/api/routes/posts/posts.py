@@ -139,26 +139,41 @@ async def postCreate(
 
 
 # 게시글 수정
-@router.patch("/{id}")
-async def postEdit(id: int, postsEdit: PostsUpdate):
+@router.patch("/{post_id}")
+async def postUpdate(
+    branch_id: int, board_id: int, post_id: int, posts_update: PostsUpdate, current_user_id: int = Depends(get_current_user_id)
+):
     try:
+        user_query = select(Users).options(joinedload(Users.part)).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
+        
+        if current_user.role.strip() != "MSO 최고권한" and current_user.branch_id != branch_id :
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        findPost = db.query(Posts).filter(Posts.id == id).first()
+        board_query = select(Board).where(Board.id == board_id, Board.branch_id == branch_id, Board.deleted_yn == 'N')
+        board_result = await db.execute(board_query)
+        board = board_result.scalar_one_or_none()
 
-        if findPost == None:
+        check_authority(current_user.role.strip(), board.write_authority.strip())
+
+        query = select(Posts).where(Posts.id == post_id, Posts.branch_id == branch_id, Posts.board_id == board_id, Posts.deleted_yn == 'N')
+        result = await db.execute(query)
+        postOne = result.scalar_one_or_none()
+
+        if postOne is None:
             raise HTTPException(status_code=404, detail="게시글이 존재하지 않습니다.")
+        
+        if postOne.users.id != current_user.id:
+            raise HTTPException(status_code=403, detail="작성자가 아닙니다.")
 
-        findPost.title = postsEdit.title
-        findPost.context = postsEdit.context
-        findPost.category = (
-            postsEdit.category if (postsEdit.category != None) else findPost.category
-        )
-        findPost.isOpen = (
-            postsEdit.isOpen if (postsEdit.isOpen != None) else findPost.isOpen
-        )
-        findPost.image = (
-            postsEdit.image if (postsEdit.image != None) else findPost.image
-        )
+        if posts_update.title is not None:
+            postOne.title = posts_update.title
+        if posts_update.content is not None:
+            postOne.content = posts_update.content
+
+        postOne.updated_at = datetime.now()
+        await db.commit()
 
         return {"message": "게시글을 정상적으로 수정하였습니다."}
     except Exception as err:
@@ -168,15 +183,36 @@ async def postEdit(id: int, postsEdit: PostsUpdate):
 
 # 게시글 삭제
 @router.delete("/{id}")
-async def postDelete(id: int):
+async def postDelete(
+    branch_id: int, board_id: int, post_id: int, current_user_id: int = Depends(get_current_user_id)
+):
     try:
-        findPost = db.query(Posts).filter(Posts.id == id).first()
+        user_query = select(Users).options(joinedload(Users.part)).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
+        
+        if current_user.role.strip() != "MSO 최고권한" and current_user.branch_id != branch_id :
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
-        if findPost == None:
+        board_query = select(Board).where(Board.id == board_id, Board.branch_id == branch_id, Board.deleted_yn == 'N')
+        board_result = await db.execute(board_query)
+        board = board_result.scalar_one_or_none()
+
+        check_authority(current_user.role.strip(), board.write_authority.strip())
+
+        query = select(Posts).where(Posts.id == post_id, Posts.branch_id == branch_id, Posts.board_id == board_id, Posts.deleted_yn == 'N')
+        result = await db.execute(query)
+        postOne = result.scalar_one_or_none()
+
+        if postOne is None:
             raise HTTPException(status_code=404, detail="게시글이 존재하지 않습니다.")
-
-        db.delete(findPost)
-        db.commit()
+        
+        if postOne.users.id != current_user.id:
+            raise HTTPException(status_code=403, detail="작성자가 아닙니다.")
+        
+        postOne.deleted_yn = 'Y'
+        postOne.updated_at = datetime.now()
+        await db.commit()
 
         return {"message": "게시글을 정상적으로 삭제하였습니다."}
     except Exception as err:
