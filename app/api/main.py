@@ -13,7 +13,7 @@ from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
 from app.api.routes.salary_bracket import salary_bracket
 from app.api.routes.users import users
-
+from app.api.routes.posts import posts
 app = APIRouter()
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -33,6 +33,7 @@ app.include_router(branches.router, prefix="/branches", tags=["Branches"])
 app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-categories", tags=["Leave Categories"])
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
 app.include_router(board.router, prefix='/branches/{branch_id}/boards', tags=['Boards'])
+app.include_router(posts.router, prefix='/branches/{branch_id}/boards/{board_id}/posts', tags=['Posts'])
 
 @app.get("/health")
 def health_check():
