@@ -61,7 +61,7 @@ class OvertimeCreate(BaseModel):
         return v
 
 
-class OvertimeSelect(BaseModel):
+class OvertimeSelect(OvertimeBase):
     manager_memo: str = Field(None, max_length=500, description="승인자 메모")
     
     @field_validator("manager_memo")
@@ -69,3 +69,10 @@ class OvertimeSelect(BaseModel):
         if v is not None and len(v) > 500 and len(v) < 1:
             raise ValueError("승인자 메모는 1자 이상 500자 이하여야 합니다.")
         return v
+
+
+class OvertimeUpdate(OvertimeBase):
+    overtime_hours: Optional[str] = Field(None, description="초과 근무 시간")
+    application_memo: Optional[str] = Field(None, max_length=500, description="신청 메모")
+    manager_memo: Optional[str] = Field(None, max_length=500, description="승인자 메모")
+
