@@ -24,7 +24,7 @@ async def get_comments(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/{comment_id}", response_model=CommentsResponse)
-async def getOneComment(
+async def get_comment(
     board_id: int, 
     post_id: int, 
     comment_id: int, 
@@ -37,7 +37,7 @@ async def getOneComment(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("", status_code=201)
-async def postCreate(
+async def create_comment(
     board_id: int, 
     post_id: int, 
     commentCreate: CommentsCreate, 
@@ -50,7 +50,7 @@ async def postCreate(
         raise HTTPException(status_code=500, detail=str(e)) 
 
 @router.patch("/{comment_id}", response_model=CommentsResponse)
-async def putUpdate(
+async def update_comment(
     board_id: int, 
     post_id: int, 
     comment_id: int, 
@@ -64,7 +64,7 @@ async def putUpdate(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/{comment_id}")
-async def deleteDelete(
+async def delete_comment(
     board_id: int, 
     post_id: int, 
     comment_id: int, 
