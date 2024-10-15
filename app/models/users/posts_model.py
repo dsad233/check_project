@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
-
+from pydantic import BaseModel
 from app.core.database import Base
 
 class Posts(Base):
@@ -18,3 +18,17 @@ class Posts(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
+    
+class PostsCreate(BaseModel):
+    title: str
+    content: str
+    
+class PostsUpdate(BaseModel):
+    title: str
+    content: str
+    
+class PostsResponse(BaseModel):
+    id: int
+    title: str
+    content: str
+    created_at: datetime
