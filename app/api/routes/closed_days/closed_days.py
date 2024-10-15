@@ -14,15 +14,15 @@ db = async_session()
 
 
 # 휴일 생성
-@router.post("")
-async def create_closed_day(closed_day: ClosedDayCreate, current_user_id: dict = Depends(get_current_user_id)):
+@router.post("/{branch_id}/closed_days")
+async def create_closed_day(branch_id : int, closed_day: ClosedDayCreate, current_user_id: dict = Depends(get_current_user_id)):
     try:
         stmt = select(Users).where(Users.id == current_user_id)
         result = await db.execute(stmt)
         user = result.scalars().first()
 
         new_closed_day = ClosedDays(
-            branch_id=user.branch_id,
+            branch_id=branch_id,
             closed_day_date=closed_day.closed_day_date,
             memo=closed_day.memo,
         )
@@ -50,6 +50,23 @@ async def create_closed_day(closed_day: ClosedDayCreate, current_user_id: dict =
 async def get_closed_days():
     try:
         stmt = select(ClosedDays)
+        result = await db.execute(stmt)
+        closed_days = result.scalars().all()
+
+        return {
+            "message": "휴무일 목록을 성공적으로 조회했습니다.",
+            "data": closed_days,
+        }
+    except Exception as err:
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+    
+    # 휴일 목록 상세 조회
+@router.get("/{id}")
+async def get_closed_days(id : int):
+    try:
+        stmt = select(ClosedDays).where(ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
