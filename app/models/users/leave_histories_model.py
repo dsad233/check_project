@@ -70,6 +70,11 @@ class LeaveHistoriesCreate(BaseModel):
     date: datetime
     applicant_description: Optional[str]
 
+class LeaveHistoriesUpdate(BaseModel):
+    leave_category_id: int
+    date: datetime
+    applicant_description: Optional[str]
+
 class LeaveHistoriesApprove(BaseModel):
     status: str
     admin_description: Optional[str]

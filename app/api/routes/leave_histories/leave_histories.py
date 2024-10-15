@@ -5,7 +5,7 @@ from datetime import datetime
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse, LeaveHistoriesSearchDto, LeaveHistoriesApprove
+from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
 from app.models.users.users_model import Users
 from app.common.dto.pagination_dto import PaginationDto
 
@@ -158,70 +158,94 @@ async def approve_leave(
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 
-# @router.patch("/{id}")
-# async def updateAnnualLeave(
-#     id: int,
-#     annualLeaveUpdate: AnnualLeaveUpdate,
-#     current_user: Users = Depends(validate_token),
-# ):
-#     try:
-#         query = select(AnnualLeave).where(AnnualLeave.annual_leave_id == id)
-#         result = await annualleaves.execute(query)
-#         annual_leave = result.scalar_one_or_none()
+@router.patch("/{leave_id}")
+async def update_leave(
+    branch_id: int,
+    leave_id: int,
+    leave_update: LeaveHistoriesUpdate,
+    current_user_id: int = Depends(get_current_user_id),
+):
+    try:
+        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
 
-#         if not annual_leave:
-#             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
+        if current_user.role.strip() == "MSO 관리자":
+            pass
+        elif current_user.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
 
-#         if annual_leave.proposer_id != current_user.id:
-#             raise HTTPException(
-#                 status_code=403, detail="연차를 수정할 권한이 없습니다."
-#             )
+        query = select(LeaveHistories).where(LeaveHistories.id == leave_id, LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == 'N')
+        result = await db.execute(query)
+        leave_history = result.scalar_one_or_none()
 
-#         if annual_leave.application_status != "pending":
-#             raise HTTPException(
-#                 status_code=400, detail="승인/반려된 연차는 수정할 수 없습니다."
-#             )
+        if not leave_history:
+            raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
 
-#         annual_leave.type = annualLeaveUpdate.type
-#         annual_leave.date_count = annualLeaveUpdate.date_count
-#         annual_leave.application_date = annualLeaveUpdate.application_date
-#         annual_leave.proposer_note = annualLeaveUpdate.proposer_note
-#         await annualleaves.commit()
-#         return {"message": "연차 수정에 성공하였습니다."}
-#     except HTTPException:
-#         raise
-#     except Exception as err:
-#         await annualleaves.rollback()
-#         print(err)
-#         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자"]:
+            raise HTTPException(
+                status_code=403, detail="연차를 삭제할 권한이 없습니다."
+            )
+
+        if leave_history.status.strip() != "확인중":
+            raise HTTPException(
+                status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다."
+            )
+
+        if leave_update.leave_category_id:
+            leave_history.leave_category_id = leave_update.leave_category_id
+        if leave_update.date:
+            leave_history.application_date = leave_update.date
+        if leave_update.applicant_description:
+            leave_history.applicant_description = leave_update.applicant_description
+            
+        await db.commit()
+        return {"message": "연차 수정에 성공하였습니다."}
+    except HTTPException:
+        raise
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 
-# @router.delete("/{id}")
-# async def deleteAnnualLeave(id: int, current_user: Users = Depends(validate_token)):
-#     try:
-#         query = select(AnnualLeave).where(AnnualLeave.annual_leave_id == id)
-#         result = await annualleaves.execute(query)
-#         annual_leave = result.scalar_one_or_none()
+@router.delete("/{leave_id}")
+async def delete_leave(
+    branch_id: int, leave_id: int, current_user_id: int = Depends(get_current_user_id)
+):
+    try:
+        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
 
-#         if not annual_leave:
-#             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
+        if current_user.role.strip() == "MSO 관리자":
+            pass
+        elif current_user.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
 
-#         if annual_leave.proposer_id != current_user.id:
-#             raise HTTPException(
-#                 status_code=403, detail="연차를 삭제할 권한이 없습니다."
-#             )
+        query = select(LeaveHistories).where(LeaveHistories.id == leave_id, LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == 'N')
+        result = await db.execute(query)
+        leave_history = result.scalar_one_or_none()
 
-#         if annual_leave.application_status != "pending":
-#             raise HTTPException(
-#                 status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다."
-#             )
+        if not leave_history:
+            raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
 
-#         annual_leave.deleted_yn = "Y"
-#         await annualleaves.commit()
-#         return {"message": "연차 삭제에 성공하였습니다."}
-#     except HTTPException:
-#         raise
-#     except Exception as err:
-#         await annualleaves.rollback()
-#         print(err)
-#         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자"]:
+            raise HTTPException(
+                status_code=403, detail="연차를 삭제할 권한이 없습니다."
+            )
+
+        if leave_history.status.strip() != "확인중":
+            raise HTTPException(
+                status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다."
+            )
+
+        leave_history.deleted_yn = "Y"
+        await db.commit()
+        return {"message": "연차 삭제에 성공하였습니다."}
+    except HTTPException:
+        raise
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
