@@ -15,34 +15,34 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "Authorization_Swagger"],
 )
 
 app.include_router(auth.router, prefix="/api")
 
 
-# def custom_openapi():
-#     if app.openapi_schema:
-#         return app.openapi_schema
-#     openapi_schema = get_openapi(
-#         title="Your API",
-#         version="1.0.0",
-#         description="Your API description",
-#         routes=app.routes,
-#     )
-#     openapi_schema["components"]["securitySchemes"] = {
-#         "Bearer Authorization": {
-#             "type": "http",
-#             "scheme": "bearer",
-#             "bearerFormat": "JWT",
-#         }
-#     }
-#     app.openapi_schema = openapi_schema
-#     return app.openapi_schema
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="Your API",
+        version="1.0.0",
+        description="Your API description",
+        routes=app.routes,
+    )
+    openapi_schema["components"]["securitySchemes"] = {
+        "Authorization_Swagger": {
+            "type": "apiKey",
+            "in": "header",
+            "name": "Authorization_Swagger",
+        }
+    }
+    openapi_schema["security"] = [{"Authorization_Swagger": []}]
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
 
-
-# app.openapi = custom_openapi
+app.openapi = custom_openapi
 app.include_router(main.app)
