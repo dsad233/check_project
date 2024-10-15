@@ -14,6 +14,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from pydantic_settings import BaseSettings
+from typing import Optional
 
 
 class AllowancePolicies(Base):
@@ -33,3 +35,19 @@ class AllowancePolicies(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
+
+
+class AllowancePoliciesCreate(BaseSettings):
+    comprehensive_overtime : bool
+    annual_leave : bool
+    holiday_work : bool
+    job_duty : bool
+    meal : bool
+
+
+class AllowancePoliciesUpdate(BaseSettings):
+    comprehensive_overtime : Optional[bool] = None
+    annual_leave : Optional[bool] = None
+    holiday_work : Optional[bool] = None
+    job_duty : Optional[bool] = None
+    meal : Optional[bool] = None

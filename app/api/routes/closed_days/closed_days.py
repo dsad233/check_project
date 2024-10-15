@@ -39,7 +39,7 @@ async def create_closed_day(branch_id : int, closed_day: ClosedDayCreate, token=
     except Exception as err:
         await db.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="휴무일이 생성에 오류가 발생하였습니다.")
+        raise HTTPException(status_code=500, detail="휴무일이 생성에 실패하였습니다.")
 
 
 # 휴일 전체 조회
