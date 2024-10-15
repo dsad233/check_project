@@ -27,6 +27,7 @@ from .users.leave_histories_model import LeaveHistories
 from .branches.leave_categories_model import LeaveCategories
 from .branches.board_model import Board
 from .users.posts_model import Posts
+from .users.comments_model import Comments
 # 여기서 관계를 설정합니다
 # 일 대 다 관계
 Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
@@ -55,6 +56,7 @@ Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.posts = relationship("Posts", back_populates="users")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
+Users.comments = relationship("Comments", back_populates="users")
 
 
 # 다 대 일 관계
@@ -69,7 +71,7 @@ Commutes.users = relationship("Users", back_populates="commutes")
 Users.posts = relationship("Posts", back_populates="users")
 Posts.branch = relationship("Branches", back_populates="posts")
 Posts.users = relationship("Users", back_populates="posts")
-
+Posts.comments = relationship("Comments", back_populates="posts")
 Parts.branch = relationship("Branches", back_populates="parts")
 
 WorkPolicies.part = relationship("Parts", back_populates="work_policies")
@@ -86,8 +88,13 @@ BranchPolicies.branch = relationship("Branches", back_populates="branch_policies
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
 
 Board.branch = relationship("Branches", back_populates="board")
+Board.comments = relationship("Comments", back_populates="board")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
 
 Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
 Overtimes.manager = relationship("Users", foreign_keys=[Overtimes.manager_id], back_populates="managed_overtimes")
 LeaveHistories.branch = relationship("Branches", back_populates="leave_histories")
+
+Comments.users = relationship("Users", back_populates="comments")
+Comments.posts = relationship("Posts", back_populates="comments")
+Comments.board = relationship("Board", back_populates="comments")
