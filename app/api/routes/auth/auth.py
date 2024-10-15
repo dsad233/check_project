@@ -85,7 +85,7 @@ async def login(login: Login, res : Response):
 
         jwtToken = jwt_service._create_token(data={"id": findUser.id})
 
-        res.set_cookie('Authorization', f'Bearer {jwtSign}')
+        res.set_cookie('Authorization', f'Bearer {jwtToken}')
 
         # 토큰을 응답 본문에 포함시켜 반환
         return JSONResponse(
