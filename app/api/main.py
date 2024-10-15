@@ -15,6 +15,8 @@ from app.api.routes.salary_bracket import salary_bracket
 from app.api.routes.users import users
 from app.api.routes.posts import posts
 from app.api.routes.allowance_policies import allowance_policies
+from app.api.routes.comments import comments
+
 app = APIRouter()
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"])
@@ -38,6 +40,7 @@ app.include_router(board.router, prefix='/branches/{branch_id}/boards', tags=['B
 app.include_router(posts.router, prefix='/branches/{branch_id}/boards/{board_id}/posts', tags=['Posts'])
 app.include_router(leave_histories.router, prefix='/branches/{branch_id}/leaves', tags=['Leave Histories'])
 app.include_router(allowance_policies.router, prefix='/branches', tags=['Allowance_policies'])
+app.include_router(comments.router, prefix='/boards/{board_id}/posts/{post_id}/comments', tags=['Comments'])
 
 @app.get("/health")
 def health_check():
