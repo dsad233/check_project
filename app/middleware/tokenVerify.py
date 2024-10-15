@@ -18,7 +18,9 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
         else:
             # 다른 클라이언트를 위한 처리
             header = req.headers.get("Authorization")
-
+        print(header)
+        print(auth)
+        print(req.headers.get("Authorization"))
         if not header:
             raise HTTPException(status_code=401, detail="로그인을 진행해주세요.")
         
