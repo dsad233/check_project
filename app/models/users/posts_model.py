@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 from datetime import datetime
 from pydantic import BaseModel
 from app.core.database import Base
-
+from app.common.dto.pagination_dto import PaginationDto
 class Posts(Base):
     __tablename__ = "posts"
 
@@ -31,4 +31,9 @@ class PostsResponse(BaseModel):
     id: int
     title: str
     content: str
+    author_name: str
     created_at: datetime
+    
+class PostListResponse(BaseModel):
+    list: list[PostsResponse]
+    pagination: PaginationDto
