@@ -1,4 +1,5 @@
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request, Security
+from fastapi.security import APIKeyHeader
 from sqlalchemy import select
 
 from app.core.database import async_session
@@ -7,23 +8,33 @@ from app.models.users.users_model import Users
 
 users = async_session()
 
+auth_header = APIKeyHeader(name="Authorization_Swagger", auto_error=False)
 
-async def validate_token(req: Request):
+async def validate_token(req: Request, auth: str = Security(auth_header)):
     try:
-        header = req.headers.get("Authorization")
-
-        if header is None:
+        # 스웨거를 위한 처리
+        if auth:
+            header = f"Bearer {auth}"
+        else:
+            # 다른 클라이언트를 위한 처리
+            header = req.headers.get("Authorization")
+        print(header)
+        print(auth)
+        print(req.headers.get("Authorization"))
+        if not header:
             raise HTTPException(status_code=401, detail="로그인을 진행해주세요.")
+        
+        parts = header.split()
+        if len(parts) != 2:
+            raise HTTPException(status_code=400, detail="잘못된 인증 헤더 형식입니다.")
+        
+        token_type, token = parts
 
-        tokenType, token = header.split(" ")
-
-        if tokenType != "Bearer":
-            raise HTTPException(
-                status_code=400, detail="토큰 타입이 일치하지 않습니다."
-            )
-        if token is None:
+        if token_type.lower() != "bearer":
+            raise HTTPException(status_code=400, detail="토큰 타입이 일치하지 않습니다.")
+        if not token:
             raise HTTPException(status_code=400, detail="토큰이 존재하지 않습니다.")
-
+        
         jwtService = JWTService(None, JWTDecoder())
         jwtVerify = jwtService.check_token_expired(token)
 
@@ -44,7 +55,6 @@ async def validate_token(req: Request):
     except Exception as err:
         print(f"예상치 못한 에러가 발생하였습니다: {str(err)}")
         raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다.")
-
 
 # 현재 사용자 ID를 가져오는 함수
 async def get_current_user_id(req: Request):
