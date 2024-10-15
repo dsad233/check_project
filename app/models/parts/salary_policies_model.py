@@ -15,6 +15,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class SalaryPolicies(Base):
@@ -32,3 +34,9 @@ class SalaryPolicies(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+
+
+
+
+class SalaryPoliciesCreate(BaseSettings):
+    base_salary : str = Field("월급")
