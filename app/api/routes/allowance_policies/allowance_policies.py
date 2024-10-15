@@ -11,14 +11,15 @@ router = APIRouter(dependencies= [Depends(validate_token)])
 allowance_policies = async_session()
 
 # 수당 데이터 생성
-@router.post("/parts/{part_id}/allowance_policies")
-async def create_allowance_policies(part_id : int, allowancePoliciesCreate : AllowancePoliciesCreate, token=Annotated[Users, Depends(validate_token)]):
+@router.post("/{branch_id}/parts/{part_id}/allowance_policies")
+async def create_allowance_policies(branch_id : int, part_id : int, allowancePoliciesCreate : AllowancePoliciesCreate, token=Annotated[Users, Depends(validate_token)]):
     try:
         if token.role != "MSO 최고권한" | token.role != "최고관리자" | token.role != "관리자":
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
 
         new_allowance_Policies = AllowancePolicies(
             part_id = part_id,
+            branch_id = branch_id,
             comprehensive_overtime = allowancePoliciesCreate.comprehensive_overtime,
             annual_leave = allowancePoliciesCreate.annual_leave,
             holiday_work = allowancePoliciesCreate.holiday_work,
@@ -41,13 +42,13 @@ async def create_allowance_policies(part_id : int, allowancePoliciesCreate : All
 
 
 # 수당 데이터 수정
-@router.patch("/parts/{part_id}/allowance_policies/{id}")
-async def find_one_allowance_policies(part_id : int, id : int, allowancePoliciesUpdate : AllowancePoliciesUpdate, token=Annotated[Users, Depends(validate_token)]):
+@router.patch("/{branch_id}/parts/{part_id}/allowance_policies/{id}")
+async def find_one_allowance_policies(branch_id : int, part_id : int, id : int, allowancePoliciesUpdate : AllowancePoliciesUpdate, token=Annotated[Users, Depends(validate_token)]):
     try:
         if token.role != "MSO 최고권한" | token.role != "최고관리자" | token.role != "관리자":
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
 
-        find_one_allowance_policies = await allowance_policies.execute(select(AllowancePolicies).where(AllowancePolicies.part_id == part_id, AllowancePolicies.id == id, AllowancePolicies.deleted_yn == "N"))
+        find_one_allowance_policies = await allowance_policies.execute(select(AllowancePolicies).where(AllowancePolicies.branch_id == branch_id, AllowancePolicies.part_id == part_id, AllowancePolicies.id == id, AllowancePolicies.deleted_yn == "N"))
         result = find_one_allowance_policies.scalar_one_or_none()
         
         if(result == None):

@@ -25,6 +25,7 @@ class AllowancePolicies(Base):
     # )
     id = Column(Integer, primary_key=True, autoincrement=True)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
     comprehensive_overtime = Column(Boolean, default=False)  # 포괄산정 연장근무수당
     annual_leave = Column(Boolean, default=False)  # 연차수당
@@ -36,7 +37,8 @@ class AllowancePolicies(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
-
+    branch = relationship("Branches", back_populates="allowance_policies")
+    
 class AllowancePoliciesCreate(BaseSettings):
     comprehensive_overtime : bool
     annual_leave : bool
