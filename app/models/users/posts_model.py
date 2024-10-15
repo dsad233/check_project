@@ -4,12 +4,12 @@ from datetime import datetime
 
 from app.core.database import Base
 
-class Board(Base):
-    __tablename__ = "boards"
+class Posts(Base):
+    __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    board_category_id = Column(Integer, ForeignKey("board_categories.id"), nullable=False)
+    board_id = Column(Integer, ForeignKey("boards.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     
     title = Column(String(255), nullable=False)

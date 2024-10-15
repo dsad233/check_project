@@ -25,6 +25,7 @@ from .branches.rest_days_model import RestDays
 from .users.leave_histories_model import LeaveHistories
 from .branches.leave_categories_model import LeaveCategories
 from .branches.board_model import Board
+from .users.posts_model import Posts
 # 여기서 관계를 설정합니다
 # 일 대 다 관계
 Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
@@ -39,6 +40,7 @@ Branches.parts = relationship("Parts", back_populates="branch")
 Branches.users = relationship("Users", back_populates="branch")
 Branches.board = relationship("Board", back_populates="branch")
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
+Branches.posts = relationship("Posts", back_populates="branch")
 
 LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
@@ -57,6 +59,9 @@ Users.branch = relationship("Branches", back_populates="users")
 Users.part = relationship("Parts", back_populates="users")
 Users.commutes = relationship("Commutes", back_populates="users")
 Commutes.users = relationship("Users", back_populates="commutes")
+
+Users.posts = relationship("Posts", back_populates="users")
+Posts.branch = relationship("Branches", back_populates="posts")
 
 Parts.branch = relationship("Branches", back_populates="parts")
 
