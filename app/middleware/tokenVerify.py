@@ -43,7 +43,7 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
             raise HTTPException(status_code=401, detail="토큰이 만료되었습니다.")
         
         user_id = jwtVerify.get("id")
-        stmt = select(Users).where((Users.id == user_id) & (Users.deleted_yn == "N"))
+        stmt = select(Users).where((Users.id == user_id) & (Users.deleted_yn == "N") & (Users.role != "퇴사자"))
         result = await users.execute(stmt)
         find_user = result.scalar_one_or_none()
 

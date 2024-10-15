@@ -5,7 +5,7 @@ from sqlalchemy import func, select, update
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
-from app.models.users.overtimes_model import OvertimeCreate, Overtimes
+from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes
 from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
@@ -38,7 +38,75 @@ async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depen
         print("에러가 발생하였습니다.")
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+
+# 초과 근무 승인
+@router.patch("/approve/{overtime_id}")
+async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
+    try:
+        stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N") & (Overtimes.status == "pending"))
+        result = await db.execute(stmt)
+        overtime = result.scalar_one_or_none()
         
+        if overtime is None:
+            raise HTTPException(status_code=404, detail="초과 근무 기록을 찾을 수 없습니다.")
+
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자"]:
+            raise HTTPException(status_code=403, detail="관리자만 승인할 수 있습니다.")
+        
+        overtime.status = "approved"
+        overtime.manager_id = current_user.id
+        overtime.processed_date = datetime.now(UTC).date()
+        overtime.is_approved = "Y"
+        overtime.manager_memo = overtime_select.manager_memo
+        await db.commit()
+        
+        return {
+            "message": "초과 근무 기록이 승인되었습니다.",
+        }
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+
+# 초과 근무 거절
+@router.patch("/reject/{overtime_id}")
+async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
+    try:
+        stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N") & (Overtimes.status == "pending"))
+        result = await db.execute(stmt)
+        overtime = result.scalar_one_or_none()
+        
+        if overtime is None:
+            raise HTTPException(status_code=404, detail="초과 근무 기록을 찾을 수 없습니다.")
+
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자"]:
+            raise HTTPException(status_code=403, detail="관리자만 승인할 수 있습니다.")
+        
+        overtime.status = "rejected"
+        overtime.manager_id = current_user.id
+        overtime.processed_date = datetime.now(UTC).date()
+        overtime.is_approved = "N"
+        overtime.manager_memo = overtime_select.manager_memo
+        await db.commit()
+        
+        return {
+            "message": "초과 근무 기록이 거절되었습니다.",
+        }
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 # 초과 근무 목록 조회
 @router.get("")
