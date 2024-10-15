@@ -31,7 +31,7 @@ from datetime import datetime
 class OvertimeBase(BaseModel):
     applicant_id: Optional[int] = Field(None, description="신청자 ID")
     manager_id: Optional[int] = Field(None, description="승인자 ID")
-    overtime_hours: Optional[int] = Field(None, description="초과 근무 시간")
+    overtime_hours: Optional[str] = Field(None, description="초과 근무 시간")
     status: Optional[str] = Field(None, description="상태")
     application_memo: Optional[str] = Field(None, max_length=500, description="신청 메모")
     manager_memo: Optional[str] = Field(None, max_length=500, description="승인자 메모")
@@ -39,12 +39,12 @@ class OvertimeBase(BaseModel):
     is_approved: Optional[str] = Field(None, description="승인 여부")
 
 class OvertimeCreate(BaseModel):
-    overtime_hours: float = Field(..., description="초과 근무 시간")
+    overtime_hours: str = Field(..., description="초과 근무 시간")
     application_memo: str = Field(None, max_length=500, description="신청 메모")
     
     @field_validator("overtime_hours")
     def validate_overtime_hours(cls, v):
-        if v is not None and v < 0:
+        if v is not None and int(v) < 0:
             raise ValueError("초과 근무 시간은 0 이상이어야 합니다.")
         return v
     
