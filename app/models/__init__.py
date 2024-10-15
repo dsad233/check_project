@@ -50,6 +50,7 @@ Parts.work_policies = relationship("WorkPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
 
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
+Users.posts = relationship("Posts", back_populates="users")
 
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
@@ -62,6 +63,7 @@ Commutes.users = relationship("Users", back_populates="commutes")
 
 Users.posts = relationship("Posts", back_populates="users")
 Posts.branch = relationship("Branches", back_populates="posts")
+Posts.users = relationship("Users", back_populates="posts")
 
 Parts.branch = relationship("Branches", back_populates="parts")
 
