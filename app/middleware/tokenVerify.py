@@ -49,6 +49,7 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
 
         # 요청 객체에 사용자 ID를 추가
         req.state.user_id = user_id
+        req.state.user = find_user
 
     except HTTPException as http_err:
         print(f"HTTP 에러가 발생하였습니다: {http_err.detail}")
@@ -60,3 +61,7 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
 # 현재 사용자 ID를 가져오는 함수
 async def get_current_user_id(req: Request):
     return req.state.user_id
+
+# 현재 사용자를 가져오는 함수
+async def get_current_user(req: Request):
+    return req.state.user
