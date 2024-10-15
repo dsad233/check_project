@@ -39,6 +39,9 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
         jwtService = JWTService(None, JWTDecoder())
         jwtVerify = jwtService.check_token_expired(token)
 
+        if jwtVerify is None:
+            raise HTTPException(status_code=401, detail="토큰이 만료되었습니다.")
+        
         user_id = jwtVerify.get("id")
         stmt = select(Users).where((Users.id == user_id) & (Users.deleted_yn == "N"))
         result = await users.execute(stmt)
