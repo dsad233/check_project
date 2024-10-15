@@ -77,7 +77,7 @@ async def get_leave_histories(
         return leave_list_response
     except Exception as err:
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        raise HTTPException(status_code=500, detail=str(err))
 
 @router.post("")
 async def create_leave_history(
@@ -110,7 +110,7 @@ async def create_leave_history(
     except Exception as err:
         await db.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.post("/{leave_id}")
@@ -149,13 +149,10 @@ async def approve_leave(
             return {"message": "연차 승인/반려에 성공하였습니다."}
         else:
             raise HTTPException(status_code=400, detail="날짜가 지났습니다.")
-        
-    except HTTPException:
-        raise
     except Exception as err:
         await db.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.patch("/{leave_id}")
@@ -183,14 +180,10 @@ async def update_leave(
             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
 
         if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자"]:
-            raise HTTPException(
-                status_code=403, detail="연차를 삭제할 권한이 없습니다."
-            )
+            raise HTTPException(status_code=403, detail="연차를 삭제할 권한이 없습니다.")
 
         if leave_history.status.strip() != "확인중":
-            raise HTTPException(
-                status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다."
-            )
+            raise HTTPException(status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다.")
 
         if leave_update.leave_category_id:
             leave_history.leave_category_id = leave_update.leave_category_id
@@ -201,12 +194,10 @@ async def update_leave(
             
         await db.commit()
         return {"message": "연차 수정에 성공하였습니다."}
-    except HTTPException:
-        raise
     except Exception as err:
         await db.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.delete("/{leave_id}")
@@ -243,9 +234,7 @@ async def delete_leave(
         leave_history.deleted_yn = "Y"
         await db.commit()
         return {"message": "연차 삭제에 성공하였습니다."}
-    except HTTPException:
-        raise
     except Exception as err:
         await db.rollback()
         print(err)
-        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        raise HTTPException(status_code=500, detail=str(err))
