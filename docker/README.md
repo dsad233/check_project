@@ -5,15 +5,15 @@ cd docker
 ```
 2. 도커 컨테이너 실행
 ```shell
-docker compose up -d
+docker-compose up -d
 ```
 3. 도커 중지
 ```shell
-docker compose stop
+docker-compose stop
 ```
 4. 도커 내리기
 ```shell
-docker compose down
+docker-compose down
 ```
 5. 다시 나오기
 ```shell
