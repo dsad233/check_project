@@ -3,6 +3,7 @@ from sqlalchemy.orm import relationship
 
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
+from app.models.users.overtimes_model import Overtimes
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users
@@ -51,6 +52,9 @@ Parts.users = relationship("Users", back_populates="part")
 
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.posts = relationship("Posts", back_populates="users")
+Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
+Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
+
 
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
@@ -82,3 +86,6 @@ AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_over
 
 Board.branch = relationship("Branches", back_populates="board")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
+
+Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
+Overtimes.manager = relationship("Users", foreign_keys=[Overtimes.manager_id], back_populates="managed_overtimes")
