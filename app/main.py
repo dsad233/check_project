@@ -7,7 +7,11 @@ from app.api.routes.auth import auth
 
 app = FastAPI()
 
-origins = ["https://workswave-frontend.vercel.app"]
+origins = [
+    "https://workswave-frontend.vercel.app",
+    "http://localhost:8000",
+    "http://52.78.246.46"
+]
 
 app.add_middleware(
     CORSMiddleware,
