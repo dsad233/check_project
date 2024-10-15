@@ -41,6 +41,7 @@ Branches.users = relationship("Users", back_populates="branch")
 Branches.board = relationship("Board", back_populates="branch")
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Branches.posts = relationship("Posts", back_populates="branch")
+Branches.leave_histories = relationship("LeaveHistories", back_populates="branch")
 
 LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
@@ -82,3 +83,4 @@ AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_over
 
 Board.branch = relationship("Branches", back_populates="board")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
+LeaveHistories.branch = relationship("Branches", back_populates="leave_histories")
