@@ -15,10 +15,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*", "Authorization_Swagger"],
+    allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
 
 app.include_router(auth.router, prefix="/api")
