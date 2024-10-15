@@ -1,20 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload, joinedload
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate
+from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse
 from app.models.users.users_model import Users
+from app.common.dto.search_dto import BaseSearchDto
+from app.common.dto.pagination_dto import PaginationDto
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
 
-@router.get("")
+@router.get("", response_model=LeaveHistoriesListResponse)
 async def get_leave_histories(
-    branch_id: int, current_user_id: int = Depends(get_current_user_id)
-)-> list[LeaveHistoriesResponse]:
+    branch_id: int, search: BaseSearchDto = Depends(), current_user_id: int = Depends(get_current_user_id)
+)-> LeaveHistoriesListResponse:
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
         user_result = await db.execute(user_query)
@@ -27,12 +29,21 @@ async def get_leave_histories(
                 raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
         else:
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        count_query = select(func.count()).select_from(LeaveHistories).where(LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == 'N')
+        count_result = await db.execute(count_query)
+        count = count_result.scalar_one_or_none()
+        
+        pagination = PaginationDto(total_record=count)
         
         query = select(LeaveHistories).options(
             joinedload(LeaveHistories.user).joinedload(Users.part),
             joinedload(LeaveHistories.user).joinedload(Users.branch),
             joinedload(LeaveHistories.leave_category)
-        ).where(LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == 'N')
+        ).offset(search.offset).limit(search.record_size).where(
+            LeaveHistories.branch_id == branch_id, 
+            LeaveHistories.deleted_yn == 'N'
+        )
+        
         result = await db.execute(query)
         leave_histories = result.scalars().all()
         
@@ -54,7 +65,9 @@ async def get_leave_histories(
                 approve_date=history.approve_date
             )
             leave_history_dtos.append(dto)
-        return leave_history_dtos
+            
+        leave_list_response = LeaveHistoriesListResponse(list=leave_history_dtos, pagination=pagination) 
+        return leave_list_response
     except Exception as err:
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")

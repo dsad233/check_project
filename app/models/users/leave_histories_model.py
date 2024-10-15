@@ -16,6 +16,7 @@ from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 from pydantic import BaseModel
+from app.common.dto.pagination_dto import PaginationDto
 
 class LeaveHistories(Base):
     __tablename__ = "leave_histories"
@@ -67,3 +68,7 @@ class LeaveHistoriesResponse(BaseModel):
     applicant_description: Optional[str]
     admin_description: Optional[str]
     approve_date: Optional[datetime]
+    
+class LeaveHistoriesListResponse(BaseModel):
+    list: list[LeaveHistoriesResponse]
+    pagination: PaginationDto
