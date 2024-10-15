@@ -39,8 +39,9 @@ async def get_leave_histories(
         
         query = select(LeaveHistories).options(
             joinedload(LeaveHistories.user).joinedload(Users.part),
-            joinedload(LeaveHistories.user).joinedload(Users.branch),
-            joinedload(LeaveHistories.leave_category)
+            joinedload(LeaveHistories.user),
+            joinedload(LeaveHistories.leave_category),
+            joinedload(LeaveHistories.branch),
         ).offset(search.offset).limit(search.record_size).where(
             LeaveHistories.branch_id == branch_id, 
             LeaveHistories.deleted_yn == 'N'
@@ -59,7 +60,7 @@ async def get_leave_histories(
         for history in leave_histories:
             dto = LeaveHistoriesResponse(
                 id=history.id,
-                branch_name=history.user.branch.name,
+                branch_name=history.branch.name,
                 user_name=history.user.name,
                 part_name=history.user.part.name,
                 
