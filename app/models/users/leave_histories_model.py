@@ -17,7 +17,7 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
-
+from app.common.dto.search_dto import BaseSearchDto
 class LeaveHistories(Base):
     __tablename__ = "leave_histories"
     __table_args__ = (
@@ -40,10 +40,10 @@ class LeaveHistories(Base):
 
     status = Column(
         Enum(
-            "확인 중", "승인", "반려", name="leave_history_status"
+            "확인중", "승인", "반려", name="leave_history_status"
         ),
         nullable=False,
-        default="확인 중",
+        default="확인중",
     )
 
     created_at = Column(DateTime, default=datetime.now)
@@ -68,6 +68,10 @@ class LeaveHistoriesResponse(BaseModel):
     applicant_description: Optional[str]
     admin_description: Optional[str]
     approve_date: Optional[datetime]
+
+class LeaveHistoriesSearchDto(BaseSearchDto):
+    kind: Optional[str] = None
+    status: Optional[str] = None
     
 class LeaveHistoriesListResponse(BaseModel):
     list: list[LeaveHistoriesResponse]

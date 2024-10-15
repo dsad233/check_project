@@ -4,7 +4,7 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse
+from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse, LeaveHistoriesSearchDto
 from app.models.users.users_model import Users
 from app.common.dto.search_dto import BaseSearchDto
 from app.common.dto.pagination_dto import PaginationDto
@@ -15,7 +15,9 @@ db = async_session()
 
 @router.get("", response_model=LeaveHistoriesListResponse)
 async def get_leave_histories(
-    branch_id: int, search: BaseSearchDto = Depends(), current_user_id: int = Depends(get_current_user_id)
+    branch_id: int, 
+    search: LeaveHistoriesSearchDto = Depends(), 
+    current_user_id: int = Depends(get_current_user_id)
 )-> LeaveHistoriesListResponse:
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
@@ -29,6 +31,7 @@ async def get_leave_histories(
                 raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
         else:
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
         count_query = select(func.count()).select_from(LeaveHistories).where(LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == 'N')
         count_result = await db.execute(count_query)
         count = count_result.scalar_one_or_none()
@@ -43,6 +46,11 @@ async def get_leave_histories(
             LeaveHistories.branch_id == branch_id, 
             LeaveHistories.deleted_yn == 'N'
         )
+        
+        if search.kind:
+            query = query.join(LeaveHistories.leave_category).filter(LeaveHistories.leave_category.has(name=search.kind))
+        if search.status:
+            query = query.filter(LeaveHistories.status == search.status)
         
         result = await db.execute(query)
         leave_histories = result.scalars().all()
