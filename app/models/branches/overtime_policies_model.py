@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from fastapi import HTTPException
-from pydantic import Field, field_validator
+from pydantic import Field, field_validator, BaseModel
 from pydantic_settings import BaseSettings
 from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
@@ -14,18 +14,35 @@ class OverTimePolicies(Base):  # 연장근무 설정
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    name = Column(String(255), nullable=False)  # 예: 의사, 간호사...
 
     # 연장근무 당 지급 금액 설정
-    ot_30 = Column(Integer, nullable=False)
-    ot_60 = Column(Integer, nullable=False)
-    ot_90 = Column(Integer, nullable=False)
-    ot_120 = Column(Integer, nullable=False)
+    doctor_ot_30 = Column(Integer, nullable=False, default=0)
+    doctor_ot_60 = Column(Integer, nullable=False, default=0)
+    doctor_ot_90 = Column(Integer, nullable=False, default=0)
+    doctor_ot_120 = Column(Integer, nullable=False, default=0)
+
+    common_ot_30 = Column(Integer, nullable=False, default=0)
+    common_ot_60 = Column(Integer, nullable=False, default=0)
+    common_ot_90 = Column(Integer, nullable=False, default=0)
+    common_ot_120 = Column(Integer, nullable=False, default=0)
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
+class OverTimePoliciesDto(BaseModel):
+    doctor_ot_30: int = Field(description="O.T 30분 초과", default=0)
+    doctor_ot_60: int = Field(description="O.T 60분 초과", default=0)
+    doctor_ot_90: int = Field(description="O.T 90분 초과", default=0)
+    doctor_ot_120: int = Field(description="O.T 120분 초과", default=0)
+
+    common_ot_30: int = Field(description="O.T 30분 초과", default=0)
+    common_ot_60: int = Field(description="O.T 60분 초과", default=0)
+    common_ot_90: int = Field(description="O.T 90분 초과", default=0)
+    common_ot_120: int = Field(description="O.T 120분 초과", default=0)
+
+    class Config:
+        from_attributes = True
 
 class OverTimeUpdate(BaseSettings):
     name: str = Field(description="파트명")

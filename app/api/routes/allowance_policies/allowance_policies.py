@@ -3,7 +3,7 @@ from app.middleware.tokenVerify import validate_token
 from app.core.database import async_session
 from sqlalchemy.future import select
 from app.models.users.users_model import Users
-from app.models.parts.allowance_policies_model import AllowancePolicies, AllowancePoliciesCreate, AllowancePoliciesUpdate
+from app.models.branches.allowance_policies_model import AllowancePolicies, AllowancePoliciesCreate, AllowancePoliciesUpdate
 from typing import Annotated
 
 
