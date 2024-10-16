@@ -17,6 +17,7 @@ from app.api.routes.posts import posts
 from app.api.routes.allowance_policies import allowance_policies
 from app.api.routes.comments import comments
 from app.api.routes.work_policies import work_policies
+from app.api.routes.users.User_Management import user_management
 
 app = APIRouter()
 
@@ -43,6 +44,8 @@ app.include_router(leave_histories.router, prefix='/branches/{branch_id}/leaves'
 app.include_router(allowance_policies.router, prefix='/branches', tags=['Allowance_policies'])
 app.include_router(comments.router, prefix='/boards/{board_id}/posts/{post_id}/comments', tags=['Comments'])
 app.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['Work_policies'])
+app.include_router(user_management.router, prefix='/user_management', tags=['User_Management'])
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
