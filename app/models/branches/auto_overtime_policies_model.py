@@ -1,5 +1,5 @@
 from datetime import datetime
-
+from pydantic import Field, BaseModel
 from sqlalchemy import (
     Boolean,
     Column,
@@ -24,9 +24,18 @@ class AutoOvertimePolicies(Base):
     # )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    role = Column(Enum("최고관리자", "관리자", name="user_role"), nullable=False)
-    is_auto_applied = Column(Boolean, default=False)
+    top_manager_auto_applied = Column(Boolean, default=False)
+    manager_auto_applied = Column(Boolean, default=False)
+    employee_auto_applied = Column(Boolean, default=False)
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
+
+class AutoOvertimePoliciesDto(BaseModel):
+    top_manager_auto_applied: bool = Field(description="최고관리자 자동적용", default=False)
+    manager_auto_applied: bool = Field(description="관리자 자동적용", default=False)
+    employee_auto_applied: bool = Field(description="사원 자동적용", default=False)
+
+    class Config:
+        from_attributes = True

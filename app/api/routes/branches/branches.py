@@ -8,6 +8,7 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.cruds.branches import branches_crud
+from app.cruds.branches.policies import holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud, allowance_crud
 from app.middleware.tokenVerify import validate_token
 from app.models.branches.branches_model import (
     BranchCreate,
@@ -18,8 +19,8 @@ from app.models.branches.branches_model import (
 
 logger = logging.getLogger(__name__)
 
-# router = APIRouter(dependencies=[Depends(validate_token)])
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(validate_token)])
+# router = APIRouter()
 
 
 @router.get("/", response_model=BranchListResponse)
@@ -35,11 +36,19 @@ async def read_branches(
     return BranchListResponse(list=branches, pagination=pagination)
 
 
-@router.post("/", response_model=BranchResponse, status_code=201)
+@router.post("/", response_model=str, status_code=201)
 async def create_branch(
     *, session: AsyncSession = Depends(get_db), branch_in: BranchCreate
-) -> BranchResponse:
-    return await branches_crud.create_branch(session=session, branch_create=branch_in)
+) -> str:
+    branch = await branches_crud.create_branch(session=session, branch_create=branch_in)
+    branch_id = branch.id
+    # 정책 생성
+    await holiday_work_crud.create_holiday_work_policies(session=session, branch_id=branch_id)
+    await overtime_crud.create_overtime_policies(session=session, branch_id=branch_id)
+    await work_crud.create_work_policies(session=session, branch_id=branch_id)
+    await auto_overtime_crud.create_auto_overtime_policies(session=session, branch_id=branch_id)
+    await allowance_crud.create_allowance_policies(session=session, branch_id=branch_id)
+    return f"{branch_id}번 지점이 생성되었습니다."
 
 
 @router.get("/{branch_id}", response_model=BranchResponse)

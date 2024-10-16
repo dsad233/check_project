@@ -12,14 +12,13 @@ from .branches.branches_model import Branches
 
 # policies/branchpolicies.py에서 정의된 모델들
 from .parts.salary_policies_model import SalaryPolicies
-from .parts.work_policies_model import WorkPolicies
+from .branches.work_policies_model import WorkPolicies
 from .branches.branches_policies_model import BranchPolicies
 from .branches.commute_policies_model import CommutePolicies
 from .branches.overtime_policies_model import OverTimePolicies
 from .branches.auto_overtime_policies_model import AutoOvertimePolicies
 from .branches.holiday_work_policies_model import HolidayWorkPolicies
-from .parts.work_policies_model import WorkPolicies
-from .parts.allowance_policies_model import AllowancePolicies
+from .branches.allowance_policies_model import AllowancePolicies
 from .salary.salary_bracket_model import SalaryBracket
 from .branches.document_policies_model import DocumentPolicies
 from .branches.rest_days_model import RestDays
@@ -45,11 +44,12 @@ Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Branches.posts = relationship("Posts", back_populates="branch")
 Branches.leave_histories = relationship("LeaveHistories", back_populates="branch")
 
+Branches.work_policies = relationship("WorkPolicies", back_populates="branch")
+Branches.allowance_policies = relationship("AllowancePolicies", back_populates="branch")
+
 LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
-Parts.allowance_policies = relationship("AllowancePolicies", back_populates="part")
 Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
-Parts.work_policies = relationship("WorkPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
 
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
@@ -74,9 +74,9 @@ Posts.users = relationship("Users", back_populates="posts")
 Posts.comments = relationship("Comments", back_populates="posts")
 Parts.branch = relationship("Branches", back_populates="parts")
 
-WorkPolicies.part = relationship("Parts", back_populates="work_policies")
+WorkPolicies.branch = relationship("Branches", back_populates="work_policies")
 SalaryPolicies.part = relationship("Parts", back_populates="salary_policies")
-AllowancePolicies.part = relationship("Parts", back_populates="allowance_policies")
+AllowancePolicies.branch = relationship("Branches", back_populates="allowance_policies")
 
 RestDays.branch = relationship("Branches", back_populates="rest_days")
 OverTimePolicies.branch = relationship("Branches", back_populates="overtime_policies")
