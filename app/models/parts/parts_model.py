@@ -25,6 +25,7 @@ class Parts(Base):
     name = Column(String(255), nullable=False)
     task = Column(String(500), nullable=True)
     is_doctor = Column(Boolean, default=False)
+    salaries = relationship("UserSalary", back_populates="part")
     required_certification = Column(Boolean, default=False)
     leave_granting_authority = Column(Boolean, default=False)
 
@@ -35,6 +36,7 @@ class Parts(Base):
     deleted_yn = Column(
         String(1), default="N"
     )  # annual_leaves = relationship("AnnualLeave", back_populates="part")
+
 
 
 class PartCreate(BaseModel):

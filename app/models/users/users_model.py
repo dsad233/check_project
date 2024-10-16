@@ -29,9 +29,10 @@ class Users(Base):
     birth_date = Column(Date, nullable=True)
     hire_date = Column(Date, nullable=True)
     resignation_date = Column(Date, nullable=True)
-    gender = Column(Enum("남자", "여자", name="user_gender"), nullable=True)
+    gender = Column(Enum("남자", "여자", name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    salary = relationship("UserSalary", back_populates="user", uselist=False)
 
     last_company = Column(String(255), nullable=True)
     last_position = Column(String(255), nullable=True)
@@ -40,7 +41,7 @@ class Users(Base):
 
     role = Column(
         Enum(
-            "MSO 최고권한", "최고관리자", "관리자", "사원", "퇴사자", name="user_role"
+            "MSO 최고권한", "최고관리자", "관리자", "사원", "퇴사자", "휴직자", name="user_role"
         ),
         nullable=False,
         default="사원",
