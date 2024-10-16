@@ -38,8 +38,6 @@ class Branches(Base):
     deleted_yn = Column(String(1), default="N")
 
 
-    allowance_policies = relationship("AllowancePolicies", back_populates="branch")
-
 class BranchCreate(BaseModel):
     code: str = Field(description="지점 코드")
     name: str = Field(description="지점 이름")
