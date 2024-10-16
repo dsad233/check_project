@@ -17,9 +17,7 @@ from app.models.branches.leave_categories_model import (
 
 logger = logging.getLogger(__name__)
 
-# router = APIRouter(dependencies=[Depends(validate_token)])
-router = APIRouter()
-
+router = APIRouter(dependencies=[Depends(validate_token)])
 
 @router.get("/", response_model=LeaveListResponse)
 async def read_leave_categories(
@@ -28,14 +26,18 @@ async def read_leave_categories(
     session: AsyncSession = Depends(get_db),
     search: BaseSearchDto = Depends()
 ) -> LeaveListResponse:
-    count = await leave_categories_crud.count_leave_category_all(
-        session=session, branch_id=branch_id
-    )
-    pagination = PaginationDto(total_record=count)
-    leave_categories = await leave_categories_crud.find_leave_category_all(
-        session=session, branch_id=branch_id, search=search
-    )
-    return LeaveListResponse(list=leave_categories, pagination=pagination)
+    try:
+        count = await leave_categories_crud.count_leave_category_all(
+            session=session, branch_id=branch_id
+        )
+        pagination = PaginationDto(total_record=count)
+        leave_categories = await leave_categories_crud.find_leave_category_all(
+            session=session, branch_id=branch_id, search=search
+        )
+        return LeaveListResponse(list=leave_categories, pagination=pagination)
+    except Exception as e:
+        logger.error(f"Error occurred while getting leave category list: {e}")
+        raise HTTPException(status_code=500, detail=f"Error occurred while getting leave category list: {e}")
 
 
 @router.post("/", response_model=LeaveResponse, status_code=201)
@@ -45,9 +47,13 @@ async def create_leave_category(
     session: AsyncSession = Depends(get_db),
     leave_create: LeaveCreate
 ) -> LeaveResponse:
-    return await leave_categories_crud.create_leave_category(
+    try:
+        return await leave_categories_crud.create_leave_category(
         session=session, branch_id=branch_id, leave_create=leave_create
-    )
+        )
+    except Exception as e:
+        logger.error(f"Error occurred while creating leave category: {e}")
+        raise HTTPException(status_code=500, detail=f"Error occurred while creating leave category: {e}")
 
 
 @router.get("/{leave_id}", response_model=LeaveResponse)

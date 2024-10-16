@@ -37,7 +37,7 @@ async def read_branches(
     
     except Exception as e:
         logger.error(f"Error occurred while reading branches: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while reading branches: {e}")
 
 
 @router.post("/", response_model=str, status_code=201)
@@ -56,7 +56,7 @@ async def create_branch(
         return f"{branch_id}번 지점이 생성되었습니다."
     except Exception as e:
         logger.error(f"Error occurred while creating branch: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while creating branch: {e}")
 
 
 @router.get("/{branch_id}", response_model=BranchResponse)
@@ -70,7 +70,7 @@ async def read_branch(
         return branch
     except Exception as e:
         logger.error(f"Error occurred while reading branch: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while reading branch: {e}")
 
 
 @router.delete("/{branch_id}", status_code=204)
@@ -84,7 +84,7 @@ async def delete_branch(
         await branches_crud.delete_branch(session=session, branch=branch)
     except Exception as e:
         logger.error(f"Error occurred while deleting branch: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while deleting branch: {e}")
 
 
 @router.get("/deleted", response_model=BranchListResponse)
@@ -100,4 +100,4 @@ async def read_deleted_branches(
         return BranchListResponse(list=branches, pagination=pagination)
     except Exception as e:
         logger.error(f"Error occurred while reading deleted branches: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while reading deleted branches: {e}")

@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
@@ -29,8 +29,8 @@ class Branches(Base):
     registration_number = Column(String(255), nullable=False)
     call_number = Column(String(255), nullable=False)
     address = Column(String(255), nullable=False)
-    corporate_seal = Column(String(255), nullable=False)
-    nameplate = Column(String(255), nullable=False)
+    corporate_seal = Column(String(255), nullable=True)
+    nameplate = Column(String(255), nullable=True)
     mail_address = Column(String(255), nullable=False)
 
     created_at = Column(DateTime, default=datetime.now)
@@ -45,8 +45,8 @@ class BranchCreate(BaseModel):
     registration_number: str = Field(description="사업자번호")
     call_number: str = Field(description="전화번호")
     address: str = Field(description="지점 주소")
-    corporate_seal: str = Field(description="법인 도장")
-    nameplate: str = Field(description="명판")
+    corporate_seal: Optional[str] = Field(description="법인 도장")
+    nameplate: Optional[str] = Field(description="명판")
     mail_address: str = Field(description="메일 주소")
 
 
@@ -58,8 +58,8 @@ class BranchResponse(BaseModel):
     registration_number: str = Field(description="사업자번호")
     call_number: str = Field(description="전화번호")
     address: str = Field(description="지점 주소")
-    corporate_seal: str = Field(description="법인 도장")
-    nameplate: str = Field(description="명판")
+    corporate_seal: Optional[str] = Field(description="법인 도장")
+    nameplate: Optional[str] = Field(description="명판")
     mail_address: str = Field(description="메일 주소")
     created_at: datetime = Field(description="생성 일자")
     updated_at: datetime = Field(description="수정 일자")

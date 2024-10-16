@@ -77,7 +77,7 @@ async def get_work_policies(*,
                                         holiday_allowance_policies=holiday_allowance_policies_dto)
     except Exception as e:
         logger.error(f"Error occurred while reading work policies: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while reading work policies: {e}")
 
 @router.post("/", response_model=str)
 async def update_work_policies(*,
@@ -99,4 +99,4 @@ async def update_work_policies(*,
         return f"{branch_id} 번 지점의 근무정책 업데이트 완료"
     except Exception as e:
         logger.error(f"Error occurred while updating work policies: {e}")
-        raise HTTPException(status_code=500, detail={"message":"Internal server error", "error":e})
+        raise HTTPException(status_code=500, detail=f"Error occurred while updating work policies: {e}")
