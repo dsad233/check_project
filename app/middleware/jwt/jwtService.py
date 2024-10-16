@@ -16,8 +16,8 @@ class JWTService:
         self.decoder = decoder
         self.algorithm = settings.JWT_ALGORITHM
         self.secret_key = settings.JWT_SECRET_KEY
-        self.access_token_expire_time = 120
-        self.refresh_token_expire_time = 120
+        self.access_token_expire_time = 3600
+        self.refresh_token_expire_time = 3600
 
     def create_access_token(self, data: dict) -> str:
         return self._create_token(data, self.access_token_expire_time)
