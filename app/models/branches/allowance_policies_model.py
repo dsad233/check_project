@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import Field, BaseModel, BaseSettings
+from pydantic import Field, BaseModel
+from pydantic_settings import BaseSettings
 from typing import Optional
 
 from sqlalchemy import (
