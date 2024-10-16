@@ -27,40 +27,40 @@ def verifyPassword(password: str, hashed_password: str) -> bool:
 
 
 # 회원가입
-@router.post("/register")
-async def register(register: Register):
-    try:
-        findEmail = users.query(Users).filter(Users.email == register.email).first()
-        findNickname = (
-            users.query(Users).filter(Users.nickname == register.nickname).first()
-        )
+# @router.post("/register")
+# async def register(register: Register):
+#     try:
+#         findEmail = users.query(Users).filter(Users.email == register.email).first()
+#         findNickname = (
+#             users.query(Users).filter(Users.nickname == register.nickname).first()
+#         )
 
-        if findEmail:
-            return JSONResponse(status_code=400, content="이미 존재하는 이메일 입니다.")
+#         if findEmail:
+#             return JSONResponse(status_code=400, content="이미 존재하는 이메일 입니다.")
 
-        if findNickname:
-            return JSONResponse(status_code=400, content="이미 존재하는 닉네임 입니다.")
+#         if findNickname:
+#             return JSONResponse(status_code=400, content="이미 존재하는 닉네임 입니다.")
 
-        create = Users(
-            email=register.email,
-            password=hashPassword(register.password),
-            nickname=register.nickname,
-        )
+#         create = Users(
+#             email=register.email,
+#             password=hashPassword(register.password),
+#             nickname=register.nickname,
+#         )
 
-        users.add(create)
-        users.commit()
-        users.refresh(create)
+#         users.add(create)
+#         users.commit()
+#         users.refresh(create)
 
-        rolesCreate = Roles(userId=create.id)
+#         rolesCreate = Roles(userId=create.id)
 
-        users.add(rolesCreate)
-        users.commit()
-        users.refresh(rolesCreate)
+#         users.add(rolesCreate)
+#         users.commit()
+#         users.refresh(rolesCreate)
 
-        return {"message": "유저를 정상적으로 생성하였습니다.", "data": rolesCreate}
-    except Exception as err:
-        print("에러가 발생하였습니다.")
-        print(err)
+#         return {"message": "유저를 정상적으로 생성하였습니다.", "data": rolesCreate}
+#     except Exception as err:
+#         print("에러가 발생하였습니다.")
+#         print(err)
 
 
 # 로그인
