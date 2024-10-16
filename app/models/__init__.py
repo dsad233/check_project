@@ -8,6 +8,7 @@ from app.models.users.overtimes_model import Overtimes
 # models.py에서 정의된 모델들
 from .users.users_model import Users
 from .parts.parts_model import Parts
+from .parts.user_salary import UserSalary
 from .branches.branches_model import Branches
 
 # policies/branchpolicies.py에서 정의된 모델들
@@ -27,6 +28,7 @@ from .branches.leave_categories_model import LeaveCategories
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
 
+Users.salary = relationship("UserSalary", back_populates="user", uselist=False)
 # 여기서 관계를 설정합니다
 # 일 대 다 관계
 Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
@@ -53,6 +55,10 @@ Parts.hour_wage_templates = relationship("HourWageTemplate", back_populates="par
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
+
+Users.salaries = relationship("UserSalary", back_populates="user")
+Parts.salaries = relationship("UserSalary", back_populates="part")
+Branches.salaries = relationship("UserSalary", back_populates="branch")
 
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
@@ -84,3 +90,6 @@ LeaveHistories.branch = relationship("Branches", back_populates="leave_histories
 
 HourWageTemplate.branch = relationship("Branches", back_populates="hour_wage_templates")
 HourWageTemplate.part = relationship("Parts", back_populates="hour_wage_templates")
+UserSalary.user = relationship("Users", back_populates="salaries")
+UserSalary.part = relationship("Parts", back_populates="salaries")
+UserSalary.branch = relationship("Branches", back_populates="salaries")
