@@ -69,9 +69,6 @@ class UserManagement:
             ))
             users = result.scalars().all()
 
-            if not users:
-                raise HTTPException(status_code=404, detail="유저가 존재하지 않습니다.")
-
             return {
                 "message": "유저를 정상적으로 조회하였습니다.",
                 "data": users,
