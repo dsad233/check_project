@@ -9,7 +9,7 @@ from app.api.routes.parts_policy.schema.parts_policy_schema import (
     PartWorkPolicyResponse,
 )
 from app.core.database import async_session
-from app.middleware.tokenVerify import validate_token
+from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.models.parts.salary_policies_model import SalaryPolicies
 from app.models.branches.work_policies_model import WorkPolicies
@@ -21,7 +21,7 @@ db = async_session()
 
 @router.get("/workpolicies")
 async def getPartWorkPolicies(
-    branch_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, current_user: Users = Depends(get_current_user)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -70,7 +70,7 @@ async def getPartWorkPolicies(
 
 @router.get("/{part_id}/workpolicies")
 async def getPartWorkPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -119,7 +119,7 @@ async def createPartWorkPolicy(
     branch_id: int,
     part_id: int,
     data: PartWorkPolicyCreate,
-    current_user: Users = Depends(validate_token),
+    current_user: Users = Depends(get_current_user),
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -181,7 +181,7 @@ async def updatePartWorkPolicy(
     branch_id: int,
     part_id: int,
     data: PartWorkPolicyCreate,
-    current_user: Users = Depends(validate_token),
+    current_user: Users = Depends(get_current_user),
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -234,7 +234,7 @@ async def updatePartWorkPolicy(
 
 @router.delete("/{part_id}/workpolicies")
 async def deletePartWorkPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -261,7 +261,7 @@ async def deletePartWorkPolicy(
 
 @router.get("/salarypolicies")
 async def getPartSalaryPolicies(
-    branch_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, current_user: Users = Depends(get_current_user)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -311,7 +311,7 @@ async def getPartSalaryPolicies(
 
 @router.get("/{part_id}/salarypolicies")
 async def getPartSalaryPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -360,7 +360,7 @@ async def createPartSalaryPolicy(
     branch_id: int,
     part_id: int,
     data: PartSalaryPolicyCreate,
-    current_user: Users = Depends(validate_token),
+    current_user: Users = Depends(get_current_user),
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -421,7 +421,7 @@ async def updatePartSalaryPolicy(
     branch_id: int,
     part_id: int,
     data: PartSalaryPolicyCreate,
-    current_user: Users = Depends(validate_token),
+    current_user: Users = Depends(get_current_user),
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -474,7 +474,7 @@ async def updatePartSalaryPolicy(
 
 @router.delete("/{part_id}/salarypolicies")
 async def deletePartSalaryPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
+    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (

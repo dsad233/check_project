@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean
 from app.core.database import Base
 from datetime import date
 from typing import Optional
@@ -17,6 +17,7 @@ class ClosedDays(Base):
     user_id = Column(Integer,ForeignKey('users.id'), nullable=True)
     closed_day_date = Column(Date, nullable=False, index=True)
     memo = Column(String(500))
+    is_sunday = Column(Boolean, default= False)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")

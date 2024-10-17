@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
 
 from app.core.database import async_session
-from app.middleware.tokenVerify import validate_token
+from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.branches.document_policies_model import DocumentPolicies
 from app.models.users.users_model import Users
 
@@ -115,7 +115,7 @@ async def update_document(
     branch_id: int,
     branch_policy_id: int,
     id: int,
-    token:Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(get_current_user)],
 ):
     try:
         if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
@@ -149,7 +149,7 @@ async def delete_document(
     branch_id: int,
     branch_policy_id: int,
     id: int,
-    token:Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(get_current_user)],
 ):
     try:
         if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
@@ -189,7 +189,7 @@ async def delete_document(
     branch_id: int,
     branch_policy_id: int,
     id: int,
-    token:Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(get_current_user)],
 ):
     try:
         if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
