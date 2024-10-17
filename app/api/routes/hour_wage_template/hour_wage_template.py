@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
-@router.get("")
+@router.get("/list")
 async def get_hour_wage_template_list(
     branch_id: int,
     session: AsyncSession = Depends(get_db)
@@ -28,7 +28,7 @@ async def get_hour_wage_template_list(
         logger.error(f"Error occurred while getting hour wage template list: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while getting hour wage template list: {e}")
 
-@router.post("")
+@router.post("/create")
 async def create_hour_wage_template(
     branch_id: int,
     hour_wage_template_create: HourWageTemplateCreate,
@@ -41,7 +41,7 @@ async def create_hour_wage_template(
         logger.error(f"Error occurred while creating hour wage template: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while creating hour wage template: {e}")
 
-@router.put("/{hour_wage_template_id}")
+@router.patch("/{hour_wage_template_id}/update")
 async def update_hour_wage_template(
     branch_id: int,
     hour_wage_template_id: int,
@@ -55,7 +55,7 @@ async def update_hour_wage_template(
         logger.error(f"Error occurred while updating hour wage template: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while updating hour wage template: {e}")
 
-@router.delete("/{hour_wage_template_id}", status_code=204)
+@router.delete("/{hour_wage_template_id}/delete", status_code=204)
 async def delete_hour_wage_template(
     branch_id: int,
     hour_wage_template_id: int,

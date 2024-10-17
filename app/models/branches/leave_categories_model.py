@@ -35,14 +35,14 @@ class LeaveCategories(Base):
     deleted_yn = Column(String(1), default="N")
 
 
-class LeaveCreate(BaseModel):
+class LeaveCategoryCreate(BaseModel):
     name: str = Field(description="휴무 명")
     leave_count: int = Field(description="차감 일수")
     is_paid: bool = Field(description="유급 여부")
     is_leave_of_absence: bool = Field(description="휴직 여부")
 
 
-class LeaveResponse(BaseModel):
+class LeaveCategoryResponse(BaseModel):
     id: int = Field(description="휴무 ID")
     branch_id: int = Field(description="지점 ID")
     name: str = Field(description="휴무 명")
@@ -56,7 +56,13 @@ class LeaveResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class LeaveCategoryUpdate(BaseModel):
+    name: str = Field(description="휴무 명")
+    leave_count: int = Field(description="차감 일수")
+    is_paid: bool = Field(description="유급 여부")
+    is_leave_of_absence: bool = Field(description="휴직 여부")
 
-class LeaveListResponse(BaseModel):
-    list: List[LeaveResponse] = Field(description="휴무 목록")
+
+class LeaveCategoryListResponse(BaseModel):
+    list: List[LeaveCategoryResponse] = Field(description="휴무 목록")
     pagination: PaginationDto = Field(description="페이지네이션")

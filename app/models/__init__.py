@@ -24,6 +24,7 @@ from .branches.document_policies_model import DocumentPolicies
 from .branches.rest_days_model import RestDays
 from .users.leave_histories_model import LeaveHistories
 from .branches.leave_categories_model import LeaveCategories
+from .branches.leave_excluded_parts_model import LeaveExcludedPart
 
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
@@ -51,7 +52,7 @@ LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates=
 Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
 Parts.hour_wage_templates = relationship("HourWageTemplate", back_populates="part")
-
+Parts.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="part")
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
@@ -59,6 +60,8 @@ Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.mana
 Users.salaries = relationship("UserSalary", back_populates="user")
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
+
+LeaveCategories.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="leave_category")
 
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
@@ -93,3 +96,6 @@ HourWageTemplate.part = relationship("Parts", back_populates="hour_wage_template
 UserSalary.user = relationship("Users", back_populates="salaries")
 UserSalary.part = relationship("Parts", back_populates="salaries")
 UserSalary.branch = relationship("Branches", back_populates="salaries")
+
+LeaveExcludedPart.part = relationship("Parts", back_populates="leave_excluded_parts")
+LeaveExcludedPart.leave_category = relationship("LeaveCategories", back_populates="leave_excluded_parts")

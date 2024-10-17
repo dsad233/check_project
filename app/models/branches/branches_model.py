@@ -46,9 +46,15 @@ class BranchCreate(BaseModel):
     registration_number: str = Field(description="사업자번호")
     call_number: str = Field(description="전화번호")
     address: str = Field(description="지점 주소")
-    corporate_seal: Optional[str] = Field(description="법인 도장")
-    nameplate: Optional[str] = Field(description="명판")
+    corporate_seal: Optional[str] = Field(description="법인 도장", default=None)
+    nameplate: Optional[str] = Field(description="명판", default=None)
     mail_address: str = Field(description="메일 주소")
+
+    @field_validator("corporate_seal", "nameplate")
+    def validate_file_extension(cls, v):
+        if v == "":
+            return None
+        return v
 
 
 class BranchResponse(BaseModel):
