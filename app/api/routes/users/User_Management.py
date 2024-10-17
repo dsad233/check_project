@@ -5,10 +5,9 @@ from sqlalchemy import func, select, update, and_, case
 from sqlalchemy.orm import joinedload, load_only, contains_eager
 
 from app.api.routes.auth.auth import hashPassword
-from app.api.routes.users.schema.userschema import UserUpdate, UserCreate, RoleUpdate
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user_id, validate_token
-from app.models.users.users_model import Users
+from app.models.users.users_model import Users, UserUpdate, RoleUpdate
 from app.models.parts.user_salary import UserSalary
 
 router = APIRouter(dependencies=[Depends(validate_token)])
@@ -76,7 +75,6 @@ class UserManagement:
                 query = query.filter(Users.phone_number.ilike(f"%{search_phone}%"))
             if search_branch:
                 query = query.filter(Users.branch.has(name=search_branch))
-
             # 현재 사용자를 맨 앞으로 정렬
             query = query.order_by(
                 case(
