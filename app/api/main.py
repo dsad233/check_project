@@ -29,8 +29,6 @@ app.include_router(branches.router, prefix="/branches", tags=["Branches"])
 app.include_router(parts.router, prefix="/branches/{branch_id}/parts", tags=["Parts"])
 app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-categories", tags=["Leave Categories"])
 app.include_router(leave_histories.router, prefix='/branches/{branch_id}/leaves', tags=['Leave Histories'])
-app.include_router(allowance_policies.router, prefix='/parts', tags=['Allowance_policies'])
-app.include_router(comments.router, prefix='/boards/{board_id}/posts/{post_id}/comments', tags=['Comments'])
 app.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['Work_policies'])
 app.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour-wage-templates', tags=['Hour_wage_templates'])
 app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts_policies", tags=["Parts_policies"])
@@ -41,5 +39,3 @@ app.include_router(user_management.router, prefix='/user_management', tags=['Use
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
-
-

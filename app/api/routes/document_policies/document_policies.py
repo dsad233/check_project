@@ -115,10 +115,10 @@ async def update_document(
     branch_id: int,
     branch_policy_id: int,
     id: int,
-    token=Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(validate_token)],
 ):
     try:
-        if token.role != "MSO 최고권한" | token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_one_document = await document.execute(
@@ -149,10 +149,10 @@ async def delete_document(
     branch_id: int,
     branch_policy_id: int,
     id: int,
-    token=Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(validate_token)],
 ):
     try:
-        if token.role != "MSO 최고권한" | token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_one_document = await document.execute(
@@ -189,10 +189,10 @@ async def delete_document(
     branch_id: int,
     branch_policy_id: int,
     id: int,
-    token=Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(validate_token)],
 ):
     try:
-        if token.role != "MSO 최고권한" | token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자":
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_one_document = await document.execute(
@@ -224,12 +224,12 @@ async def delete_document(
 
 # 문서 정책 조회
 # @router.get('/{branch_id}/branch_policies/{branch_policy_id}/document_policies')
-# async def find_document(token=Annotated[Users, Depends(validate_token)]):
+# async def find_document(token:Annotated[Users, Depends(validate_token)]):
 #     try:
-#         if token.role != "MSO 최고권한" | token.role != "최고관리자":
+#         if token.role != "MSO 최고권한" or token.role != "최고관리자":
 #             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
 
-#         find_document = await document.execute(select(DocumentPolicies).where(DocumentPolicies.deleted_yn == "N"))
+#         find_document = await docåument.execute(select(DocumentPolicies).where(DocumentPolicies.deleted_yn == "N"))
 #         result = find_document.scalars().all()
 
 #         if len(result) == 0:

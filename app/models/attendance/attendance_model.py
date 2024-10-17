@@ -11,5 +11,9 @@ class Attendance(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     part_id = Column(Integer, ForeignKey('parts.id'), nullable=False)
     part_name = Column(String(255), nullable=False)
-    name = Column(String(10))
-    gender = Column(String(5))
+    name = Column(String(10),nullable=False)
+    gender = Column(String(5), nullable= False)
+
+    
+
+
