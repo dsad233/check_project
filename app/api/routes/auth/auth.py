@@ -8,7 +8,7 @@ from sqlalchemy.future import select
 from app.api.routes.auth.schema.authSchema import Login, Register
 from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
-from app.middleware.tokenVerify import validate_token
+from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
 
 router = APIRouter()

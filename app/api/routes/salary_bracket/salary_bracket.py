@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 
 from app.core.database import async_session
-from app.middleware.tokenVerify import validate_token
+from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.salary.salary_bracket_model import (
     SalaryBracket,
     SalaryBracketCreate,
@@ -12,7 +12,7 @@ from app.models.salary.salary_bracket_model import (
 )
 from app.models.users.users_model import Users
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
 
@@ -72,7 +72,7 @@ async def get_salary_bracket(year: int):
 async def create_salary_bracket(
     year: int,
     salary_bracket_create: SalaryBracketCreate,
-    current_user: Users = Depends(validate_token),
+    current_user: Users = Depends(get_current_user),
 ):
     if current_user.role.strip() != "MSO 최고권한":
         raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -130,7 +130,7 @@ async def create_salary_bracket(
 
 @router.delete("/{year}")
 async def delete_salary_bracket(
-    year: int, current_user: Users = Depends(validate_token)
+    year: int, current_user: Users = Depends(get_current_user)
 ):
     if current_user.role.strip() != "MSO 최고권한":
         raise HTTPException(status_code=403, detail="권한이 없습니다.")

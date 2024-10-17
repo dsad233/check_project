@@ -9,7 +9,7 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.cruds.branches.policies import allowance_crud, auto_overtime_crud, holiday_work_crud, overtime_crud, work_crud
-from app.middleware.tokenVerify import validate_token
+from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
 from app.models.branches.allowance_policies_model import (
     AllowancePolicies,AllowancePoliciesDto,DefaultAllowancePoliciesDto,HolidayAllowancePoliciesDto
@@ -82,7 +82,7 @@ async def get_work_policies(*,
 @router.post("", response_model=str)
 async def update_work_policies(*,
     session: AsyncSession = Depends(get_db),
-    token=Annotated[Users, Depends(validate_token)],
+    token:Annotated[Users, Depends(get_current_user)],
     branch_id: int,
     policies_in: CombinedPoliciesRequest
 ) -> str:
