@@ -91,23 +91,27 @@ async def update_work_policies(*,
         if token.role not in allowed_roles:
             raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
         
-        if work_crud.get_work_policies(session=session, branch_id=branch_id) is None:
+        if await work_crud.get_work_policies(session=session, branch_id=branch_id) is None:
             await work_crud.create_work_policies_by_value(session=session, branch_id=branch_id, work_policies_update=policies_in.work_policies)
         else:
             await work_crud.update_work_policies(session=session, branch_id=branch_id, work_policies_update=policies_in.work_policies)
-        if auto_overtime_crud.get_auto_overtime_policies(session=session, branch_id=branch_id) is None:
+
+        if await auto_overtime_crud.get_auto_overtime_policies(session=session, branch_id=branch_id) is None:
             await auto_overtime_crud.create_auto_overtime_policies_by_value(session=session, branch_id=branch_id, auto_overtime_policies_update=policies_in.auto_overtime_policies)
         else:
             await auto_overtime_crud.update_auto_overtime_policies(session=session, branch_id=branch_id, auto_overtime_policies_update=policies_in.auto_overtime_policies)
-        if holiday_work_crud.get_holiday_work_policies(session=session, branch_id=branch_id) is None:
+
+        if await holiday_work_crud.get_holiday_work_policies(session=session, branch_id=branch_id) is None:
             await holiday_work_crud.create_holiday_work_policies_by_value(session=session, branch_id=branch_id, holiday_work_policies_update=policies_in.holiday_work_policies)
         else:
             await holiday_work_crud.update_holiday_work_policies(session=session, branch_id=branch_id, holiday_work_policies_update=policies_in.holiday_work_policies)
-        if overtime_crud.get_overtime_policies(session=session, branch_id=branch_id) is None:
+
+        if await overtime_crud.get_overtime_policies(session=session, branch_id=branch_id) is None:
             await overtime_crud.create_overtime_policies_by_value(session=session, branch_id=branch_id, overtime_policies_update=policies_in.overtime_policies  )
         else:
             await overtime_crud.update_overtime_policies(session=session, branch_id=branch_id, overtime_policies_update=policies_in.overtime_policies)
-        if allowance_crud.get_allowance_policies(session=session, branch_id=branch_id) is None:
+            
+        if await allowance_crud.get_allowance_policies(session=session, branch_id=branch_id) is None:
             await allowance_crud.create_allowance_policies_by_value(session=session, branch_id=branch_id, default_allowance_update=policies_in.default_allowance_policies, holiday_allowance_update=policies_in.holiday_allowance_policies)
         else:
             await allowance_crud.update_allowance_policies(session=session, branch_id=branch_id, default_allowance_update=policies_in.default_allowance_policies, holiday_allowance_update=policies_in.holiday_allowance_policies)

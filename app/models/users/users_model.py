@@ -36,7 +36,6 @@ class Users(Base):
     gender = Column(Enum("남자", "여자", name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    salary = relationship("UserSalary", back_populates="user", uselist=False)
 
     last_company = Column(String(255), nullable=True)
     last_position = Column(String(255), nullable=True)
