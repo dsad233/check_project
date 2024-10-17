@@ -20,10 +20,8 @@ from app.models.branches.branches_model import (
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-# router = APIRouter()
 
-
-@router.get("", response_model=BranchListResponse)
+@router.get("/list", response_model=BranchListResponse)
 async def read_branches(
     *, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends()
 ) -> BranchListResponse:
@@ -40,7 +38,7 @@ async def read_branches(
         raise HTTPException(status_code=500, detail=f"Error occurred while reading branches: {e}")
 
 
-@router.post("", response_model=str, status_code=201)
+@router.post("/create", response_model=str, status_code=201)
 async def create_branch(
     *, session: AsyncSession = Depends(get_db), branch_in: BranchCreate
 ) -> str:
@@ -59,7 +57,7 @@ async def create_branch(
         raise HTTPException(status_code=500, detail=f"Error occurred while creating branch: {e}")
 
 
-@router.get("/{branch_id}", response_model=BranchResponse)
+@router.get("/{branch_id}/get", response_model=BranchResponse)
 async def read_branch(
     *, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> BranchResponse:
@@ -72,8 +70,7 @@ async def read_branch(
         logger.error(f"Error occurred while reading branch: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while reading branch: {e}")
 
-
-@router.delete("/{branch_id}", status_code=204)
+@router.delete("/{branch_id}/delete", status_code=204)
 async def delete_branch(
     *, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> None:
@@ -87,12 +84,12 @@ async def delete_branch(
         raise HTTPException(status_code=500, detail=f"Error occurred while deleting branch: {e}")
 
 
-@router.get("/deleted", response_model=BranchListResponse)
+@router.get("/deleted/list", response_model=BranchListResponse)
 async def read_deleted_branches(
     *, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends()
 ) -> BranchListResponse:
     try:
-        count = await branches_crud.count_branch_deleted_all(session=session)
+        count = await branches_crud.count_deleted_branch_all(session=session)
         pagination = PaginationDto(total_record=count)
         branches = await branches_crud.find_branch_deleted_all(
         session=session, offset=search.offset, limit=search.record_size
@@ -101,3 +98,16 @@ async def read_deleted_branches(
     except Exception as e:
         logger.error(f"Error occurred while reading deleted branches: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while reading deleted branches: {e}")
+    
+@router.patch("/{branch_id}/revive", status_code=204)
+async def revive_branch(
+    *, session: AsyncSession = Depends(get_db), branch_id: int
+) -> None:
+    try:
+        branch = await branches_crud.find_branch_by_id(session=session, branch_id=branch_id)
+        if branch is None:
+            raise HTTPException(status_code=404, detail="Branch not found")
+        await branches_crud.revive_branch(session=session, branch=branch)
+    except Exception as e:
+        logger.error(f"Error occurred while reviving branch: {e}")
+        raise HTTPException(status_code=500, detail=f"Error occurred while reviving branch: {e}")
