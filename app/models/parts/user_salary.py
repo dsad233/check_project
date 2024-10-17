@@ -22,7 +22,3 @@ class UserSalary(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
-    # 관계 설정
-    user = relationship("Users", back_populates="salary")
-    branch = relationship("Branches", back_populates="salaries")
