@@ -39,5 +39,3 @@ app.include_router(user_management.router, prefix='/user_management', tags=['Use
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
-
-
