@@ -52,7 +52,7 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
         if overtime is None:
             raise HTTPException(status_code=404, detail="초과 근무 기록을 찾을 수 없습니다.")
 
-        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자"]:
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자"]:
             raise HTTPException(status_code=403, detail="관리자만 승인할 수 있습니다.")
         
         overtime.status = "approved"
@@ -86,7 +86,7 @@ async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, cur
         if overtime is None:
             raise HTTPException(status_code=404, detail="초과 근무 기록을 찾을 수 없습니다.")
 
-        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자"]:
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자"]:
             raise HTTPException(status_code=403, detail="관리자만 승인할 수 있습니다.")
         
         overtime.status = "rejected"
@@ -168,7 +168,7 @@ async def update_overtime(overtime_id: int, overtime_update: OvertimeUpdate, cur
         if overtime is None:
             raise HTTPException(status_code=404, detail="초과 근무 기록을 찾을 수 없습니다.")
 
-        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자"] or current_user.id != overtime.applicant_id:
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자"] or current_user.id != overtime.applicant_id:
             raise HTTPException(status_code=403, detail="관리자 또는 초과 근무 신청자만 수정할 수 있습니다.")
 
         if overtime.status != "pending":
@@ -177,7 +177,7 @@ async def update_overtime(overtime_id: int, overtime_update: OvertimeUpdate, cur
         update_data = {}
 
         # 관리자인 경우
-        if current_user.role in ["MSO 최고권한", "최고관리자", "관리자"]:
+        if current_user.role in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자"]:
             if overtime_update.overtime_hours is not None:
                 update_data["overtime_hours"] = overtime_update.overtime_hours
             if overtime_update.application_memo is not None:
@@ -224,7 +224,7 @@ async def delete_overtime(overtime_id: int, current_user: Users = Depends(get_cu
         if overtime is None:
             raise HTTPException(status_code=404, detail="초과 근무 기록을 찾을 수 없습니다.")
         
-        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자"] or current_user.id != overtime.applicant_id:
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자"] or current_user.id != overtime.applicant_id:
             raise HTTPException(status_code=403, detail="관리자 또는 초과 근무 신청자만 삭제할 수 있습니다.")
 
         if overtime.status != "pending":

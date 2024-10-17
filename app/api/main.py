@@ -31,10 +31,10 @@ app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-ca
 app.include_router(leave_histories.router, prefix='/branches/{branch_id}/leaves', tags=['Leave Histories'])
 app.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['Work_policies'])
 app.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour-wage-templates', tags=['Hour_wage_templates'])
-app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts_policies", tags=["Parts_policies"])
+app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-policies", tags=["Parts_policies"])
 
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
-app.include_router(user_management.router, prefix='/user_management', tags=['User_Management'])
+app.include_router(user_management.router, prefix='/user-management', tags=['User_Management'])
 
 @app.get("/health")
 def health_check():

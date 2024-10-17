@@ -24,8 +24,11 @@ async def getPartWorkPolicies(
     branch_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -70,8 +73,11 @@ async def getPartWorkPolicy(
     branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -116,8 +122,11 @@ async def createPartWorkPolicy(
     current_user: Users = Depends(validate_token),
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -175,8 +184,11 @@ async def updatePartWorkPolicy(
     current_user: Users = Depends(validate_token),
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -225,8 +237,11 @@ async def deletePartWorkPolicy(
     branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -249,8 +264,11 @@ async def getPartSalaryPolicies(
     branch_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -296,8 +314,11 @@ async def getPartSalaryPolicy(
     branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -342,8 +363,11 @@ async def createPartSalaryPolicy(
     current_user: Users = Depends(validate_token),
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -400,8 +424,11 @@ async def updatePartSalaryPolicy(
     current_user: Users = Depends(validate_token),
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
@@ -450,8 +477,11 @@ async def deletePartSalaryPolicy(
     branch_id: int, part_id: int, current_user: Users = Depends(validate_token)
 ):
     try:
-        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             current_user.role.strip() == "최고관리자"
+            and current_user.branch_id != branch_id
+        ) or (
+            current_user.role.strip() == "통합관리자"
             and current_user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")

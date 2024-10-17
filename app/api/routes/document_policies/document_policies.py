@@ -118,7 +118,7 @@ async def update_document(
     token:Annotated[Users, Depends(validate_token)],
 ):
     try:
-        if token.role != "MSO 최고권한" or token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_one_document = await document.execute(
@@ -152,7 +152,7 @@ async def delete_document(
     token:Annotated[Users, Depends(validate_token)],
 ):
     try:
-        if token.role != "MSO 최고권한" or token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_one_document = await document.execute(
@@ -192,7 +192,7 @@ async def delete_document(
     token:Annotated[Users, Depends(validate_token)],
 ):
     try:
-        if token.role != "MSO 최고권한" or token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         find_one_document = await document.execute(
