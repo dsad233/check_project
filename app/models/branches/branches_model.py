@@ -33,7 +33,7 @@ class Branches(Base):
     nameplate = Column(String(255), nullable=True)
     mail_address = Column(String(255), nullable=False)
     salaries = relationship("UserSalary", back_populates="branch")
-
+    
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
