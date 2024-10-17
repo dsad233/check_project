@@ -94,13 +94,7 @@ async def createPart(
         if part_exist:
             raise HTTPException(status_code=400, detail="이미 존재하는 부서입니다.")
 
-        create = Parts(
-            name=part_create.name,
-            branch_id=branch_id,
-            task=part_create.task,
-            is_doctor=part_create.is_doctor,
-            required_certification=part_create.required_certification,
-        )
+        create = Parts(branch_id = branch_id, **part_create.model_dump())
         db.add(create)
         await db.commit()
 
