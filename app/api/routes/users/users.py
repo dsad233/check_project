@@ -6,10 +6,9 @@ from sqlalchemy import func, select, update
 from sqlalchemy.orm import joinedload, load_only
 
 from app.api.routes.auth.auth import hashPassword
-from app.api.routes.users.schema.userschema import UserUpdate
 from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import get_current_user_id, validate_token
-from app.models.users.users_model import Users
+from app.models.users.users_model import Users, UserUpdate
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
