@@ -24,6 +24,7 @@ class Parts(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(255), nullable=False)
     task = Column(String(500), nullable=True)
+    color = Column(String(255), nullable=True)
     is_doctor = Column(Boolean, default=False)
     salaries = relationship("UserSalary", back_populates="part")
     required_certification = Column(Boolean, default=False)
@@ -42,6 +43,7 @@ class Parts(Base):
 class PartCreate(BaseModel):
     name: str = Field(..., min_length=1, description="파트 이름")
     task: str = Field(..., min_length=1, description="파트 업무")
+    color: str = Field(..., min_length=1, description="파트 색상")
     is_doctor: bool
     required_certification: bool
 
@@ -49,6 +51,7 @@ class PartCreate(BaseModel):
 class PartUpdate(BaseModel):
     name: Optional[str] = None
     task: Optional[str] = None
+    color: Optional[str] = None
     is_doctor: Optional[bool] = None
     required_certification: Optional[bool] = None
 
@@ -57,6 +60,7 @@ class PartResponse(BaseModel):
     id: int
     name: str
     task: Optional[str] = None
+    color: Optional[str] = None
     is_doctor: bool
     required_certification: bool
     leave_granting_authority: bool
