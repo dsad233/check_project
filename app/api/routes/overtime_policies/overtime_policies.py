@@ -243,16 +243,16 @@
 
 
 # overtime 정책 수정 [어드민만]
-@router.patch("/{branch_id}/overtime_policies/{id}")
-async def time_edit(
-    branch_id: int,
-    id: int,
-    overTimeUpdate: OverTimeUpdate,
-    token: Annotated[OverTimePolicies, Depends(validate_token)],
-):
-    try:
-        if token.role != "MSO 최고권한" | token.role != "최고관리자":
-            raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+# @router.patch("/{branch_id}/overtime_policies/{id}")
+# async def time_edit(
+#     branch_id: int,
+#     id: int,
+#     overTimeUpdate: OverTimeUpdate,
+#     token: Annotated[OverTimePolicies, Depends(validate_token)],
+# ):
+#     try:
+#         if token.role != "MSO 최고권한" | token.role != "최고관리자":
+#             raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
 
 #         find_one_over_time = await overtime.execute(
 #             select(OverTimePolicies).where(
