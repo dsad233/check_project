@@ -6,11 +6,11 @@ from app.core.database import async_session, get_db
 from app.middleware.jwt.jwtService import JWTDecoder, JWTService
 from app.models.users.users_model import Users
 
-# users = async_session()
+users = async_session()
 
 auth_header = APIKeyHeader(name="Authorization-Swagger", auto_error=False)
 
-async def validate_token(req: Request, auth: str = Security(auth_header), users: AsyncSession = Depends(get_db)):
+async def validate_token(req: Request, auth: str = Security(auth_header)):
     print(auth)
     print(req.headers.get("Authorization"))
     try:
