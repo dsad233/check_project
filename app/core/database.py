@@ -2,11 +2,21 @@ from fastapi import HTTPException
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.ext.declarative import declarative_base
-
+from sqlalchemy.pool import AsyncAdaptedQueuePool
 from app.core.config import settings
 
 meta = MetaData()
-engine = create_async_engine(settings.DATABASE_URL, echo=True)
+engine = create_async_engine(settings.DATABASE_URL, echo=True, pool_pre_ping=True,
+    pool_recycle=1800,
+    pool_size=20,
+    max_overflow=10,
+    pool_timeout=30,
+    poolclass=AsyncAdaptedQueuePool,
+    connect_args={
+        "charset": "utf8mb4",
+        "connect_timeout": 60
+    })
+
 async_session = async_sessionmaker(
     engine, autoflush=False, autocommit=False, class_=AsyncSession
 )
