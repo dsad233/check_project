@@ -1,4 +1,4 @@
-from datetime import datetime
+from typing import Optional
 
 from fastapi import HTTPException
 from sqlalchemy import func, select, update
@@ -17,16 +17,17 @@ async def create_allowance_policies(
     await session.refresh(db_obj)
     return db_obj
 
+async def create_allowance_policies_by_value(
+    *, session: AsyncSession, branch_id: int, default_allowance_update: DefaultAllowancePoliciesDto, holiday_allowance_update: HolidayAllowancePoliciesDto
+) -> None:
+    db_obj = AllowancePolicies(branch_id=branch_id, **default_allowance_update.model_dump(), **holiday_allowance_update.model_dump())
+    session.add(db_obj)
+    await session.commit()
+    await session.refresh(db_obj)
+    
 async def update_allowance_policies(
     *, session: AsyncSession, branch_id: int, default_allowance_update: DefaultAllowancePoliciesDto, holiday_allowance_update: HolidayAllowancePoliciesDto
 ) -> None:
-    stmt = select(AllowancePolicies).where(AllowancePolicies.branch_id == branch_id)
-    result = await session.execute(stmt)
-    db_obj = result.scalar_one_or_none()
-
-    if db_obj is None:
-        raise HTTPException(status_code=404, detail="Allowance policies not found")
-    
     update_data = {
         **default_allowance_update.model_dump(exclude_unset=True),
         **holiday_allowance_update.model_dump(exclude_unset=True)
@@ -45,10 +46,8 @@ async def update_allowance_policies(
 
 async def get_allowance_policies(
     *, session: AsyncSession, branch_id: int
-) -> AllowancePolicies:
+) -> Optional[AllowancePolicies]:
     stmt = select(AllowancePolicies).where(AllowancePolicies.branch_id == branch_id)
     result = await session.execute(stmt)
     db_obj = result.scalar_one_or_none()
-    if db_obj is None:
-        raise HTTPException(status_code=404, detail="Allowance policies not found")
     return db_obj

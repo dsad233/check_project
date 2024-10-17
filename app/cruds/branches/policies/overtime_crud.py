@@ -1,4 +1,4 @@
-from datetime import datetime
+from typing import Optional
 
 from fastapi import HTTPException
 from sqlalchemy import func, select, update
@@ -18,15 +18,17 @@ async def create_overtime_policies(
     await session.refresh(db_obj)
     return db_obj
 
+async def create_overtime_policies_by_value(
+    *, session: AsyncSession, branch_id: int, overtime_policies_update: OverTimePoliciesDto
+) -> None:
+    db_obj = OverTimePolicies(branch_id=branch_id, **overtime_policies_update.model_dump())
+    session.add(db_obj)
+    await session.commit()
+    await session.refresh(db_obj)
+
 async def update_overtime_policies(
     *, session: AsyncSession, branch_id: int, overtime_policies_update: OverTimePoliciesDto
 ) -> None:
-    stmt = select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id)
-    result = await session.execute(stmt)
-    db_obj = result.scalar_one_or_none()
-    
-    if db_obj is None:
-        raise HTTPException(status_code=404, detail="Over time policies not found")
     
     update_data = overtime_policies_update.model_dump(exclude_unset=True)
 
@@ -42,10 +44,8 @@ async def update_overtime_policies(
 
 async def get_overtime_policies(
     *, session: AsyncSession, branch_id: int
-) -> OverTimePolicies:
+) -> Optional[OverTimePolicies]:
     stmt = select(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id)
     result = await session.execute(stmt)
     db_obj = result.scalar_one_or_none()
-    if db_obj is None:
-        raise HTTPException(status_code=404, detail="Over time policies not found")
     return db_obj
