@@ -22,7 +22,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(commutes.router, prefix="/commutes", tags=["Commutes"])
 app.include_router(overtimes.router, prefix="/overtimes", tags=["Overtimes"])
-app.include_router(closed_days.router, prefix="/closed-days", tags=["Closed Days"])
+app.include_router(closed_days.router, prefix="/branches", tags=["Closed Days"])
 
 app.include_router(branches.router, prefix="/branches", tags=["Branches"])
 # app.include_router(overtime_policies.router, prefix="/branches", tags=["Overtime_policies"])
