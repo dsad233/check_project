@@ -48,7 +48,7 @@ class CombinedPoliciesRequest(BaseModel):
     holiday_allowance_policies: HolidayAllowancePoliciesDto
 
 
-@router.get("/", response_model=CombinedPoliciesResponse)
+@router.get("", response_model=CombinedPoliciesResponse)
 async def get_work_policies(*,
     session: AsyncSession = Depends(get_db),
     branch_id: int
@@ -79,7 +79,7 @@ async def get_work_policies(*,
         logger.error(f"Error occurred while reading work policies: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while reading work policies: {e}")
 
-@router.post("/", response_model=str)
+@router.post("", response_model=str)
 async def update_work_policies(*,
     session: AsyncSession = Depends(get_db),
     token=Annotated[Users, Depends(validate_token)],

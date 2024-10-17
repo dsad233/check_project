@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
-@router.get("/", response_model=LeaveListResponse)
+@router.get("", response_model=LeaveListResponse)
 async def read_leave_categories(
     *,
     branch_id: int,
@@ -40,7 +40,7 @@ async def read_leave_categories(
         raise HTTPException(status_code=500, detail=f"Error occurred while getting leave category list: {e}")
 
 
-@router.post("/", response_model=LeaveResponse, status_code=201)
+@router.post("", response_model=LeaveResponse, status_code=201)
 async def create_leave_category(
     *,
     branch_id: int,

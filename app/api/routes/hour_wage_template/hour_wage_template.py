@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
-@router.get("/")
+@router.get("")
 async def get_hour_wage_template_list(
     branch_id: int,
     session: AsyncSession = Depends(get_db)
@@ -28,7 +28,7 @@ async def get_hour_wage_template_list(
         logger.error(f"Error occurred while getting hour wage template list: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while getting hour wage template list: {e}")
 
-@router.post("/")
+@router.post("")
 async def create_hour_wage_template(
     branch_id: int,
     hour_wage_template_create: HourWageTemplateCreate,

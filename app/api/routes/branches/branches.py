@@ -23,7 +23,7 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 # router = APIRouter()
 
 
-@router.get("/", response_model=BranchListResponse)
+@router.get("", response_model=BranchListResponse)
 async def read_branches(
     *, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends()
 ) -> BranchListResponse:
@@ -40,7 +40,7 @@ async def read_branches(
         raise HTTPException(status_code=500, detail=f"Error occurred while reading branches: {e}")
 
 
-@router.post("/", response_model=str, status_code=201)
+@router.post("", response_model=str, status_code=201)
 async def create_branch(
     *, session: AsyncSession = Depends(get_db), branch_in: BranchCreate
 ) -> str:
