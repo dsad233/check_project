@@ -27,6 +27,7 @@ async def create_branch(
     session.add(db_obj)
     await session.commit()
     await session.refresh(db_obj)
+
     return db_obj
 
 
@@ -71,3 +72,15 @@ async def delete_branch(*, session: AsyncSession, branch: Branches) -> None:
 
     # 데이터베이스에 변경사항 반영
     await session.commit()
+    return
+
+async def revive_branch(*, session: AsyncSession, branch: Branches) -> None:
+    branch.deleted_yn = "N"
+    branch.updated_at = datetime.now()
+    await session.commit()
+    return
+
+async def count_deleted_branch_all(*, session: AsyncSession) -> int:
+    statement = select(func.count()).select_from(Branches).where(Branches.deleted_yn == "Y")
+    result = await session.execute(statement)
+    return result.scalar_one()
