@@ -1,5 +1,5 @@
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select, update, and_, case
 from sqlalchemy.orm import joinedload, load_only, contains_eager
@@ -8,7 +8,8 @@ from app.api.routes.auth.auth import hashPassword
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user_id, validate_token
 from app.models.users.users_model import Users, UserUpdate, RoleUpdate
-from app.models.parts.user_salary import UserSalary
+from app.models.branches.branches_model import Branches
+from app.models.parts.parts_model import Parts
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -24,10 +25,11 @@ class UserManagement:
         search_status: Optional[str] = None, 
         search_name: Optional[str] = None,
         search_phone: Optional[str] = None,
-        search_branch: Optional[str] = None,
+        search_branch_id: Optional[int] = None,
+        search_part_id: Optional[int] = None,
     ):
         try:
-            # 현재 사용�� 정보 조회
+            # 현재 사용자 정보 조회
             current_user = await db.execute(select(Users).where(Users.id == current_user_id))
             current_user = current_user.scalar_one_or_none()
             
@@ -41,40 +43,45 @@ class UserManagement:
             )
 
             # 1. 사용자 role에 따른 필터링 (1차 필터)
-            if current_user.role in ["MSO 최고권한", "최고관리자", "관리자"]:
-                if current_user.role == "MSO 최고권한":
-                    # 모든 지점의 유저 조회 (추가 필터링 없음)
-                    pass
-                elif current_user.role == "최고관리자":
-                    # 본인 지점의 유저만 조회
-                    query = query.filter(Users.branch_id == current_user.branch_id)
-                elif current_user.role == "관리자":
-                    # 본인 파트의 유저만 조회
-                    if isinstance(current_user.part_id, list):
-                        query = query.filter(Users.part_id.in_(current_user.part_id))
-                    else:
-                        query = query.filter(Users.part_id == current_user.part_id)
-                
-                # 2. 상태 검색 조건 적용 (2차 필터)
-                if search_status:
-                    if search_status == '퇴사자':
-                        query = query.filter(Users.deleted_yn == "Y")
-                    elif search_status == '휴직자':
-                        query = query.filter(and_(Users.deleted_yn == "N", Users.role == "휴직자"))
-                    elif search_status == '재직자':
-                        query = query.filter(and_(Users.deleted_yn == "N", Users.role.notin_(["퇴직자", "휴직자"])))
-                # 상태 검색이 없을 경우 모든 상태의 사용자 조회 (퇴직자 포함)
+            if current_user.role == "MSO 최고권한":
+                # 모든 지점의 유저 조회 가능
+                pass
+            elif current_user.role == "최고관리자":
+                # 본인 지점의 유저만 조회
+                query = query.filter(Users.branch_id == current_user.branch_id)
+            elif current_user.role == "통합관리자":
+                # 본인 지점의 유저만 조회
+                query = query.filter(Users.branch_id == current_user.branch_id)
+            elif current_user.role == "관리자":
+                # 본인 파트의 유저만 조회
+                if isinstance(current_user.part_id, list):
+                    query = query.filter(Users.part_id.in_(current_user.part_id))
+                else:
+                    query = query.filter(Users.part_id == current_user.part_id)
             else:
                 # 일반 사용자, 퇴사자, 휴직자는 자기 자신만 조회
                 query = query.filter(Users.id == current_user_id)
 
-            # 3. 이름/전화번호/지점 검색 조건 적용 (3차 필터)
+            # 2. 상태 검색 조건 적용 (2차 필터)
+            if search_status:
+                if search_status == '퇴사자':
+                    query = query.filter(Users.deleted_yn == "Y")
+                elif search_status == '휴직자':
+                    query = query.filter(and_(Users.deleted_yn == "N", Users.role == "휴직자"))
+                elif search_status == '재직자':
+                    query = query.filter(and_(Users.deleted_yn == "N", Users.role.notin_(["퇴직자", "휴직자"])))
+
+            # 3. 이름/전화번호/지점/파트 검색 조건 적용 (3차 필터)
             if search_name:
                 query = query.filter(Users.name.ilike(f"%{search_name}%"))
             if search_phone:
                 query = query.filter(Users.phone_number.ilike(f"%{search_phone}%"))
-            if search_branch:
-                query = query.filter(Users.branch.has(name=search_branch))
+            if search_branch_id and current_user.role == "MSO 최고권한":
+                query = query.filter(Users.branch_id == search_branch_id)
+            if search_part_id:
+                if current_user.role == "MSO 최고권한" or current_user.role == "최고관리자" or current_user.role == "통합관리자":
+                    query = query.filter(Users.part_id == search_part_id)
+
             # 현재 사용자를 맨 앞으로 정렬
             query = query.order_by(
                 case(
@@ -202,6 +209,8 @@ class UserManagement:
                 pass  # 모든 사용자에 접근 가능
             elif current_user.role == "최고관리자":
                 stmt = stmt.filter(Users.branch_id == current_user.branch_id)
+            elif current_user.role == "통합관리자":
+                stmt = stmt.filter(Users.branch_id == current_user.branch_id)
             elif current_user.role == "관리자":
                 if isinstance(current_user.part_id, list):
                     stmt = stmt.filter(Users.part_id.in_(current_user.part_id))
@@ -255,6 +264,8 @@ class UserManagement:
                 pass  # 모든 사용자 정보 수정 가능
             elif current_user.role == "최고관리자":
                 stmt = stmt.filter(Users.branch_id == current_user.branch_id)
+            elif current_user.role == "통합관리자":
+                stmt = stmt.filter(Users.branch_id == current_user.branch_id)
             elif current_user.role == "관리자":
                 if isinstance(current_user.part_id, list):
                     stmt = stmt.filter(Users.part_id.in_(current_user.part_id))
@@ -300,7 +311,7 @@ class UserManagement:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
             # 권한 확인
-            if current_user.role not in ["MSO 최고권한", "최고관리자"]:
+            if current_user.role not in ["MSO 최고권한", "최고관리자", "통합관리자", "관리자"]:
                 raise HTTPException(status_code=403, detail="사용자를 삭제할 권한이 없습니다.")
 
             stmt = select(Users).where(Users.id == id)
@@ -308,6 +319,13 @@ class UserManagement:
             # 권한에 따른 필터링
             if current_user.role == "최고관리자":
                 stmt = stmt.filter(Users.branch_id == current_user.branch_id)
+            elif current_user.role == "통합관리자":
+                stmt = stmt.filter(Users.branch_id == current_user.branch_id)
+            elif current_user.role == "관리자":
+                if isinstance(current_user.part_id, list):
+                    stmt = stmt.filter(Users.part_id.in_(current_user.part_id))
+                else:
+                    stmt = stmt.filter(Users.part_id == current_user.part_id)
 
             result = await db.execute(stmt)
             user = result.scalars().first()
@@ -356,6 +374,7 @@ class UserManagement:
             role_hierarchy = {
                 "MSO 최고권한": 3,
                 "최고관리자": 2,
+                "통합관리자": 2,
                 "관리자": 1,
                 "사원": 0
             }
@@ -376,6 +395,11 @@ class UserManagement:
                     raise HTTPException(status_code=403, detail="관리자 이상의 권한으로 변경하거나, 자신과 같거나 더 높은 권한을 가진 사용자의 역할을 변경할 수 없습니다.")
                 if target_user.branch_id != current_user.branch_id:
                     raise HTTPException(status_code=403, detail="다른 지점의 사용자 역할을 변경할 수 없습니다.")
+            elif current_user.role == "통합관리자":
+                if new_role_level >= current_user_level or target_user_current_level >= current_user_level:
+                    raise HTTPException(status_code=403, detail="관리자 이상의 권한으로 변경하거나, 자신과 같거나 더 높은 권한을 가진 사용자의 역할을 변경할 수 없습니다.")
+                if target_user.branch_id != current_user.branch_id:
+                    raise HTTPException(status_code=403, detail="다른 지점의 사용자 역할을 변경할 수 없습니다.")
             else:
                 raise HTTPException(status_code=403, detail="사용자 권한을 변경할 권한이 없습니다.")
 
@@ -390,6 +414,46 @@ class UserManagement:
             raise http_err
         except Exception as err:
             await db.rollback()
+            print("에러가 발생하였습니다.", err)
+            raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+    # 지점 목록 조회 API (MSO 최고권한용)
+    @router.get("/branches")
+    async def get_branches(current_user_id: int = Depends(get_current_user_id)):
+        try:
+            current_user = await db.execute(select(Users).where(Users.id == current_user_id))
+            current_user = current_user.scalar_one_or_none()
+            
+            if not current_user or current_user.role != "MSO 최고권한":
+                raise HTTPException(status_code=403, detail="권한이 없습니다.")
+
+            branches = await db.execute(select(Branches))
+            branches = branches.scalars().all()
+
+            return {"branches": [{"id": b.id, "name": b.name} for b in branches]}
+        except Exception as err:
+            print("에러가 발생하였습니다.", err)
+            raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+    # 파트 목록 조회 API
+    @router.get("/parts")
+    async def get_parts(current_user_id: int = Depends(get_current_user_id)):
+        try:
+            current_user = await db.execute(select(Users).where(Users.id == current_user_id))
+            current_user = current_user.scalar_one_or_none()
+            
+            if not current_user:
+                raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
+
+            if current_user.role == "MSO 최고권한":
+                parts = await db.execute(select(Parts))
+            else:
+                parts = await db.execute(select(Parts).where(Parts.branch_id == current_user.branch_id))
+            
+            parts = parts.scalars().all()
+
+            return {"parts": [{"id": p.id, "name": p.name} for p in parts]}
+        except Exception as err:
             print("에러가 발생하였습니다.", err)
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 

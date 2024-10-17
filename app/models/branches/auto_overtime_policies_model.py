@@ -33,7 +33,7 @@ class AutoOvertimePolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
 class AutoOvertimePoliciesDto(BaseModel):
-    top_manager_auto_applied: bool = Field(description="최고관리자 자동적용", default=False)
+    top_manager_auto_applied: bool = Field(description="통합관리자 자동적용", default=False)
     manager_auto_applied: bool = Field(description="관리자 자동적용", default=False)
     employee_auto_applied: bool = Field(description="사원 자동적용", default=False)
 

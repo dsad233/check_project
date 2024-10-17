@@ -45,7 +45,7 @@ class Users(Base):
 
     role = Column(
         Enum(
-            "MSO 최고권한", "최고관리자", "관리자", "사원", "퇴사자", "휴직자", name="user_role"
+            "MSO 최고권한", "최고관리자", "통합관리자" , "관리자", "사원", "퇴사자", "휴직자", name="user_role"
         ),
         nullable=False,
         default="사원",

@@ -87,7 +87,7 @@ async def update_work_policies(*,
     policies_in: CombinedPoliciesRequest
 ) -> str:
     try:
-        if token.role != "MSO 최고권한" | token.role != "최고관리자":
+        if token.role != "MSO 최고권한" | token.role != "최고관리자" | token.role != "통합관리자":
             raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
     
         await work_crud.update_work_policies(session=session, branch_id=branch_id, work_policies_update=policies_in.work_policies)

@@ -22,8 +22,10 @@ async def getParts(branch_id: int, current_user_id: int = Depends(get_current_us
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             user.role.strip() == "최고관리자" and user.branch_id != branch_id
+        ) or (
+            user.role.strip() == "통합관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -65,8 +67,10 @@ async def createPart(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             user.role.strip() == "최고관리자" and user.branch_id != branch_id
+        ) or (
+            user.role.strip() == "통합관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -118,8 +122,10 @@ async def deletePart(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             user.role.strip() == "최고관리자" and user.branch_id != branch_id
+        ) or (
+            user.role.strip() == "통합관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 
@@ -157,8 +163,10 @@ async def updatePart(
         user_result = await db.execute(user_query)
         user = user_result.scalar_one_or_none()
 
-        if user.role.strip() not in ["MSO 최고권한", "최고관리자"] or (
+        if user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
             user.role.strip() == "최고관리자" and user.branch_id != branch_id
+        ) or (
+            user.role.strip() == "통합관리자" and user.branch_id != branch_id
         ):
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
 

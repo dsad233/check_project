@@ -25,7 +25,7 @@ async def get_leave_histories(
 
         if current_user.role.strip() == "MSO 관리자":
             pass
-        elif current_user.role.strip() in ["최고관리자", "파트관리자"]:
+        elif current_user.role.strip() in ["최고관리자", "파트관리자", "통합관리자"]:
             if current_user.branch_id != branch_id:
                 raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
         else:
@@ -180,7 +180,7 @@ async def update_leave(
         if not leave_history:
             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
 
-        if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자"]:
+        if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"]:
             raise HTTPException(status_code=403, detail="연차를 삭제할 권한이 없습니다.")
 
         if leave_history.status.strip() != "확인중":
@@ -222,7 +222,7 @@ async def delete_leave(
         if not leave_history:
             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
 
-        if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자"]:
+        if leave_history.user_id != current_user.id and current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"]:
             raise HTTPException(
                 status_code=403, detail="연차를 삭제할 권한이 없습니다."
             )

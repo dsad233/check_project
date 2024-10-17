@@ -14,7 +14,7 @@ allowance_policies = async_session()
 @router.post("/{part_id}/allowance_policies")
 async def create_allowance_policies(part_id : int, allowancePoliciesCreate : AllowancePoliciesCreate, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role != "MSO 최고권한" or token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자" :
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
 
         new_allowance_Policies = AllowancePolicies(
@@ -44,7 +44,7 @@ async def create_allowance_policies(part_id : int, allowancePoliciesCreate : All
 @router.patch("/{part_id}/allowance_policies/{id}")
 async def find_one_allowance_policies(part_id : int, id : int, allowancePoliciesUpdate : AllowancePoliciesUpdate, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role != "MSO 최고권한" or token.role != "최고관리자":
+        if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
             raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
 
         find_one_allowance_policies = await allowance_policies.execute(select(AllowancePolicies).where(AllowancePolicies.part_id == part_id, AllowancePolicies.id == id, AllowancePolicies.deleted_yn == "N"))
