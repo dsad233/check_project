@@ -243,7 +243,7 @@ async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_
     
 
 # 휴일 지점 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/month/{date}")
+@router.get("/{branch_id}/closed_days/branch_month/{date}")
 async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -272,10 +272,76 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
+
+
+# 휴일 지점 월간 전체 조회 [어드민만]
+@router.get("/{branch_id}/closed_days/branch_month/{date}")
+async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+    try:
+        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
+            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
+        
+        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        date_start_day = date_obj.replace(day=1)
+        
+        _, last_day = monthrange(date_obj.year, date_obj.month)
+        date_end_day = date_obj.replace(day=last_day)
+        
+
+        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N")
+        result = await db.execute(stmt)
+        closed_days = result.scalars().all()
+
+        if len(closed_days) == 0:
+            raise HTTPException(
+                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
+            )
+
+        return {
+            "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
+            "data": closed_days,
+        }
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")  
     
+# 휴일 파트 월간 전체 조회 [어드민만]
+@router.get("/{branch_id}/parts/{part_id}/closed_days/part_month/{date}")
+async def get_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+    try:
+        if token.role.strip() != "MSO 최고권한":
+            if token.branch_id != branch_id and token.role != "최고관리자":
+                if token.role != "통합 관리자" or token.part_id != part_id:
+                    raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
+        
+        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
+        date_start_day = date_obj.replace(day=1)
+        
+        _, last_day = monthrange(date_obj.year, date_obj.month)
+        date_end_day = date_obj.replace(day=last_day)
+        
+
+        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N")
+        result = await db.execute(stmt)
+        closed_days = result.scalars().all()
+
+        if len(closed_days) == 0:
+            raise HTTPException(
+                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
+            )
+
+        return {
+            "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
+            "data": closed_days,
+        }
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
 
 # 휴일 지점 일요일만 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/sunday/{date}")
+@router.get("/{branch_id}/closed_days/branch_sunday/{date}")
 async def get_branch_month_sunday_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -311,7 +377,7 @@ async def get_branch_month_sunday_closed_days(branch_id : int, date : str, token
 async def branch_sunday_result_closed_days(branch_id : int, id : int, token : Annotated[Users, Depends(get_current_user)], sundayOff: bool):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
+            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
 
         stmt = select(ClosedDays).join(WorkPolicies, WorkPolicies.branch_id == id).where(ClosedDays.branch_id == branch_id, WorkPolicies.branch_id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -342,47 +408,15 @@ async def branch_sunday_result_closed_days(branch_id : int, id : int, token : An
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
+
     
-    
-# 휴일 지점 월간 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/month/{date}")
-async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
-    try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
-        
-        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-        date_start_day = date_obj.replace(day=1)
-        
-        _, last_day = monthrange(date_obj.year, date_obj.month)
-        date_end_day = date_obj.replace(day=last_day)
-        
-
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N")
-        result = await db.execute(stmt)
-        closed_days = result.scalars().all()
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
-        return {
-            "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
-            "data": closed_days,
-        }
-    except Exception as err:
-        await db.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
-
-
 # 휴일 지점 주간 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/week/{date}")
+@router.get("/{branch_id}/closed_days/branch_week/{date}")
 async def get_week_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
+        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
+            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
+
         
         kr_tz = ZoneInfo("Asia/Seoul")
         date_obj = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=kr_tz)
@@ -393,7 +427,7 @@ async def get_week_closed_days(branch_id : int, date : str, token : Annotated[Us
         date_start = start_of_week - timedelta(days=3)
         date_end = end_of_week + timedelta(days=2)
 
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start.date(), ClosedDays.closed_day_date <= date_end.date(), ClosedDays.deleted_yn == "N")
+        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start, ClosedDays.closed_day_date <= date_end, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
@@ -411,49 +445,15 @@ async def get_week_closed_days(branch_id : int, date : str, token : Annotated[Us
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 주간 전체 조회에 실패하였습니다.")
     
-    
-# 휴일 파트 월간 조회 [어드민만]
-@router.get("/{branch_id}/parts/{part_id}/closed_days/month/{date}")
-async def get_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
-    try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
-        
-        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-        date_start_day = date_obj.replace(day=1)
-        
-        _, last_day = monthrange(date_obj.year, date_obj.month)
-        date_end_day = date_obj.replace(day=last_day)
-        
-
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N")
-        result = await db.execute(stmt)
-        closed_days = result.scalars().all()
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
-        return {
-            "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
-            "data": closed_days,
-        }
-    except Exception as err:
-        await db.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
-    
 
 # 휴일 파트 주간 조회 [어드민만]
-@router.get("/{branch_id}/parts/{part_id}/closed_days/week/{date}")
+@router.get("/{branch_id}/parts/{part_id}/closed_days/part_week/{date}")
 async def get_week_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
             if token.branch_id != branch_id and token.role != "최고관리자":
                 if token.role != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
-
+                    raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
         
         kr_tz = ZoneInfo("Asia/Seoul")
         date_obj = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=kr_tz)
@@ -464,7 +464,7 @@ async def get_week_closed_days(branch_id : int, part_id : int, date : str, token
         date_start = start_of_week - timedelta(days=3)
         date_end = end_of_week + timedelta(days=2)
 
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.closed_day_date >= date_start, ClosedDays.closed_day_date <= date_end, ClosedDays.deleted_yn == "N")
+        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.closed_day_date >= date_start.date(), ClosedDays.closed_day_date <= date_end.date(), ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
@@ -481,7 +481,7 @@ async def get_week_closed_days(branch_id : int, part_id : int, date : str, token
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 주간 전체 조회에 실패하였습니다.")
-
+    
 
 # 휴일 지점별 전체 조회 
 @router.get("/{branch_id}/closed_days/get_date/{date}")
