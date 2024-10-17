@@ -308,7 +308,7 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
     
 # 휴일 파트 월간 전체 조회 [어드민만]
 @router.get("/{branch_id}/parts/{part_id}/closed_days/part_month/{date}")
-async def get_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_part_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
             if token.branch_id != branch_id and token.role != "최고관리자":
