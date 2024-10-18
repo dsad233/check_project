@@ -79,7 +79,7 @@ class AttendanceCreate(BaseSettings):
     # O.T 90분 횟수
     ot_90 = int
     # O.T 총 금액 
-    # ot_total : 
+    ot_total : int
 
     parts = relationship("Attendance", back_populates="parts")
     branchs = relationship("Attendance", back_populates="branchs")

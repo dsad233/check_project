@@ -17,7 +17,6 @@ attendance = async_session()
 async def find_attendance(branch_id : int, part_id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         find_part = await attendance.execute(select(Parts).where(Parts.id == part_id))
-        
         result_part = find_part.scalar_one_or_none()
         
 
