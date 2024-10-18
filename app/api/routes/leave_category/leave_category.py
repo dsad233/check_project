@@ -13,7 +13,6 @@ from app.cruds.leave_categories import leave_categories_crud, leave_excluded_par
 from app.middleware.tokenVerify import validate_token
 from app.models.branches.leave_categories_model import (
     LeaveCategoryCreate,
-    LeaveCategoryListResponse,
     LeaveCategoryResponse,
     LeaveCategoryUpdate
 )
@@ -28,15 +27,15 @@ class ExcludedPartIdAndPartName(BaseModel):
 
 class LeaveCategoryWithExcludedPartsResponse(BaseModel):
     leave_category: LeaveCategoryResponse
-    excluded_parts: list[ExcludedPartIdAndPartName]
+    excluded_parts: list[ExcludedPartIdAndPartName] = []
 
 class LeaveCreateWithExcludedPartIds(BaseModel):
-    create_leave_category: LeaveCategoryCreate
-    excluded_part_ids: Optional[list[int]] = None
+    leave_category: LeaveCategoryCreate
+    excluded_part_ids: Optional[list[int]] = []
 
 class LeaveUpdateWithExcludedPartIds(BaseModel):
     update_leave_category: LeaveCategoryUpdate
-    excluded_part_ids: Optional[list[int]] = None
+    excluded_part_ids: Optional[list[int]] = []
 
     
 @router.get("/list", response_model=List[LeaveCategoryWithExcludedPartsResponse])
