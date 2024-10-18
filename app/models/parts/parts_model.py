@@ -26,7 +26,6 @@ class Parts(Base):
     task = Column(String(500), nullable=True)
     color = Column(String(255), nullable=True)
     is_doctor = Column(Boolean, default=False)
-    salaries = relationship("UserSalary", back_populates="part")
     required_certification = Column(Boolean, default=False)
     leave_granting_authority = Column(Boolean, default=False)
 
