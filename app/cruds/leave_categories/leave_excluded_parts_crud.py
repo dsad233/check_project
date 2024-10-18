@@ -44,3 +44,14 @@ async def delete(
     await session.delete(leave_excluded_part)
     await session.commit()
     return leave_excluded_part.id
+
+async def delete_by_part_id(
+    *, session: AsyncSession, leave_category_id: int, part_id: int
+) -> int:
+    stmt = select(LeaveExcludedPart).where(LeaveExcludedPart.leave_category_id == leave_category_id, LeaveExcludedPart.part_id == part_id)
+    result = await session.execute(stmt)
+    leave_excluded_part = result.scalar_one_or_none()
+    if leave_excluded_part is None:
+        raise ValueError(f"LeaveExcludedPart with part_id {part_id} and leave_category_id {leave_category_id} not found")
+    await session.delete(leave_excluded_part)
+    await session.commit()
