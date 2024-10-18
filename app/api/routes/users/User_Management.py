@@ -37,7 +37,7 @@ class UserManagement:
                 raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
 
             query = select(Users).options(
-                joinedload(Users.salary),
+                joinedload(Users.salaries),
                 joinedload(Users.part),
                 joinedload(Users.branch)
             )
@@ -109,8 +109,8 @@ class UserManagement:
                     "phone_number": user.phone_number,
                     "email": user.email,
                     "hire_date": user.hire_date,
-                    "monthly_salary": user.salary.monthly_salary if user.salary else None,
-                    "annual_salary": user.salary.annual_salary if user.salary else None,
+                    "monthly_salary": user.salaries.monthly_salary if user.salaries else None,
+                    "annual_salary": user.salaries.annual_salary if user.salaries else None,
                     "part": user.part.name if user.part else None,
                     "branch": user.branch.name if user.branch else None,
                 }
