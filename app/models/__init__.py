@@ -57,7 +57,7 @@ Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 
-Users.salaries = relationship("UserSalary", back_populates="user")
+Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
 
