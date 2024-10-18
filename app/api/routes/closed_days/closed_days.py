@@ -665,11 +665,11 @@ async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
             raise HTTPException(status_code=400, detail="삭제 권한이 없습니다.")
         
         for data in array_list:
-            find_one_closed_days = await db.execute(select(ClosedDays).where(ClosedDays.id == data, ClosedDays.deleted_yn == "N"))
+            find_one_closed_days = await db.execute(select(ClosedDays).where(ClosedDays.id == int(data), ClosedDays.branch_id == branch_id, ClosedDays.deleted_yn == "N"))
             result = find_one_closed_days.scalar_one_or_none()
 
             if(result is not None):
-                db.delete(result)
+                await db.delete(result)
 
         await db.commit()
 
