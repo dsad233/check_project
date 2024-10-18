@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 router = APIRouter(dependencies=[Depends(validate_token)])
 
 class ExcludedPartIdAndPartName(BaseModel):
-    id: int
+    part_id: int
     part_name: str
 
 class LeaveCategoryWithExcludedPartsResponse(BaseModel):
@@ -31,11 +31,12 @@ class LeaveCategoryWithExcludedPartsResponse(BaseModel):
 
 class LeaveCreateWithExcludedPartIds(BaseModel):
     leave_category: LeaveCategoryCreate
-    excluded_part_ids: Optional[list[int]] = []
+    excluded_create_ids: Optional[list[int]] = []
 
 class LeaveUpdateWithExcludedPartIds(BaseModel):
     leave_category: LeaveCategoryUpdate
-    excluded_part_ids: Optional[list[int]] = []
+    excluded_create_ids: Optional[list[int]] = []
+    excluded_delete_ids: Optional[list[int]] = []
 
     
 @router.get("/list", response_model=List[LeaveCategoryWithExcludedPartsResponse])
@@ -56,7 +57,7 @@ async def read_leave_categories(
             )
             excluded_parts_data = [
                 ExcludedPartIdAndPartName(
-                    id=excluded_part.id,
+                    part_id=excluded_part.part_id,
                     part_name=await parts_crud.get_name_by_branch_id_and_part_id(
                         session=session, branch_id=branch_id, part_id=excluded_part.part_id
                     )
@@ -84,8 +85,12 @@ async def create_leave_category(
         leave_category_id = await leave_categories_crud.create_leave_category(
             session=session, branch_id=branch_id, leave_category_create=data.leave_category
         )
-        if data.excluded_part_ids:
-            for part_id in data.excluded_part_ids:
+        excluded_parts = await leave_excluded_parts_crud.get_all_by_leave_category_id(
+            session=session, leave_category_id=leave_category_id
+        )
+        # 제외 부서 생성
+        for part_id in data.excluded_create_ids:
+            if part_id not in [excluded_part.part_id for excluded_part in excluded_parts]:
                 await leave_excluded_parts_crud.create(
                     session=session, leave_category_id=leave_category_id, part_id=part_id
                 )
@@ -103,16 +108,39 @@ async def update_leave_category(
     session: AsyncSession = Depends(get_db),
     data: LeaveUpdateWithExcludedPartIds
 ) -> str:
+    """
+    휴무 카테고리를 수정 합니다.
+
+    - leave_category: 수정 할 카테고리 내용을 입력합니다.
+    - excluded_create_ids: 추가 할 제외 부서 id를 입력합니다.
+    - excluded_delete_ids: 삭제 할 제외 부서 id를 입력합니다.
+    
+    - 오류 발생 시 500 Internal Server Error를 반환합니다.
+    """
     try:
         await leave_categories_crud.update_leave_category(
             session=session, branch_id=branch_id, leave_category_id=leave_category_id, leave_category_update=data.leave_category
         )
-        if data.excluded_part_ids:
-            for excluded_part_id in data.excluded_part_ids:
-                await leave_excluded_parts_crud.delete(
-                    session=session, leave_excluded_part_id=excluded_part_id
+        excluded_parts = await leave_excluded_parts_crud.get_all_by_leave_category_id(
+            session=session, leave_category_id=leave_category_id
+        )
+        # 제외 부서 삭제
+        for part_id in data.excluded_delete_ids:
+            print("------------------------------------")
+            print(part_id)
+            if part_id in [excluded_part.part_id for excluded_part in excluded_parts]:
+                await leave_excluded_parts_crud.delete_by_part_id(
+                    session=session, leave_category_id=leave_category_id, part_id=part_id
                 )
-        return f"{data.leave_category_update.name} 휴가 카테고리가 수정되었습니다."
+        # 제외 부서 생성
+        for part_id in data.excluded_create_ids:
+            print("------------------------------------")
+            print(part_id)
+            if part_id not in [excluded_part.part_id for excluded_part in excluded_parts]:
+                await leave_excluded_parts_crud.create(
+                    session=session, leave_category_id=leave_category_id, part_id=part_id
+                )
+        return f"{leave_category_id}번 휴가 카테고리가 수정되었습니다."
     except Exception as e:
         logger.error(f"Error occurred while updating leave category: {e}")
         raise HTTPException(status_code=500, detail=f"Error occurred while updating leave category: {e}")
