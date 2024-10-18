@@ -31,11 +31,20 @@ async def create_branch(
     return db_obj
 
 
-async def find_branch_all(
+async def find_branch_all_by_limit(
     *, session: AsyncSession, offset: int = 0, limit: int = 10
 ) -> list[Branches]:
     statement = (
         select(Branches).filter(Branches.deleted_yn == "N").offset(offset).limit(limit)
+    )
+    result = await session.execute(statement)
+    return result.scalars().all()
+
+async def find_branch_all(
+    *, session: AsyncSession
+) -> list[Branches]:
+    statement = (
+        select(Branches).where(Branches.deleted_yn == "N")
     )
     result = await session.execute(statement)
     return result.scalars().all()

@@ -25,12 +25,23 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 async def read_branches(
     *, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends()
 ) -> BranchListResponse:
+    """
+    지점 목록을 조회합니다.
+
+    - **page**: 페이지 번호. 0을 입력하면 페이지네이션 없이 모든 결과를 반환합니다.
+    - 기본적으로 페이지네이션이 적용되며, `search` 파라미터를 통해 offset과 record_size를 조정할 수 있습니다.
+    - 오류 발생 시 500 Internal Server Error를 반환합니다.
+    """
     try:
         count = await branches_crud.count_branch_all(session=session)
-        pagination = PaginationDto(total_record=count)
-        branches = await branches_crud.find_branch_all(
-        session=session, offset=search.offset, limit=search.record_size
-        )
+        if search.page == 0:
+            branches = await branches_crud.find_branch_all(session=session)
+            pagination = None
+        else:
+            pagination = PaginationDto(total_record=count)
+            branches = await branches_crud.find_branch_all_by_limit(
+            session=session, offset=search.offset, limit=search.record_size
+            )
         return BranchListResponse(list=branches, pagination=pagination)
     
     except Exception as e:

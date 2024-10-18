@@ -1,12 +1,12 @@
 from datetime import datetime
-
+from typing import Optional
 from pydantic import BaseModel, Field
 
 
 class BaseSearchDto(BaseModel):
-    page: int = Field(default=1, description="현재 페이지")
-    offset: int = Field(default=0, description="시작 행")
-    record_size: int = Field(default=10, description="출력 갯수")
+    page: Optional[int] = Field(default=1, description="현재 페이지 번호", ge=0)
+    offset: Optional[int] = Field(default=0, description="시작 행")
+    record_size: Optional[int] = Field(default=10, description="출력 갯수", gt=0)
 
     def __init__(self, **data):
         super().__init__(**data)

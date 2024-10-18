@@ -11,7 +11,7 @@ meta = MetaData()
 engine = create_async_engine(settings.DATABASE_URL,
     echo=False, 
     pool_pre_ping=True,
-    pool_recycle=1800,
+    pool_recycle=3600,
     pool_size=20,
     max_overflow=10,
     pool_timeout=30,
@@ -19,12 +19,7 @@ engine = create_async_engine(settings.DATABASE_URL,
     connect_args={
         "charset": "utf8mb4",
         "connect_timeout": 60
-    },
-    # 추가 설정
-    isolation_level="READ COMMITTED",  # 격리 수준 설정
-    pool_use_lifo=True,  # LIFO 방식으로 연결 재사용 (성능 향상 가능)
-    pool_reset_on_return="rollback",  # 연결 반환 시 롤백 수행
-    echo_pool=False
+    }
     )
 
 
