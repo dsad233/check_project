@@ -10,8 +10,7 @@ from app.middleware.tokenVerify import get_current_user, validate_token
 from app.models.closed_days.closed_days_model import ClosedDays, ClosedDayCreate, ClosedDayUpdate
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
-from fastapi.responses import JSONResponse
-from calendar import monthrange, weekday
+from calendar import monthrange
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -307,20 +306,41 @@ async def get_part_month_closed_days(branch_id : int, part_id : int, date : str,
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
 
+
 # 휴일 지점 일요일만 월간 전체 조회 [어드민만]
 @router.get("/{branch_id}/closed_days/branch_sunday/{date}")
-async def get_branch_month_sunday_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
+        # 권한 확인
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
+            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
         
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
         date_start_day = date_obj.replace(day=1)
-        
         _, last_day = monthrange(date_obj.year, date_obj.month)
         date_end_day = date_obj.replace(day=last_day)
+        
+        sundays = []
+        current_day = date_start_day
+        
+        while current_day <= date_end_day:
+            if current_day.weekday() == 6:
+                sundays.append(current_day)
+            current_day += timedelta(days=1)
 
-        stmt = select(ClosedDays).join(WorkPolicies, WorkPolicies.branch_id == branch_id).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start_day, WorkPolicies.sunday_is_holiday == True, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N").offset(0).limit(100)
+        stmt = (
+            select(ClosedDays)
+            .join(WorkPolicies, WorkPolicies.branch_id == branch_id)
+            .where(
+                ClosedDays.branch_id == branch_id,
+                ClosedDays.closed_day_date.in_(sundays), 
+                WorkPolicies.sunday_is_holiday == True,
+                ClosedDays.deleted_yn == "N"
+            )
+            .offset(0)
+            .limit(100)
+        )
+        
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
@@ -332,6 +352,7 @@ async def get_branch_month_sunday_closed_days(branch_id : int, date : str, token
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
+
     
 
 # 휴일 지점 일요일 휴무 지정 [어드민만]
