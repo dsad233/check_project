@@ -25,7 +25,6 @@ async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate,
 
         new_closed_day = ClosedDays(
             branch_id=branch_id,
-            user_id = token.id,
             closed_day_date=closed_day.closed_day_date,
             memo=closed_day.memo,
         )
@@ -77,7 +76,39 @@ async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, 
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 생성에 실패하였습니다.")
     
-# 휴무일 다중 휴무 생성
+# 휴무일 지점 다중 휴무 생성
+@router.post("/{branch_id}/closed_days/arrays")
+async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list : list[ClosedDayCreate] = Body(...)):
+    try:
+
+        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
+            raise HTTPException(status_code=400, detail="생성 권한이 없습니다.")
+        
+        
+        results = []
+        for data in array_list:
+            new_closed_day = ClosedDays(
+                branch_id=branch_id,
+                closed_day_date=data.closed_day_date,
+                memo=data.memo,
+            )
+            results.append(new_closed_day)
+
+        db.add_all(results)
+        await db.commit()
+
+        return {
+            "message": "지점 다중 휴무일이 성공적으로 생성되었습니다."
+        }
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail="휴무일 생성에 실패하였습니다.")
+    
+# 휴무일 파트 다중 휴무 생성
 @router.post("/{branch_id}/parts/{part_id}/closed_days/arrays/users/{user_id}")
 async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list : list[ClosedDayCreate] = Body(...)):
     try:
@@ -99,10 +130,9 @@ async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id 
 
         db.add_all(results)
         await db.commit()
-        await db.refresh(results)
 
         return {
-            "message": "다중 휴무일이 성공적으로 생성되었습니다."
+            "message": "파트 다중 휴무일이 성공적으로 생성되었습니다."
         }
     except HTTPException as http_err:
         await db.rollback()
