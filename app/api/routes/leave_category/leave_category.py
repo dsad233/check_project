@@ -82,7 +82,7 @@ async def create_leave_category(
 ) -> str:
     try:
         leave_category_id = await leave_categories_crud.create_leave_category(
-            session=session, branch_id=branch_id, leave_category_create=data.create_leave_category
+            session=session, branch_id=branch_id, leave_category_create=data.leave_category
         )
         if data.excluded_part_ids:
             for part_id in data.excluded_part_ids:
@@ -105,7 +105,7 @@ async def update_leave_category(
 ) -> str:
     try:
         await leave_categories_crud.update_leave_category(
-            session=session, branch_id=branch_id, leave_category_id=leave_category_id, leave_category_update=data.update_leave_category
+            session=session, branch_id=branch_id, leave_category_id=leave_category_id, leave_category_update=data.leave_category
         )
         if data.excluded_part_ids:
             for excluded_part_id in data.excluded_part_ids:
