@@ -289,11 +289,6 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
         return {
             "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
