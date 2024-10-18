@@ -11,9 +11,8 @@ from app.api.routes.overtimes import overtimes
 from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
 from app.api.routes.salary_bracket import salary_bracket
-from app.api.routes.users import users
+from app.api.routes.users import users, user_management
 from app.api.routes.work_policies import work_policies
-from app.api.routes.users.user_management import user_management
 from app.api.routes.hour_wage_template import hour_wage_template
 
 app = APIRouter()

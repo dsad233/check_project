@@ -22,6 +22,7 @@ class Parts(Base):
     __tablename__ = "parts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     name = Column(String(255), nullable=False)
     task = Column(String(500), nullable=True)
     color = Column(String(255), nullable=True)
@@ -29,7 +30,13 @@ class Parts(Base):
     required_certification = Column(Boolean, default=False)
     leave_granting_authority = Column(Boolean, default=False)
 
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    # role = Column(
+    #     Enum(
+    #         "회계기준", "입사일 기준", "조건별" , "수동", name="user_role"
+    #     ),
+    #     nullable=False,
+    #     default="사원",
+    # )
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -63,3 +70,6 @@ class PartResponse(BaseModel):
     is_doctor: bool
     required_certification: bool
     leave_granting_authority: bool
+    
+    class Config:
+        from_attributes = True
