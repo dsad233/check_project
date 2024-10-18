@@ -36,7 +36,7 @@ app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-poli
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
 app.include_router(user_management.router, prefix='/user-management', tags=['User_Management'])
 
-# app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
+app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
 
 @app.get("/health")
 def health_check():

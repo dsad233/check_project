@@ -82,13 +82,3 @@ class AttendanceCreate(BaseSettings):
     # O.T 총 금액 
     ot_total : int
 
-    # parts = relationship("Attendance", back_populates="parts")
-    # branchs = relationship("Attendance", back_populates="branchs")
-    
-
-
- 
-
-
-    # attendance = relationship("Branches", back_populates="attendance")
-    # attendance = relationship("Parts", back_populates="attendance")
