@@ -25,6 +25,7 @@ from .branches.rest_days_model import RestDays
 from .users.leave_histories_model import LeaveHistories
 from .branches.leave_categories_model import LeaveCategories
 from .branches.leave_excluded_parts_model import LeaveExcludedPart
+from .attendance.attendance_model import Attendance
 
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
@@ -46,6 +47,7 @@ Branches.leave_histories = relationship("LeaveHistories", back_populates="branch
 Branches.work_policies = relationship("WorkPolicies", back_populates="branch")
 Branches.allowance_policies = relationship("AllowancePolicies", back_populates="branch")
 Branches.hour_wage_templates = relationship("HourWageTemplate", back_populates="branch")
+Branches.attendance = relationship("Attendance", back_populates="branch")
 
 LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
@@ -53,9 +55,13 @@ Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
 Parts.hour_wage_templates = relationship("HourWageTemplate", back_populates="part")
 Parts.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="part")
+Parts.closed_days = relationship("ClosedDays", back_populates="part")
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
+Users.closed_days = relationship("ClosedDays", back_populates="user")
+
+Parts.attendance = relationship("Attendance", back_populates="part")
 
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
 Parts.salaries = relationship("UserSalary", back_populates="part")
@@ -86,6 +92,7 @@ DocumentPolicies.branch = relationship("Branches", back_populates="document_poli
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
+ClosedDays.part = relationship("Parts", back_populates="closed_days")
 
 Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
 Overtimes.manager = relationship("Users", foreign_keys=[Overtimes.manager_id], back_populates="managed_overtimes")
@@ -99,3 +106,6 @@ UserSalary.branch = relationship("Branches", back_populates="salaries")
 
 LeaveExcludedPart.part = relationship("Parts", back_populates="leave_excluded_parts")
 LeaveExcludedPart.leave_category = relationship("LeaveCategories", back_populates="leave_excluded_parts")
+
+Attendance.branch = relationship("Branches", back_populates="attendance")
+Attendance.part = relationship("Parts", back_populates="attendance")
