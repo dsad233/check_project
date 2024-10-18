@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from typing import Annotated
+from typing import Annotated, List
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Body
@@ -78,7 +78,7 @@ async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, 
     
 # 휴무일 지점 다중 휴무 생성
 @router.post("/{branch_id}/closed_days/arrays")
-async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list : list[ClosedDayCreate] = Body(...)):
+async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
     try:
 
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -110,7 +110,7 @@ async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
     
 # 휴무일 파트 다중 휴무 생성
 @router.post("/{branch_id}/parts/{part_id}/closed_days/arrays/users/{user_id}")
-async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list : list[ClosedDayCreate] = Body(...)):
+async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
     try:
 
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id or token.part_id != part_id and token.role.strip() not in ["최고관리자", "관리자", "사원", "통합 관리자"]):
