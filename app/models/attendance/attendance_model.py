@@ -2,6 +2,8 @@ from pydantic import BaseModel
 from sqlalchemy import Column, Integer, ForeignKey, String
 from sqlalchemy.orm import relationship
 from app.core.database import Base
+from pydantic_settings import BaseSettings
+from enum import Enum
 
 
 class Attendance(Base):
@@ -43,6 +45,41 @@ class Attendance(Base):
     # O.T 총 금액
     ot_total = Column(Integer, default= 0)
 
+class UserEnum(str, Enum):
+    male = "남자"
+    femail = "여자"
+    
+class AttendanceCreate(BaseSettings):
+    branch_name : str
+    name : str
+    gender : UserEnum
+    part_name : str
+    # 근무 일자
+    workdays : int
+    # 휴직 일자
+    leavedays : int
+    # 정규 휴무
+    regular_holiday : int
+    # 연차 사용
+    annual_leave : int
+    # 무급 사용
+    unpaid_use : int
+    
+    # 재택 근무
+    work_from_home : int 
+    # 주말 근무 시간
+    weekend_work_hours : int
+    # 주말 근무 수당
+    holiday_work : int
+
+    # O.T 30분 횟수
+    ot_30 : int
+    # O.T 60분 횟수
+    ot_60 : int
+    # O.T 90분 횟수
+    ot_90 = int
+    # O.T 총 금액 
+    # ot_total : 
 
     parts = relationship("Attendance", back_populates="parts")
     branchs = relationship("Attendance", back_populates="branchs")
