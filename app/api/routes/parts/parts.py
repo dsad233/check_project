@@ -38,14 +38,7 @@ async def getParts(branch_id: int, current_user_id: int = Depends(get_current_us
         parts_dtos = []
 
         for part in parts:
-            dto = PartResponse(
-                id=part.id,
-                name=part.name,
-                task=part.task,
-                is_doctor=part.is_doctor,
-                required_certification=part.required_certification,
-                leave_granting_authority=part.leave_granting_authority,
-            )
+            dto = PartResponse.model_validate(part)
             parts_dtos.append(dto)
 
         return parts_dtos
