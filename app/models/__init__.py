@@ -29,7 +29,7 @@ from .branches.leave_excluded_parts_model import LeaveExcludedPart
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
 
-Users.salary = relationship("UserSalary", back_populates="user", uselist=False)
+# Users.salary = relationship("UserSalary", back_populates="user")
 # 여기서 관계를 설정합니다
 # 일 대 다 관계
 Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
