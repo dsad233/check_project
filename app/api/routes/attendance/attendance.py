@@ -82,32 +82,40 @@ async def find_attendance(token: Annotated[Users, Depends(get_current_user)]):
             select(Users, Branches, Parts, Commutes, LeaveHistories, Overtimes)
             .join(Branches, Users.branch_id == Branches.id)
             .join(Parts, Users.part_id == Parts.id)
-            .outerjoin(Commutes, Users.id == Commutes.user_id)
+            .join(Commutes, Users.id == Commutes.user_id)
             .outerjoin(LeaveHistories, Users.id == LeaveHistories.user_id)
-            .outerjoin(Overtimes, Users.id == Overtimes.applicant_id)
+            .join(Overtimes, Users.id == Overtimes.applicant_id)
         )
         result = find_attendance.fetchall()
         
+        
         attendance_data = []
         for user, branch, part, commute, leave, overtime in result:
+            find_user_work = await attendance.execute(select(Commutes).where(Commutes.user_id == user.id))
+            result_user_work = find_user_work.scalars().all()
+            # print("dsdadasdasdas : ",branch.__dict__)
+            print("dsdadasdasdas : ",commute.__dict__)
+            print("dsdadasdasdas : ",overtime.__dict__)
             attendance_info = {
                 "번호": user.id,
                 "지점": branch.name,
                 "이름": user.name,
                 "근무파트": part.name,
-                "근무일수": commute.work_days if commute else 0,
-                "휴일근무": commute.holiday_work_days if commute else 0,
+                "근무일수": len(result_user_work) if commute else 0,
+                # "휴일근무": commute.holiday_work_days if commute else 0,
                 "정규 휴무": leave.regular_leave_days if leave else 0,
                 "연차 사용": leave.annual_leave_days if leave else 0,
                 "무급 사용": leave.unpaid_leave_days if leave else 0,
-                "계획 근무": "0일",
-                "휴일 근무": "0일",  
+                "재택 근무": "0일",
+                "휴일 근무": "0일",
+                "주말 근무 시간" : 0,
+                "주말 근무 수당" : 0,  
                 "추가 근무 시간": "0시간", 
                 "추가 근무 수당": 0,
-                "O.T 30분 할증": overtime.ot_30min if overtime else 0,
-                "O.T 60분 할증": overtime.ot_60min if overtime else 0,
-                "O.T 90분 할증": overtime.ot_90min if overtime else 0,
-                "O.T 총 금액": overtime.total_amount if overtime else 0
+                # "O.T 30분 할증": overtime.ot_30min if overtime else 0,
+                # "O.T 60분 할증": overtime.ot_60min if overtime else 0,
+                # "O.T 90분 할증": overtime.ot_90min if overtime else 0,
+                # "O.T 총 금액": overtime.total_amount if overtime else 0
             }
             attendance_data.append(attendance_info)
         
