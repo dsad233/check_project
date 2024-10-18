@@ -49,9 +49,6 @@ class LeaveCategoryResponse(BaseModel):
     leave_count: int = Field(description="차감 일수")
     is_paid: bool = Field(description="유급 여부")
     is_leave_of_absence: bool = Field(description="휴직 여부")
-    created_at: datetime = Field(description="생성 일시")
-    updated_at: datetime = Field(description="수정 일시")
-    deleted_yn: str = Field(description="삭제 여부")
 
     class Config:
         from_attributes = True
@@ -61,8 +58,3 @@ class LeaveCategoryUpdate(BaseModel):
     leave_count: int = Field(description="차감 일수")
     is_paid: bool = Field(description="유급 여부")
     is_leave_of_absence: bool = Field(description="휴직 여부")
-
-
-class LeaveCategoryListResponse(BaseModel):
-    list: List[LeaveCategoryResponse] = Field(description="휴무 목록")
-    pagination: PaginationDto = Field(description="페이지네이션")
