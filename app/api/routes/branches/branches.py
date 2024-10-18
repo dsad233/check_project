@@ -36,7 +36,7 @@ async def read_branches(
         count = await branches_crud.count_branch_all(session=session)
         if search.page == 0:
             branches = await branches_crud.find_branch_all(session=session)
-            pagination = None
+            pagination = PaginationDto(total_record=count, record_size=count)
         else:
             pagination = PaginationDto(total_record=count)
             branches = await branches_crud.find_branch_all_by_limit(
