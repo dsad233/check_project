@@ -16,7 +16,8 @@ attendance = async_session()
 @router.get('/{branch_id}/parts/{part_id}/attendance')
 async def find_attendance(branch_id : int, part_id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        find_attendance = await attendance.execute(select(Users).where(Branches.id == branch_id))
+        find_part = await attendance.execute(select(Parts).where(Parts.))
+        find_attendance = await attendance.execute(select(Users).where(Branches.id == branch_id, Branches.name))
 
         find_working = await attendance.execute(select(WorkPolicies).where(WorkPolicies.))
     except Exception as err:

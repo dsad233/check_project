@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from sqlalchemy import Column, Integer, ForeignKey, String
+from sqlalchemy.orm import relationship
 from app.core.database import Base
 
 
@@ -10,10 +11,46 @@ class Attendance(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     part_id = Column(Integer, ForeignKey('parts.id'), nullable=False)
-    part_name = Column(String(255), nullable=False)
+    branch_name = Column(String(20), nullable=False)
     name = Column(String(10),nullable=False)
     gender = Column(String(5), nullable= False)
+    part_name = Column(String(255), nullable=False)
 
+    # 근무 일자
+    workdays = Column(Integer, default=0)
+    # 휴직 일자
+    leavedays = Column(Integer, default=0)
+    # 정규 휴무
+    regular_holiday = Column(Integer, default=0)
+    # 연차 사용
+    annual_leave = Column(Integer, default=0)
+    # 무급 사용
+    unpaid_use = Column(Integer, default=0)
+
+    # 재택 근무
+    work_from_home = Column(Integer, default=0)
+    # 주말 근무 시간
+    weekend_work_hours = Column()
+    # 주말 근무 수당
+    holiday_work = Column(Integer, default=0)
+
+    # O.T 30분 횟수
+    ot_30 = Column(Integer, default= 0)
+    # O.T 60분 횟수
+    ot_60 = Column(Integer, default= 0)
+    # O.T 90분 횟수
+    ot_90 = Column(Integer, default= 0)
+    # O.T 총 금액
+    ot_total = Column(Integer, default= 0)
+
+
+    parts = relationship("Attendance", back_populates="parts")
+    branchs = relationship("Attendance", back_populates="branchs")
     
 
 
+ 
+
+
+    attendance = relationship("Branches", back_populates="attendance")
+    attendance = relationship("Parts", back_populates="attendance")
