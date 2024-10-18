@@ -100,9 +100,9 @@ async def find_attendance(token: Annotated[Users, Depends(get_current_user)]):
                 "정규 휴무": leave.regular_leave_days if leave else 0,
                 "연차 사용": leave.annual_leave_days if leave else 0,
                 "무급 사용": leave.unpaid_leave_days if leave else 0,
-                "계획 근무": "0일",  # 데이터 없음, 필요시 추가
-                "휴일 근무": "0일",  # 데이터 없음, 필요시 추가
-                "추가 근무 시간": "0시간",  # 데이터 없음, 필요시 추가
+                "계획 근무": "0일",
+                "휴일 근무": "0일",  
+                "추가 근무 시간": "0시간", 
                 "추가 근무 수당": 0,
                 "O.T 30분 할증": overtime.ot_30min if overtime else 0,
                 "O.T 60분 할증": overtime.ot_60min if overtime else 0,
