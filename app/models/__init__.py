@@ -1,6 +1,7 @@
 from app.core.database import Base
 from sqlalchemy.orm import relationship
 
+from app.models.attendance.attendance_model import Attendance
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes
@@ -64,6 +65,12 @@ Branches.salaries = relationship("UserSalary", back_populates="branch")
 
 LeaveCategories.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="leave_category")
 
+Branches.closed_days = relationship("ClosedDays", back_populates="branch")
+Parts.closed_days = relationship("ClosedDays", back_populates="part")
+
+Branches.attendance = relationship("Attendance", back_populates="branch")
+Parts.attendance = relationship("Attendance", back_populates="part")
+Users.attendance = relationship("Attendance", back_populates="users")
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
 LeaveHistories.leave_category = relationship("LeaveCategories", back_populates="leave_histories")
@@ -103,3 +110,10 @@ UserSalary.branch = relationship("Branches", back_populates="salaries")
 
 LeaveExcludedPart.part = relationship("Parts", back_populates="leave_excluded_parts")
 LeaveExcludedPart.leave_category = relationship("LeaveCategories", back_populates="leave_excluded_parts")
+
+ClosedDays.branch = relationship("Branches", back_populates="closed_days")
+ClosedDays.part = relationship("Parts", back_populates="closed_days")
+
+Attendance.branch = relationship("Branches", back_populates="attendance")
+Attendance.part = relationship("Parts", back_populates="attendance")
+Attendance.users = relationship("Users", back_populates="attendance")

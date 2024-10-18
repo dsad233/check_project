@@ -13,6 +13,7 @@ class Attendance(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     part_id = Column(Integer, ForeignKey('parts.id'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
     branch_name = Column(String(20), nullable=False)
     name = Column(String(10),nullable=False)
     gender = Column(String(5), nullable= False)

@@ -2,12 +2,15 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
 from app.core.database import async_session
+from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
 from app.models.users.users_model import Users
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.overtimes_model import Overtimes
 from app.models.attendance.attendance_model import AttendanceCreate, Attendance
+from app.models.commutes.commutes_model import Commutes
+from app.models.users.leave_histories_model import LeaveHistories
 from app.middleware.tokenVerify import validate_token, get_current_user
 
 
@@ -63,7 +66,7 @@ async def find_attendance(branch_id : int, part_id : int, user_id : int, token:A
 
         # find_working = await attendance.execute(select(WorkPolicies).where(WorkPolicies.))
     except Exception as err:
-
+        print(err)
         raise HTTPException(status_code=500, detail= "근태 관리 생성에 실패하였습니다.")
     
 
@@ -74,11 +77,12 @@ async def find_attendance(branch_id : int, part_id : int, user_id : int, token:A
 @router.get('/attendance')
 async def find_attendance(token:Annotated[Users, Depends(get_current_user)]):
     try:
-        find_attendance = await attendance.execute(select(Attendance).offset(0).limit(100))
-        result_find = find_attendance.scalars().all()
+        # find_
 
-        if(len(result_find) == 0):
-            raise HTTPException("근태 관리 정보들이 존재하지 않습니다.")
+        find_attendance = await attendance.execute(select(Users).join(Parts, Parts.id == Users.part_id).join(Branches, Branches.id == Users.branch_id).join(Commutes, Commutes.user_id == Users.id)
+                .offset(0)
+                .limit(100))
+        result_find = find_attendance.scalars().all()
         
         return { "message" : "성공적으로 근로 관리 전체 조회를 완료 하였습니다.", "data" : result_find }
     except Exception as err:

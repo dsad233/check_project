@@ -655,10 +655,38 @@ async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 삭제에 실패하였습니다.")
+    
+# 휴무일 지점 다중 삭제 [어드민만]
+@router.delete("/{branch_id}/closed_days/arrays/delete")
+async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[int] = Body(...)):
+    try:
+
+        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
+            raise HTTPException(status_code=400, detail="삭제 권한이 없습니다.")
+        
+        for data in array_list:
+            find_one_closed_days = await db.execute(select(ClosedDays).where(ClosedDays.id == data, ClosedDays.deleted_yn == "N"))
+            result = find_one_closed_days.scalar_one_or_none()
+
+            if(result is not None):
+                db.delete(result)
+
+        await db.commit()
+
+        return {
+            "message": "지점 휴무일이 성공적으로 다중 삭제되었습니다."
+        }
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail="다중 휴무일 삭제에 실패하였습니다.")
 
 # 휴무일 지점 소프트 삭제 [어드민만]
 @router.patch("/{branch_id}/closed_days/softdelete/{id}")
-async def branch_soft_delete_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
             raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
