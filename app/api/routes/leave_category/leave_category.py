@@ -34,7 +34,7 @@ class LeaveCreateWithExcludedPartIds(BaseModel):
     excluded_part_ids: Optional[list[int]] = []
 
 class LeaveUpdateWithExcludedPartIds(BaseModel):
-    update_leave_category: LeaveCategoryUpdate
+    leave_category: LeaveCategoryUpdate
     excluded_part_ids: Optional[list[int]] = []
 
     
