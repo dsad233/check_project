@@ -153,18 +153,12 @@ async def get_all_closed_days(token : Annotated[Users, Depends(get_current_user)
         stmt = select(ClosedDays).where(ClosedDays.deleted_yn == "N").offset(0).limit(100)
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
-        
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
 
         return {
             "message": "휴무일 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
         }
-    except Exception as err:
+    except Exception as err: 
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 전체 조회에 실패하였습니다.")
@@ -188,12 +182,6 @@ async def get_all_date_closed_days(date : str, token : Annotated[Users, Depends(
         stmt = select(ClosedDays).where(extract("year", ClosedDays.closed_day_date) == date_year, extract("month", ClosedDays.closed_day_date) == date_month, ClosedDays.deleted_yn == "N").offset(0).limit(100)
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
-        
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
 
         return {
             "message": "휴무일 목록을 성공적으로 전체 조회하였습니다.",
@@ -221,11 +209,6 @@ async def get_month_closed_days(date : str, token : Annotated[Users, Depends(get
         stmt = select(ClosedDays).where(ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N").offset(0).limit(100)
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
 
         return {
             "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
@@ -257,11 +240,6 @@ async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
         return {
             "message": "휴무일 주간 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
@@ -270,33 +248,6 @@ async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 주간 전체 조회에 실패하였습니다.")
-    
-
-# 휴일 지점 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/branch_month/{date}")
-async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
-    try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
-        
-        date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-        date_start_day = date_obj.replace(day=1)
-        
-        _, last_day = monthrange(date_obj.year, date_obj.month)
-        date_end_day = date_obj.replace(day=last_day)
-
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N").offset(0).limit(100)
-        result = await db.execute(stmt)
-        closed_days = result.scalars().all()
-
-        return {
-            "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
-            "data": closed_days,
-        }
-    except Exception as err:
-        await db.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
 
 
 # 휴일 지점 월간 전체 조회 [어드민만]
@@ -316,11 +267,6 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start_day, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
 
         return {
             "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
@@ -351,11 +297,6 @@ async def get_part_month_closed_days(branch_id : int, part_id : int, date : str,
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
         return {
             "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
@@ -381,11 +322,6 @@ async def get_branch_month_sunday_closed_days(branch_id : int, date : str, token
         stmt = select(ClosedDays).join(WorkPolicies, WorkPolicies.branch_id == branch_id).where(ClosedDays.branch_id == branch_id, ClosedDays.closed_day_date >= date_start_day, WorkPolicies.sunday_is_holiday == True, ClosedDays.closed_day_date <= date_end_day, ClosedDays.deleted_yn == "N").offset(0).limit(100)
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
 
         return {
             "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
@@ -456,11 +392,6 @@ async def get_week_closed_days(branch_id : int, date : str, token : Annotated[Us
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
         return {
             "message": "휴무일 주간 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
@@ -493,11 +424,6 @@ async def get_week_closed_days(branch_id : int, part_id : int, date : str, token
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
         return {
             "message": "휴무일 주간 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
@@ -522,11 +448,6 @@ async def get_branch_closed_days(branch_id : int, date : str):
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
 
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
-
         return {
             "message": "휴무일 목록을 성공적으로 전체 조회하였습니다.",
             "data": closed_days,
@@ -550,11 +471,6 @@ async def get_part_closed_days(branch_id : int, part_id : int, date : str):
         ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
         closed_days = result.scalars().all()
-
-        if len(closed_days) == 0:
-            raise HTTPException(
-                status_code=404, detail="휴일 정책들의 정보가 존재하지 않습니다."
-            )
 
         return {
             "message": "휴무일 목록을 성공적으로 전체 조회하였습니다.",
