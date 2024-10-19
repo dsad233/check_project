@@ -1,13 +1,13 @@
 from datetime import date, datetime, time
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
+from pydantic import ValidationError
 from sqlalchemy import func, select, update
 
-from app.api.routes.commutes.schema.commute_schema import CommuteUpdate
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user_id, validate_token
-from app.models.commutes.commutes_model import Commutes
+from app.models.commutes.commutes_model import Commutes, CommuteUpdate, Commutes_clock_in, Commutes_clock_out
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -15,7 +15,7 @@ db = async_session()
 
 # 출근 기록 생성
 @router.post("/clock-in")
-async def create_clock_in(current_user_id: int = Depends(get_current_user_id)):
+async def create_clock_in(commutes_clock_in : Commutes_clock_in = Body(default_factory=Commutes_clock_in), current_user_id: int = Depends(get_current_user_id)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -40,7 +40,7 @@ async def create_clock_in(current_user_id: int = Depends(get_current_user_id)):
 
         # 새 출근 기록 생성
         new_commute = Commutes(
-            user_id=current_user_id, clock_in=func.now()  # 현재 시간으로 설정
+            user_id=current_user_id, clock_in=commutes_clock_in.clock_in  # 현재 시간으로 설정
         )
 
         db.add(new_commute)
@@ -58,10 +58,9 @@ async def create_clock_in(current_user_id: int = Depends(get_current_user_id)):
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
-
 # 퇴근 기록 생성 (기존의 출근 기록 수정)
-@router.post("/clock-out")
-async def create_clock_out(current_user_id: int = Depends(get_current_user_id)):
+@router.patch("/clock-out/{id}")
+async def create_clock_out(id : int, commutes_clock_out : Commutes_clock_out = Body(default_factory=Commutes_clock_out), current_user_id: int = Depends(get_current_user_id)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -90,17 +89,17 @@ async def create_clock_out(current_user_id: int = Depends(get_current_user_id)):
             }
 
         # 현재 시간을 퇴근 시간으로 설정
-        now = datetime.now()
-        work_hours = (now - commute.clock_in).total_seconds() / 3600
+        clock_out = commutes_clock_out.clock_out
+        work_hours = (clock_out - commute.clock_in).total_seconds() / 3600
 
         # 출퇴근 기록 업데이트
         update_data = {
-            "clock_out": now,
+            "clock_out": clock_out,
             "work_hours": round(work_hours, 2),
-            "updated_at": now,
+            "updated_at": commutes_clock_out.updated_at,
         }
         update_stmt = (
-            update(Commutes).where(Commutes.id == commute.id).values(**update_data)
+            update(Commutes).where(Commutes.id == id).values(**update_data)
         )
         await db.execute(update_stmt)
         await db.commit()

@@ -332,6 +332,7 @@ async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: 
             select(ClosedDays)
             .join(WorkPolicies, WorkPolicies.branch_id == branch_id)
             .where(
+                WorkPolicies.branch_id == branch_id,
                 ClosedDays.branch_id == branch_id,
                 ClosedDays.closed_day_date.in_(sundays), 
                 WorkPolicies.sunday_is_holiday == True,
