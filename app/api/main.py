@@ -15,6 +15,7 @@ from app.api.routes.users import users, user_management
 from app.api.routes.work_policies import work_policies
 from app.api.routes.hour_wage_template import hour_wage_template
 from app.api.routes.attendance import attendance
+from app.api.routes.commutes_manager import commutes_manager
 
 app = APIRouter()
 
@@ -37,6 +38,7 @@ app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salar
 app.include_router(user_management.router, prefix='/user-management', tags=['User_Management'])
 
 app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
+app.include_router(commutes_manager.router, prefix="/branches", tags=["commutes_manager"])
 
 @app.get("/health")
 def health_check():
