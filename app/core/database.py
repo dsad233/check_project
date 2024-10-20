@@ -4,8 +4,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from app.core.config import settings
-# from alembic.config import Config
-# from alembic import command
+from alembic.config import Config
+from alembic import command
 
 meta = MetaData()
 engine = create_async_engine(settings.DATABASE_URL,
@@ -43,14 +43,14 @@ async def get_db():
     finally:
         await db.close()
 
-# # Alembic 설정 및 마이그레이션 실행 함수
-# def run_migrations():
-#     alembic_cfg = Config("alembic.ini")
-#     command.upgrade(alembic_cfg, "head")
+# Alembic 설정 및 마이그레이션 실행 함수
+def run_migrations():
+    alembic_cfg = Config("alembic.ini")
+    command.upgrade(alembic_cfg, "head")
 
 # FastAPI 애플리케이션 시작 시 실행될 함수
-# async def startup_event():
-#     # 동기 함수인 run_migrations를 비동기 컨텍스트에서 실행
-#     import asyncio
-#     loop = asyncio.get_event_loop()
-#     await loop.run_in_executor(None, run_migrations)
+async def startup_event():
+    # 동기 함수인 run_migrations를 비동기 컨텍스트에서 실행
+    import asyncio
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, run_migrations)
