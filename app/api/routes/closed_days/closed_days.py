@@ -3,7 +3,7 @@ from typing import Annotated, List
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Body
-from sqlalchemy import select, extract
+from sqlalchemy import and_, func, select, extract
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user, validate_token
@@ -308,11 +308,11 @@ async def get_part_month_closed_days(branch_id : int, part_id : int, date : str,
 
 
 # 휴일 지점 일요일만 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/branch_sunday/{date}")
+@router.get("/{branch_id}/closed_days/branch_month/sunday/{date}")
 async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         # 권한 확인
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
+        if token.role.strip() != "MSO 최고권한" and (token.branch_id != branch_id or token.role.strip() != "최고관리자"):
             raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
         
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -320,39 +320,57 @@ async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: 
         _, last_day = monthrange(date_obj.year, date_obj.month)
         date_end_day = date_obj.replace(day=last_day)
         
-        sundays = []
-        current_day = date_start_day
+        # WorkPolicies 조회
+        stmt = select(WorkPolicies).where(WorkPolicies.branch_id == branch_id)
+        result = await db.execute(stmt)
+        work_policy = result.scalar_one_or_none()
         
-        while current_day <= date_end_day:
-            if current_day.weekday() == 6:
-                sundays.append(current_day)
-            current_day += timedelta(days=1)
-
-        stmt = (
-            select(ClosedDays)
-            .join(WorkPolicies, WorkPolicies.branch_id == branch_id)
-            .where(
-                WorkPolicies.branch_id == branch_id,
+        if not work_policy:
+            raise HTTPException(status_code=404, detail="근무 정책을 찾을 수 없습니다.")
+        
+        all_closed_days = []
+        
+        # sunday_is_holiday가 True인 경우에만 일요일 휴무 처리
+        if work_policy.sunday_is_holiday:
+            current_day = date_start_day
+            while current_day <= date_end_day:
+                if current_day.weekday() == 6:  # 일요일
+                    all_closed_days.append({
+                        "date": current_day,
+                        "reason": "일요일 정기 휴무"
+                    })
+                current_day += timedelta(days=1)
+        
+            # ClosedDays 조회 (특별 휴무일 중 일요일만)
+            stmt = select(ClosedDays).where(
                 ClosedDays.branch_id == branch_id,
-                ClosedDays.closed_day_date.in_(sundays), 
-                WorkPolicies.sunday_is_holiday == True,
+                ClosedDays.closed_day_date.between(date_start_day, date_end_day),
+                func.dayofweek(ClosedDays.closed_day_date) == 1,  # 1은 일요일을 나타냄
                 ClosedDays.deleted_yn == "N"
             )
-            .offset(0)
-            .limit(100)
-        )
+            result = await db.execute(stmt)
+            closed_days = result.scalars().all()
+            
+            # 특별 휴무일 추가 (일요일만)
+            for closed_day in closed_days:
+                if closed_day.closed_day_date not in [d['date'] for d in all_closed_days]:
+                    all_closed_days.append({
+                        "date": closed_day.closed_day_date,
+                        "reason": closed_day.memo or "특별 휴무일"
+                    })
         
-        result = await db.execute(stmt)
-        closed_days = result.scalars().all()
+        # 날짜순으로 정렬
+        all_closed_days.sort(key=lambda x: x["date"])
 
         return {
-            "message": "휴무일 월간 목록을 성공적으로 전체 조회하였습니다.",
-            "data": closed_days,
+            "message": "일요일 휴무일 월간 목록을 성공적으로 조회하였습니다.",
+            "data": all_closed_days,
         }
+    except HTTPException as http_err:
+        raise http_err
     except Exception as err:
-        await db.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")
+        print(f"Error details: {str(err)}")
+        raise HTTPException(status_code=500, detail=f"일요일 휴무일 월간 조회에 실패하였습니다. 오류: {str(err)}")
 
     
 
@@ -857,3 +875,4 @@ async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token
         print(err)
         raise HTTPException(status_code=500, detail="휴무일 삭제에 실패하였습니다.")
     
+
