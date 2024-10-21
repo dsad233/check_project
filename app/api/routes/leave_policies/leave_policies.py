@@ -30,15 +30,21 @@ class PartIdWithName(BaseModel):
     class Config:
         from_attributes = True
 
+class AccountPoliciesWithParts(AccountBasedGrantDto):
+    part_ids: List[PartIdWithName] = []
+
+class EntryDatePoliciesWithParts(EntryDateBasedGrantDto):
+    part_ids: List[PartIdWithName] = []
+
+class ConditionPoliciesWithParts(ConditionBasedGrantDto):
+    part_ids: List[PartIdWithName] = []
+
 class AutoLeavePoliciesAndPartsDto(BaseModel):
     auto_approval_policies: AutoAnnualLeaveApprovalDto
-    account_based_policies: AccountBasedGrantDto
-    account_based_parts: List[PartIdWithName]
-    entry_date_based_policies: EntryDateBasedGrantDto
-    entry_date_based_parts: List[PartIdWithName]
-    condition_based_policies: ConditionBasedGrantDto
-    condition_based_parts: List[PartIdWithName]
-    manual_based_parts: List[PartIdWithName]
+    account_based_policies: AccountPoliciesWithParts
+    entry_date_based_policies: EntryDatePoliciesWithParts
+    condition_based_policies: ConditionPoliciesWithParts
+    manual_based_parts: List[PartIdWithName] = []
 
 async def check_role(*, session: AsyncSession, current_user_id: int, branch_id: int):
     user = await users_crud.find_by_id(session=session, user_id=current_user_id)
@@ -72,12 +78,18 @@ async def get_auto_leave_policies(
 
     return AutoLeavePoliciesAndPartsDto(
         auto_approval_policies=AutoAnnualLeaveApprovalDto.model_validate(auto_approval_policies or {}),
-        account_based_policies=AccountBasedGrantDto.model_validate(auto_grant_policies or {}),
-        account_based_parts=[PartIdWithName.model_validate(part) for part in (account_parts or [])],
-        entry_date_based_policies=EntryDateBasedGrantDto.model_validate(auto_grant_policies or {}),
-        entry_date_based_parts=[PartIdWithName.model_validate(part) for part in (entry_date_parts or [])],
-        condition_based_policies=ConditionBasedGrantDto.model_validate(auto_grant_policies or {}),
-        condition_based_parts=[PartIdWithName.model_validate(part) for part in (condition_parts or [])],
+        account_based_policies=AccountPoliciesWithParts(
+            **AccountBasedGrantDto.model_validate(auto_grant_policies or {}).model_dump(),
+            part_ids=[PartIdWithName.model_validate(part) for part in (account_parts or [])]
+        ),
+        entry_date_based_policies=EntryDatePoliciesWithParts(
+            **EntryDateBasedGrantDto.model_validate(auto_grant_policies or {}).model_dump(),
+            part_ids=[PartIdWithName.model_validate(part) for part in (entry_date_parts or [])]
+        ),
+        condition_based_policies=ConditionPoliciesWithParts(
+            **ConditionBasedGrantDto.model_validate(auto_grant_policies or {}).model_dump(),
+            part_ids=[PartIdWithName.model_validate(part) for part in (condition_parts or [])]
+        ),
         manual_based_parts=[PartIdWithName.model_validate(part) for part in (manual_parts or [])]
     )
 
@@ -100,32 +112,49 @@ async def update_auto_leave_policies(
     else:
         await auto_annual_leave_approval_crud.update(session=session, branch_id=branch_id, auto_annual_leave_approval_update=AutoAnnualLeaveApproval(branch_id=branch_id, **data.auto_approval_policies.model_dump(exclude_unset=True)))
 
-    # 자동 부여 정책 업데이트
+     # 자동 부여 정책 업데이트
+    grant_data = {
+        **data.account_based_policies.model_dump(exclude={'part_ids'}),
+        **data.entry_date_based_policies.model_dump(exclude={'part_ids'}),
+        **data.condition_based_policies.model_dump(exclude={'part_ids'})
+    }
+    
     if auto_annual_leave_grant is None:
-        await auto_annual_leave_grant_crud.create(session=session, branch_id=branch_id, auto_annual_leave_grant_create=AutoAnnualLeaveGrant(
+        await auto_annual_leave_grant_crud.create(
+            session=session,
             branch_id=branch_id,
-            **data.account_based_policies.model_dump(),
-            **data.entry_date_based_policies.model_dump(),
-            **data.condition_based_policies.model_dump()
-            )
+            auto_annual_leave_grant_create=AutoAnnualLeaveGrant(branch_id=branch_id, **grant_data)
         )
     else:
-        await auto_annual_leave_grant_crud.update(session=session, branch_id=branch_id, auto_annual_leave_grant_update=AutoAnnualLeaveGrant(
+        await auto_annual_leave_grant_crud.update(
+            session=session,
             branch_id=branch_id,
-            **data.account_based_policies.model_dump(exclude_unset=True),
-            **data.entry_date_based_policies.model_dump(exclude_unset=True),
-            **data.condition_based_policies.model_dump(exclude_unset=True)
-            )
+            auto_annual_leave_grant_update=AutoAnnualLeaveGrant(branch_id=branch_id, **grant_data)
         )
     
     # 파트 auto_annual_leave_grant 업데이트
-    for part in data.account_based_parts:
-        await parts_crud.update_auto_annual_leave_grant(session=session, branch_id=branch_id, part_id=part.id, auto_annual_leave_grant="회계기준 부여")
-    for part in data.entry_date_based_parts:
-        await parts_crud.update_auto_annual_leave_grant(session=session, branch_id=branch_id, part_id=part.id, auto_annual_leave_grant="입사일 기준 부여")
-    for part in data.condition_based_parts:
-        await parts_crud.update_auto_annual_leave_grant(session=session, branch_id=branch_id, part_id=part.id, auto_annual_leave_grant="조건별 부여")
-    for part in data.manual_based_parts:
-        await parts_crud.update_auto_annual_leave_grant(session=session, branch_id=branch_id, part_id=part.id, auto_annual_leave_grant="수동부여")
+    all_parts = (
+        data.account_based_policies.part_ids +
+        data.entry_date_based_policies.part_ids +
+        data.condition_based_policies.part_ids +
+        data.manual_based_parts
+    )
 
+    for part in all_parts:
+        if part in data.account_based_policies.part_ids:
+            grant_type = "회계기준 부여"
+        elif part in data.entry_date_based_policies.part_ids:
+            grant_type = "입사일 기준 부여"
+        elif part in data.condition_based_policies.part_ids:
+            grant_type = "조건별 부여"
+        else:
+            grant_type = "수동부여"
+        
+        await parts_crud.update_auto_annual_leave_grant(
+            session=session,
+            branch_id=branch_id,
+            part_id=part.id,
+            auto_annual_leave_grant=grant_type
+        )
+        
     return f"{branch_id}번 브랜치의 자동 연차 정책이 업데이트 되었습니다."

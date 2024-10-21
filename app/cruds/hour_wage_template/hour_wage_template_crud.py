@@ -25,7 +25,7 @@ async def find_by_name_and_branch_id(
     *, session: AsyncSession, branch_id: int, name: str
 ) -> Optional[HourWageTemplate]:
     
-    stmt = select(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.name == name)
+    stmt = select(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.name == name).where(HourWageTemplate.deleted_yn == "N")
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
     
@@ -42,7 +42,7 @@ async def find_all_by_branch_id(
     *, branch_id: int, session: AsyncSession
 ) -> List[HourWageTemplate]:
     
-    stmt = select(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id)
+    stmt = select(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.deleted_yn == "N")
     result = await session.execute(stmt)
     return result.scalars().all()
 
@@ -61,12 +61,14 @@ async def update(
     for column in HourWageTemplate.__table__.columns:
         if column.name not in ['id', 'branch_id']:
             new_value = getattr(hour_wage_template_update, column.name)
+            if column.name == 'part_id' and new_value is None:
+                changed_fields[column.name] = None
             if new_value is not None and getattr(hour_wage_template, column.name) != new_value:
                 changed_fields[column.name] = new_value
 
     if changed_fields:
         # 변경된 필드가 있을 경우에만 업데이트 수행
-        stmt = sa_update(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).values(**changed_fields)
+        stmt = sa_update(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.id == hour_wage_template_id).values(**changed_fields)
         await session.execute(stmt)
         await session.commit()
         await session.refresh(hour_wage_template)

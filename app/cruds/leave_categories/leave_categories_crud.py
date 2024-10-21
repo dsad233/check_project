@@ -98,7 +98,7 @@ async def update(
 
     if changed_fields:
         # 변경된 필드가 있을 경우에만 업데이트 수행
-        stmt = sa_update(LeaveCategory).where(LeaveCategory.branch_id == branch_id).values(**changed_fields)
+        stmt = sa_update(LeaveCategory).where(LeaveCategory.branch_id == branch_id).where(LeaveCategory.id == leave_category_id).values(**changed_fields)
         await session.execute(stmt)
         await session.commit()
         await session.refresh(leave_category)
