@@ -53,6 +53,9 @@ async def create_hour_wage_template(
     
     await check_role(session=session, current_user_id=current_user_id, branch_id=branch_id)
 
+    if hour_wage_template_create.part_id is 0:
+        hour_wage_template_create.part_id = None
+
     create_in = HourWageTemplate(branch_id=branch_id, **hour_wage_template_create.model_dump())
     hour_wage_template_id = await hour_wage_template_crud.create(branch_id=branch_id, hour_wage_template_create=create_in, session=session)
     return f"{hour_wage_template_id}번 시급 템플릿이 생성되었습니다."
