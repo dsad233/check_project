@@ -94,7 +94,8 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    asyncio.get_event_loop().run_until_complete(run_async_migrations())
+    asyncio.run(run_async_migrations())
+    # asyncio.get_event_loop().run_until_complete(run_async_migrations())
 
 
 if context.is_offline_mode():
