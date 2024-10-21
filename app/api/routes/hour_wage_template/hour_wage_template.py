@@ -53,7 +53,7 @@ async def create_hour_wage_template(
     
     await check_role(session=session, current_user_id=current_user_id, branch_id=branch_id)
 
-    if hour_wage_template_create.part_id is 0:
+    if hour_wage_template_create.part_id == 0:
         hour_wage_template_create.part_id = None
 
     create_in = HourWageTemplate(branch_id=branch_id, **hour_wage_template_create.model_dump())
