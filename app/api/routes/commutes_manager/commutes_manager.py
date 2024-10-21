@@ -22,7 +22,7 @@ commutes_manager = async_session()
 
 
 # 출근 퇴근 관리 전체 조회 [어드민만 가능]
-@router.get('/commutes_manager')
+@router.get('/commutes-manager')
 async def get_commutes_manager(token : Annotated[Users, Depends(get_current_user)]):
     try:
         # 유저 출 퇴근 시간 조회
@@ -53,7 +53,7 @@ async def get_commutes_manager(token : Annotated[Users, Depends(get_current_user
     
 
 # 출근 퇴근 관리 월별 전체 조회 [어드민만 가능]
-@router.get('/commutes_manager/date')
+@router.get('/commutes-manager/date')
 async def get_all_date_commutes_manager(date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -93,7 +93,7 @@ async def get_all_date_commutes_manager(date : str, token : Annotated[Users, Dep
 """ 지점별 조회 """
 
 # 출근 퇴근 관리 지점별 전체 조회 [최고 어드민만 가능]
-@router.get('/{branch_id}/commutes_manager')
+@router.get('/{branch_id}/commutes-manager')
 async def get_branch_all_commutes_manager(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -130,7 +130,7 @@ async def get_branch_all_commutes_manager(branch_id : int, date : str, token : A
         raise HTTPException(status_code=500, detail="출 퇴근 데이터 전체 조회에 실패하였습니다.")
 
 # 출근 퇴근 관리 지점별 조회 [어드민만 가능]
-@router.get('/{branch_id}/commutes_manager/date')
+@router.get('/{branch_id}/commutes-manager/date')
 async def get_branch_all_date_commutes_manager(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -170,7 +170,7 @@ async def get_branch_all_date_commutes_manager(branch_id : int, date : str, toke
 
 
 # 출근 퇴근 관리 지점 유저 이름별 조회 [어드민만 가능]
-@router.get('/{branch_id}/commutes_manager/date/name')
+@router.get('/{branch_id}/commutes-manager/date/name')
 async def get_branch_name_commutes_manager(branch_id : int, name : str, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -208,7 +208,7 @@ async def get_branch_name_commutes_manager(branch_id : int, name : str, date : s
 
 
 # 출근 퇴근 관리 지점 유저 전화번호 조회 [어드민만 가능]
-@router.get('/{branch_id}/commutes_manager/date/phonenumber')
+@router.get('/{branch_id}/commutes-manager/date/phonenumber')
 async def get_branch_phonenumber_commutes_manager(branch_id : int, phonenumber : str, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -249,7 +249,7 @@ async def get_branch_phonenumber_commutes_manager(branch_id : int, phonenumber :
 """ 파트별 조회 """   
 
 # 출근 퇴근 관리 파트 전체 조회 [어드민만 가능]
-@router.get('/{branch_id}/parts/{part_id}/commutes_manager')
+@router.get('/{branch_id}/parts/{part_id}/commutes-manager')
 async def get_part_all_date_commutes_manager(branch_id : int, part_id : int, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -280,7 +280,7 @@ async def get_part_all_date_commutes_manager(branch_id : int, part_id : int, tok
         raise HTTPException(status_code=500, detail="출 퇴근 데이터 파트 전체 조회에 실패하였습니다.")
 
 # 출근 퇴근 관리 파트 월별 전체 조회 [어드민만 가능]
-@router.get('/{branch_id}/parts/{part_id}/commutes_manager/date')
+@router.get('/{branch_id}/parts/{part_id}/commutes-manager/date')
 async def get_part_all_date_commutes_manager(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -318,7 +318,7 @@ async def get_part_all_date_commutes_manager(branch_id : int, part_id : int, dat
 
 
 # 출근 퇴근 관리 파트 유저 이름별 조회
-@router.get('/{branch_id}/parts/{part_id}/commutes_manager/date/name')
+@router.get('/{branch_id}/parts/{part_id}/commutes-manager/date/name')
 async def get_part_name_commutes_manager(branch_id : int, part_id : int, name : str, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -357,7 +357,7 @@ async def get_part_name_commutes_manager(branch_id : int, part_id : int, name : 
 
 
 # 출근 퇴근 관리 파트 유저 전화번호 조회
-@router.get('/{branch_id}/parts/{part_id}/commutes_manager/date/phonenumber')
+@router.get('/{branch_id}/parts/{part_id}/commutes-manager/date/phonenumber')
 async def get_part_phonenumber_commutes_manager(branch_id : int, part_id : int, phonenumber : str, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -398,7 +398,7 @@ async def get_part_phonenumber_commutes_manager(branch_id : int, part_id : int, 
 """ 유틸 """
 
 # 출 퇴근 관리 기록 전체 조회 엑셀 다운로드
-@router.get('/commutes_manager/excel')
+@router.get('/commutes-manager/excel')
 async def get_all_commutes_manager_excel(token: Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -464,7 +464,7 @@ async def get_all_commutes_manager_excel(token: Annotated[Users, Depends(get_cur
     
 
 # 출 퇴근 관리 기록 date로 전체 조회 엑셀 다운로드
-@router.get('/commutes_manager/date/excel')
+@router.get('/commutes-manager/date/excel')
 async def get_all_date_commutes_manager_excel(date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -535,7 +535,7 @@ async def get_all_date_commutes_manager_excel(date: str, token: Annotated[Users,
     
 
 # 출 퇴근 관리 기록 지점별 전체 조회 엑셀 다운로드
-@router.get('/{branch_id}/commutes_manager/excel')
+@router.get('/{branch_id}/commutes-manager/excel')
 async def get_branch_all_commutes_manager_excel(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -606,7 +606,7 @@ async def get_branch_all_commutes_manager_excel(branch_id: int, date: str, token
     
 
 # 출 퇴근 관리 기록 지점별 데이트 전체 조회 엑셀 다운로드
-@router.get('/{branch_id}/commutes_manager/date/excel')
+@router.get('/{branch_id}/commutes-manager/date/excel')
 async def get_branch_all_date_commutes_manager_excel(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
@@ -677,7 +677,7 @@ async def get_branch_all_date_commutes_manager_excel(branch_id: int, date: str, 
     
 
 # 출 퇴근 관리 기록 파트별 전체 조회 엑셀 다운로드
-@router.get('/{branch_id}/parts/{part_id}/commutes_manager/excel')
+@router.get('/{branch_id}/parts/{part_id}/commutes-manager/excel')
 async def get_part_all_commutes_manager_excel(branch_id: int, part_id: int, token: Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -743,7 +743,7 @@ async def get_part_all_commutes_manager_excel(branch_id: int, part_id: int, toke
     
 
 # 출 퇴근 관리 기록 파트별 데이트 전체 조회 엑셀 다운로드
-@router.get('/{branch_id}/parts/{part_id}/commutes_manager/date/excel')
+@router.get('/{branch_id}/parts/{part_id}/commutes-manager/date/excel')
 async def get_branch_part_all_date_commutes_manager_excel(branch_id: int, part_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()

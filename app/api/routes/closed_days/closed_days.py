@@ -17,7 +17,7 @@ db = async_session()
 
 
 # 휴무일 지점 생성
-@router.post("/{branch_id}/closed_days")
+@router.post("/{branch_id}/closed-days")
 async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
@@ -45,7 +45,7 @@ async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate,
         raise HTTPException(status_code=500, detail="휴무일 생성에 실패하였습니다.")
 
 # 휴무일 파트 생성
-@router.post("/{branch_id}/parts/{part_id}/closed_days/{user_id}")
+@router.post("/{branch_id}/parts/{part_id}/closed-days/{user_id}")
 async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
@@ -77,7 +77,7 @@ async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, 
         raise HTTPException(status_code=500, detail="휴무일 생성에 실패하였습니다.")
     
 # 휴무일 지점 다중 휴무 생성
-@router.post("/{branch_id}/closed_days/arrays")
+@router.post("/{branch_id}/closed-days/arrays")
 async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
     try:
 
@@ -109,7 +109,7 @@ async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
         raise HTTPException(status_code=500, detail="휴무일 생성에 실패하였습니다.")
     
 # 휴무일 파트 다중 휴무 생성
-@router.post("/{branch_id}/parts/{part_id}/closed_days/arrays/users/{user_id}")
+@router.post("/{branch_id}/parts/{part_id}/closed-days/arrays/users/{user_id}")
 async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
     try:
 
@@ -143,7 +143,7 @@ async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id 
         raise HTTPException(status_code=500, detail="휴무일 생성에 실패하였습니다.")
 
 # 휴일 전체 조회 [어드민만]
-@router.get("/closed_days")
+@router.get("/closed-days")
 async def get_all_closed_days(token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -164,7 +164,7 @@ async def get_all_closed_days(token : Annotated[Users, Depends(get_current_user)
         raise HTTPException(status_code=500, detail="휴무일 전체 조회에 실패하였습니다.")
 
 # 휴일 데이트 전체 입력 조회 [어드민만]
-@router.get("/closed_days/{date}")
+@router.get("/closed-days/{date}")
 async def get_all_date_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -193,7 +193,7 @@ async def get_all_date_closed_days(date : str, token : Annotated[Users, Depends(
         raise HTTPException(status_code=500, detail="휴무일 전체 조회에 실패하였습니다.")
 
 # 휴일 월간 전체 조회 [어드민만]
-@router.get("/closed_days/month/{date}")
+@router.get("/closed-days/month/{date}")
 async def get_month_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -221,7 +221,7 @@ async def get_month_closed_days(date : str, token : Annotated[Users, Depends(get
     
 
 # 휴일 주간 전체 조회 [어드민만]
-@router.get("/closed_days/week/{date}")
+@router.get("/closed-days/week/{date}")
 async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -251,7 +251,7 @@ async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_
 
 
 # 휴일 지점 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/branch_month/{date}")
+@router.get("/{branch_id}/closed-days/branch-month/{date}")
 async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -278,7 +278,7 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
         raise HTTPException(status_code=500, detail="휴무일 월간 전체 조회에 실패하였습니다.")  
     
 # 휴일 파트 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/parts/{part_id}/closed_days/part_month/{date}")
+@router.get("/{branch_id}/parts/{part_id}/closed-days/part-month/{date}")
 async def get_part_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -308,7 +308,7 @@ async def get_part_month_closed_days(branch_id : int, part_id : int, date : str,
 
 
 # 휴일 지점 일요일만 월간 전체 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/branch_month/sunday/{date}")
+@router.get("/{branch_id}/closed-days/branch-month/sunday/{date}")
 async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         # 권한 확인
@@ -375,7 +375,7 @@ async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: 
     
 
 # 휴일 지점 일요일 휴무 지정 [어드민만]
-@router.patch("/{branch_id}/closed_days/sunday_result")
+@router.patch("/{branch_id}/closed-days/sunday-result")
 async def branch_sunday_result_closed_days(branch_id : int, id : int, token : Annotated[Users, Depends(get_current_user)], sundayOff: bool):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -413,7 +413,7 @@ async def branch_sunday_result_closed_days(branch_id : int, id : int, token : An
 
     
 # 휴일 지점 주간 조회 [어드민만]
-@router.get("/{branch_id}/closed_days/branch_week/{date}")
+@router.get("/{branch_id}/closed-days/branch-week/{date}")
 async def get_branch_week_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -444,7 +444,7 @@ async def get_branch_week_closed_days(branch_id : int, date : str, token : Annot
     
 
 # 휴일 파트 주간 조회 [어드민만] 
-@router.get("/{branch_id}/parts/{part_id}/closed_days/part_week/{date}")
+@router.get("/{branch_id}/parts/{part_id}/closed-days/part-week/{date}")
 async def get_part_week_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -475,7 +475,7 @@ async def get_part_week_closed_days(branch_id : int, part_id : int, date : str, 
         raise HTTPException(status_code=500, detail="휴무일 주간 전체 조회에 실패하였습니다.")
     
 # 휴일 지점별 전체 조회 
-@router.get("/{branch_id}/closed_days")
+@router.get("/{branch_id}/closed-days")
 async def get_branch_all_closed_days(branch_id : int):
     try:
 
@@ -494,7 +494,7 @@ async def get_branch_all_closed_days(branch_id : int):
         raise HTTPException(status_code=500, detail="휴무일 지점별 조회에 실패하였습니다.")
 
 # 휴일 지점별 전체 조회 (데이트 입력)
-@router.get("/{branch_id}/closed_days/get_date/{date}")
+@router.get("/{branch_id}/closed-days/get-date/{date}")
 async def get_branch_all_date_closed_days(branch_id : int, date : str):
     try:
         date_start_day = datetime.strptime(date, "%Y-%m-%d").date()
@@ -518,7 +518,7 @@ async def get_branch_all_date_closed_days(branch_id : int, date : str):
     
 
 # 휴일 파트별 전체 조회 (데이트 입력)
-@router.get("/{branch_id}/parts/{part_id}/closed_days/{date}")
+@router.get("/{branch_id}/parts/{part_id}/closed-days/{date}")
 async def get_part_all_date_closed_days(branch_id : int, part_id : int, date : str):
     try:
         date_start_day = datetime.strptime(date, "%Y-%m-%d").date()
@@ -543,7 +543,7 @@ async def get_part_all_date_closed_days(branch_id : int, part_id : int, date : s
 
     
 # 휴일 지점 상세 조회
-@router.get("/{branch_id}/closed_days/get_id/{id}")
+@router.get("/{branch_id}/closed-days/get-id/{id}")
 async def get_branch_one_closed_days(branch_id : int, id : int):
     try:
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
@@ -566,7 +566,7 @@ async def get_branch_one_closed_days(branch_id : int, id : int):
     
 
 # 휴일 파트 상세 조회
-@router.get("/{branch_id}/parts/{part_id}/closed_days/{id}")
+@router.get("/{branch_id}/parts/{part_id}/closed-days/{id}")
 async def get_part_one_closed_days(branch_id : int, part_id : int, id : int):                                               
     try:
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
@@ -589,7 +589,7 @@ async def get_part_one_closed_days(branch_id : int, part_id : int, id : int):
     
 
 # 휴무일 지점 수정 [어드민만]
-@router.patch("/{branch_id}/closed_days/{id}")
+@router.patch("/{branch_id}/closed-days/{id}")
 async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
@@ -621,7 +621,7 @@ async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: 
     
 
 # 휴무일 파트 수정 [어드민만]
-@router.patch("/{branch_id}/parts/{part_id}/closed_days/{id}")
+@router.patch("/{branch_id}/parts/{part_id}/closed-days/{id}")
 async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -654,7 +654,7 @@ async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed
         raise HTTPException(status_code=500, detail="휴무일 수정에 실패하였습니다.")
     
 # 휴무일 지점 삭제 [어드민만]
-@router.delete("/{branch_id}/closed_days/{id}")
+@router.delete("/{branch_id}/closed-days/{id}")
 async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
@@ -684,7 +684,7 @@ async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Use
         raise HTTPException(status_code=500, detail="휴무일 삭제에 실패하였습니다.")
     
 # 휴무일 파트 삭제 [어드민만]
-@router.delete("/{branch_id}/parts/{part_id}/closed_days/{id}")
+@router.delete("/{branch_id}/parts/{part_id}/closed-days/{id}")
 async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -716,7 +716,7 @@ async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:
         raise HTTPException(status_code=500, detail="휴무일 삭제에 실패하였습니다.")
     
 # 휴무일 지점 다중 삭제 [어드민만]
-@router.delete("/{branch_id}/closed_days/arrays/delete")
+@router.delete("/{branch_id}/closed-days/arrays/delete")
 async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[int] = Body(...)):
     try:
     
@@ -746,7 +746,7 @@ async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
         raise HTTPException(status_code=500, detail="다중 휴무일 삭제에 실패하였습니다.")
 
 # 휴무일 지점 소프트 삭제 [어드민만]
-@router.patch("/{branch_id}/closed_days/softdelete/{id}")
+@router.patch("/{branch_id}/closed-days/softdelete/{id}")
 async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
@@ -777,7 +777,7 @@ async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotat
         raise HTTPException(status_code=500, detail="휴무일 삭제에 실패하였습니다.")
     
 # 휴무일 파트 소프트 삭제 [어드민만]
-@router.patch("/{branch_id}/parts/{part_id}/closed_days/softdelete/{id}")
+@router.patch("/{branch_id}/parts/{part_id}/closed-days/softdelete/{id}")
 async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
@@ -811,7 +811,7 @@ async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, t
     
 
 # 휴무일 지점 복구 [어드민만]
-@router.patch("/{branch_id}/closed_days/restore/{id}")
+@router.patch("/{branch_id}/closed-days/restore/{id}")
 async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
@@ -843,7 +843,7 @@ async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Us
 
 
 # 휴무일 파트 복구 [어드민만]
-@router.patch("/{branch_id}/parts/{part_id}/closed_days/restore/{id}")
+@router.patch("/{branch_id}/parts/{part_id}/closed-days/restore/{id}")
 async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
         if token.role.strip() != "MSO 최고권한":
