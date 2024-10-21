@@ -5,7 +5,6 @@ from app.api.routes.branches import branches
 from app.api.routes.commutes import commutes
 from app.api.routes.leave_category import leave_category
 from app.api.routes.leave_histories import leave_histories
-from app.api.routes.overtime_policies import overtime_policies
 from app.api.routes.closed_days import closed_days
 from app.api.routes.overtimes import overtimes
 from app.api.routes.parts import parts
@@ -16,6 +15,7 @@ from app.api.routes.work_policies import work_policies
 from app.api.routes.hour_wage_template import hour_wage_template
 from app.api.routes.attendance import attendance
 from app.api.routes.commutes_manager import commutes_manager
+from app.api.routes.leave_policies import leave_policies
 
 app = APIRouter()
 
@@ -26,12 +26,11 @@ app.include_router(overtimes.router, prefix="/overtimes", tags=["Overtimes"])
 app.include_router(closed_days.router, prefix="/branches", tags=["Closed Days"])
 
 app.include_router(branches.router, prefix="/branches", tags=["Branches"])
-# app.include_router(overtime_policies.router, prefix="/branches", tags=["Overtime_policies"])
 app.include_router(parts.router, prefix="/branches/{branch_id}/parts", tags=["Parts"])
-app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-categories", tags=["Leave Categories"])
-app.include_router(leave_histories.router, prefix='/branches/{branch_id}/leaves', tags=['Leave Histories'])
-app.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['Work_policies'])
-app.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour-wage-templates', tags=['Hour_wage_templates'])
+app.include_router(leave_category.router, prefix="/branches/{branch_id}/leave-categories", tags=["leave_categories"])
+app.include_router(leave_histories.router, prefix='/branches/{branch_id}/leaves', tags=['leave_Histories'])
+app.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['work_policies'])
+app.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour-wage-templates', tags=['hour_wage_templates'])
 app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-policies", tags=["Parts_policies"])
 
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
@@ -40,6 +39,7 @@ app.include_router(user_management.router, prefix='/user-management', tags=['Use
 app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
 app.include_router(commutes_manager.router, prefix="/branches", tags=["commutes_manager"])
 
+app.include_router(leave_policies.router, prefix='/branches/{branch_id}/leave-policies', tags=['Leave_Policies'])
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}
