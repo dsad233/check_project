@@ -71,10 +71,6 @@ LeaveCategory.leave_excluded_parts = relationship("LeaveExcludedPart", back_popu
 
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Parts.closed_days = relationship("ClosedDays", back_populates="part")
-
-Branches.attendance = relationship("Attendance", back_populates="branch")
-Parts.attendance = relationship("Attendance", back_populates="part")
-Users.attendance = relationship("Attendance", back_populates="users")
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
 LeaveHistories.leave_category = relationship("LeaveCategory", back_populates="leave_histories")
