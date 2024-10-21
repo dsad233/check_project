@@ -1,82 +1,127 @@
+import logging
 from datetime import datetime
-
+from typing import Optional
 from fastapi import Depends
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
 
 from app.common.dto.search_dto import BaseSearchDto
-from app.models.branches.leave_categories_model import LeaveCategories, LeaveCategoryCreate, LeaveCategoryUpdate, LeaveCategoryResponse
+from app.models.branches.leave_categories_model import LeaveCategory
+from app.exceptions.exceptions import BadRequestError, NotFoundError
 
+logger = logging.getLogger(__name__)
 
-async def create_leave_category(
-    *, branch_id: int, session: AsyncSession, leave_category_create: LeaveCategoryCreate
+async def create(
+    *, branch_id: int, session: AsyncSession, leave_category_create: LeaveCategory
 ) -> int:
-    db_obj = LeaveCategories(branch_id=branch_id, **leave_category_create.model_dump())
-    session.add(db_obj)
+    
+    leave_category = await find_by_name_and_branch_id(session=session, branch_id=branch_id, name=leave_category_create.name)
+    if leave_category:
+        raise BadRequestError(f"{branch_id}번 지점의 휴가 카테고리 이름 {leave_category_create.name}이(가) 이미 존재합니다.")
+    session.add(leave_category_create)
     await session.commit()
-    await session.refresh(db_obj)
-    return db_obj.id
+    await session.refresh(leave_category_create)
+    return leave_category_create.id
 
+async def find_by_name_and_branch_id(
+    *, session: AsyncSession, branch_id: int, name: str
+) -> Optional[LeaveCategory]:
 
-async def find_leave_category_all(
-    *, session: AsyncSession, branch_id: int
-) -> list[LeaveCategories]:
     statement = (
-        select(LeaveCategories).where(LeaveCategories.branch_id == branch_id).where(LeaveCategories.deleted_yn == "N")
+        select(LeaveCategory)
+        .where(LeaveCategory.branch_id == branch_id)
+        .where(LeaveCategory.name == name)
+        .where(LeaveCategory.deleted_yn == "N")
+    )
+    result = await session.execute(statement)
+    return result.scalar_one_or_none()
+
+
+async def find_all_by_branch_id(
+    *, session: AsyncSession, branch_id: int
+) -> list[LeaveCategory]:
+
+    statement = (
+        select(LeaveCategory)
+        .where(LeaveCategory.branch_id == branch_id)
+        .where(LeaveCategory.deleted_yn == "N")
     )
     result = await session.execute(statement)
     return result.scalars().all()
 
-
-async def find_leave_category_by_id(
+async def find_by_id_and_branch_id(
     *, session: AsyncSession, branch_id: int, leave_id: int
-) -> LeaveCategories:
-    statement = select(LeaveCategories).filter(
-        LeaveCategories.id == leave_id, LeaveCategories.branch_id == branch_id
-    )
-    result = await session.execute(statement)
-    return result.scalar_one_or_none()
-
-
-async def count_leave_category_all(*, session: AsyncSession, branch_id: int) -> int:
-    statement = select(func.count(LeaveCategories.id)).filter(
-        LeaveCategories.deleted_yn == "N", LeaveCategories.branch_id == branch_id
-    )
-    result = await session.execute(statement)
-    return result.scalar_one_or_none()
-
-async def update_leave_category(
-    *, session: AsyncSession, branch_id: int, leave_category_id: int, leave_category_update: LeaveCategoryUpdate
-) -> None:
-
-    stmt = select(LeaveCategories).where(LeaveCategories.id == leave_category_id)
-    result = await session.execute(stmt)
-    db_obj = result.scalar_one_or_none()
-    if db_obj is None:
-        raise ValueError(f"Leave category with id {leave_category_id} not found")
+) -> LeaveCategory:
     
-    update_data = leave_category_update.model_dump(exclude_unset=True)
-
-    update_stmt = (
-        update(LeaveCategories)
-        .where(LeaveCategories.id == leave_category_id)
-        .values(**update_data)
+    stmt = (
+        select(LeaveCategory)
+        .where(LeaveCategory.branch_id == branch_id)
+        .where(LeaveCategory.deleted_yn == 'N')
+        .where(LeaveCategory.id == leave_id)
     )
-    await session.execute(update_stmt)
-    await session.commit()
-    return
+    result = await session.execute(stmt)
+    policy = result.scalar_one_or_none()
+    
+    return policy
 
 
-async def delete_leave_category(
+async def count_all(*, session: AsyncSession, branch_id: int) -> int:
+    
+    statement = (
+        select(func.count(LeaveCategory.id))
+        .where(LeaveCategory.deleted_yn == "N")
+        .where(LeaveCategory.branch_id == branch_id)
+    )
+    result = await session.execute(statement)
+    return result.scalar_one_or_none()
+
+async def update(
+    *, session: AsyncSession, branch_id: int, leave_category_id: int, leave_category_update: LeaveCategory
+) -> None:
+        
+    # 기존 정책 조회
+    leave_category = await find_by_id_and_branch_id(
+        session=session, branch_id=branch_id, leave_id=leave_category_id
+    )
+
+    if leave_category is None:
+        raise NotFoundError(f"{branch_id}번 지점의 {leave_category_id}번 휴가 카테고리가 존재하지 않습니다.")
+
+    # 변경된 필드만 업데이트
+    changed_fields = {}
+    for column in LeaveCategory.__table__.columns:
+        if column.name not in ['id', 'branch_id']:
+            new_value = getattr(leave_category_update, column.name)
+            if new_value is not None and getattr(leave_category, column.name) != new_value:
+                changed_fields[column.name] = new_value
+
+    if changed_fields:
+        # 변경된 필드가 있을 경우에만 업데이트 수행
+        stmt = sa_update(LeaveCategory).where(LeaveCategory.branch_id == branch_id).values(**changed_fields)
+        await session.execute(stmt)
+        await session.commit()
+        await session.refresh(leave_category)
+    else:
+        pass
+
+    return 
+
+
+async def delete(
     *, session: AsyncSession, branch_id: int, leave_category_id: int
 ) -> None:
-    stmt = select(LeaveCategories).where(LeaveCategories.id == leave_category_id, LeaveCategories.branch_id == branch_id)
+    
+    stmt = (
+        select(LeaveCategory)
+        .where(LeaveCategory.id == leave_category_id)
+        .where(LeaveCategory.branch_id == branch_id)
+        .where(LeaveCategory.deleted_yn == "N")
+    )
     result = await session.execute(stmt)
     leave_category = result.scalar_one_or_none()
     if leave_category is None:
-        raise ValueError(f"Leave category with id {leave_category_id} not found")
-    
+        raise NotFoundError(f"{branch_id}번 지점의 {leave_category_id}번 휴가 카테고리를 찾을 수 없습니다.")
     leave_category.deleted_yn = "Y"
     leave_category.updated_at = datetime.now()
     await session.commit()
-    return

@@ -8,7 +8,6 @@ from app.models.parts.parts_model import Parts
 from app.models.users.users_model import Users
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.overtimes_model import Overtimes
-from app.models.attendance.attendance_model import AttendanceCreate, Attendance
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.leave_histories_model import LeaveHistories
 from app.models.branches.overtime_policies_model import OverTimePolicies
@@ -21,7 +20,7 @@ attendance = async_session()
 
 # 근로 관리 생성
 @router.get('/{branch_id}/parts/{part_id}/attendance/users/{user_id}')
-async def find_attendance(branch_id : int, part_id : int, user_id : int, token:Annotated[Users, Depends(get_current_user)], attendanceCreate : AttendanceCreate):
+async def find_attendance(branch_id : int, part_id : int, user_id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
 
         find_data = await attendance.execute(select(Parts).join(Branches, Parts, Overtimes, WorkPolicies))
@@ -124,33 +123,33 @@ async def find_attendance(token: Annotated[Users, Depends(get_current_user)]):
         print(err)
         raise HTTPException(status_code=500, detail="근태 관리 전체 조회에 실패하였습니다.")
 
-@router.post('/attendance')
-async def create_attendance(token: Annotated[Users, Depends(get_current_user)], attendance_data: AttendanceCreate):
-    try:
-        new_attendance = Attendance(
-            user_id=attendance_data.user_id,
-            branch_id=attendance_data.branch_id,
-            part_id=attendance_data.part_id,
-            work_days=attendance_data.work_days,
-            holiday_work_days=attendance_data.holiday_work_days,
-            regular_leave_days=attendance_data.regular_leave_days,
-            annual_leave_days=attendance_data.annual_leave_days,
-            unpaid_leave_days=attendance_data.unpaid_leave_days,
-            planned_work_days=attendance_data.planned_work_days,
-            additional_work_hours=attendance_data.additional_work_hours,
-            additional_work_pay=attendance_data.additional_work_pay,
-            ot_30min=attendance_data.ot_30min,
-            ot_60min=attendance_data.ot_60min,
-            ot_90min=attendance_data.ot_90min,
-            ot_total_amount=attendance_data.ot_total_amount
-        )
+# @router.post('/attendance')
+# async def create_attendance(token: Annotated[Users, Depends(get_current_user)]):
+#     try:
+        # new_attendance = Attendance(
+        #     user_id=attendance_data.user_id,
+        #     branch_id=attendance_data.branch_id,
+        #     part_id=attendance_data.part_id,
+        #     work_days=attendance_data.work_days,
+        #     holiday_work_days=attendance_data.holiday_work_days,
+        #     regular_leave_days=attendance_data.regular_leave_days,
+        #     annual_leave_days=attendance_data.annual_leave_days,
+        #     unpaid_leave_days=attendance_data.unpaid_leave_days,
+        #     planned_work_days=attendance_data.planned_work_days,
+        #     additional_work_hours=attendance_data.additional_work_hours,
+        #     additional_work_pay=attendance_data.additional_work_pay,
+        #     ot_30min=attendance_data.ot_30min,
+        #     ot_60min=attendance_data.ot_60min,
+        #     ot_90min=attendance_data.ot_90min,
+        #     ot_total_amount=attendance_data.ot_total_amount
+        # )
 
-        attendance.add(new_attendance)
-        await attendance.commit()
-        await attendance.refresh(new_attendance)
+        # attendance.add(new_attendance)
+        # await attendance.commit()
+        # await attendance.refresh(new_attendance)
 
-        return {"message": "근태 정보가 성공적으로 생성되었습니다.", "data": new_attendance}
-    except Exception as err:
-        await attendance.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail="근태 정보 생성에 실패하였습니다.")
+        # return {"message": "근태 정보가 성공적으로 생성되었습니다.", "data": new_attendance}
+    # except Exception as err:
+    #     await attendance.rollback()
+    #     print(err)
+    #     raise HTTPException(status_code=500, detail="근태 정보 생성에 실패하였습니다.")
