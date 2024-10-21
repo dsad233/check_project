@@ -30,13 +30,13 @@ class Parts(Base):
     required_certification = Column(Boolean, default=False)
     leave_granting_authority = Column(Boolean, default=False)
 
-    # role = Column(
-    #     Enum(
-    #         "회계기준", "입사일 기준", "조건별" , "수동", name="user_role"
-    #     ),
-    #     nullable=False,
-    #     default="사원",
-    # )
+    auto_annual_leave_grant = Column(
+        Enum(
+            "수동부여", "회계기준 부여", "입사일 기준 부여", "조건별 부여", name="part_auto_annual_leave_grant"
+        ),
+        nullable=False,
+        default="수동부여",
+    )
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

@@ -1,7 +1,6 @@
 from app.core.database import Base
 from sqlalchemy.orm import relationship
 
-from app.models.attendance.attendance_model import Attendance
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes
@@ -24,8 +23,11 @@ from .salary.salary_bracket_model import SalaryBracket
 from .branches.document_policies_model import DocumentPolicies
 from .branches.rest_days_model import RestDays
 from .users.leave_histories_model import LeaveHistories
-from .branches.leave_categories_model import LeaveCategories
+from .branches.leave_categories_model import LeaveCategory
 from .branches.leave_excluded_parts_model import LeaveExcludedPart
+
+from .branches.auto_annual_leave_grant_model import AutoAnnualLeaveGrant
+from .branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
 
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
@@ -37,7 +39,7 @@ Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_popu
 Branches.commute_policies = relationship("CommutePolicies", back_populates="branch")
 Branches.document_policies = relationship("DocumentPolicies", back_populates="branch")
 Branches.holiday_work_policies = relationship("HolidayWorkPolicies", back_populates="branch")
-Branches.leave_category = relationship("LeaveCategories", back_populates="branch")
+Branches.leave_categories = relationship("LeaveCategory", back_populates="branch")
 Branches.overtime_policies = relationship("OverTimePolicies", back_populates="branch")
 Branches.rest_days = relationship("RestDays", back_populates="branch")
 Branches.parts = relationship("Parts", back_populates="branch")
@@ -47,8 +49,10 @@ Branches.leave_histories = relationship("LeaveHistories", back_populates="branch
 Branches.work_policies = relationship("WorkPolicies", back_populates="branch")
 Branches.allowance_policies = relationship("AllowancePolicies", back_populates="branch")
 Branches.hour_wage_templates = relationship("HourWageTemplate", back_populates="branch")
+Branches.auto_annual_leave_grant = relationship("AutoAnnualLeaveGrant", back_populates="branch", uselist=False)
+Branches.auto_annual_leave_approval = relationship("AutoAnnualLeaveApproval", back_populates="branch", uselist=False)
 
-LeaveCategories.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
+LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 
 Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
@@ -63,7 +67,7 @@ Users.salaries = relationship("UserSalary", back_populates="user", uselist=False
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
 
-LeaveCategories.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="leave_category")
+LeaveCategory.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="leave_category")
 
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Parts.closed_days = relationship("ClosedDays", back_populates="part")
@@ -73,7 +77,7 @@ Parts.attendance = relationship("Attendance", back_populates="part")
 Users.attendance = relationship("Attendance", back_populates="users")
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
-LeaveHistories.leave_category = relationship("LeaveCategories", back_populates="leave_histories")
+LeaveHistories.leave_category = relationship("LeaveCategory", back_populates="leave_histories")
 
 Users.branch = relationship("Branches", back_populates="users")
 Users.part = relationship("Parts", back_populates="users")
@@ -89,7 +93,7 @@ AllowancePolicies.branch = relationship("Branches", back_populates="allowance_po
 
 RestDays.branch = relationship("Branches", back_populates="rest_days")
 OverTimePolicies.branch = relationship("Branches", back_populates="overtime_policies")
-LeaveCategories.branch = relationship("Branches", back_populates="leave_category")
+LeaveCategory.branch = relationship("Branches", back_populates="leave_categories")
 HolidayWorkPolicies.branch = relationship("Branches", back_populates="holiday_work_policies")
 DocumentPolicies.branch = relationship("Branches", back_populates="document_policies")
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
@@ -114,6 +118,10 @@ LeaveExcludedPart.leave_category = relationship("LeaveCategories", back_populate
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
 ClosedDays.part = relationship("Parts", back_populates="closed_days")
 
-Attendance.branch = relationship("Branches", back_populates="attendance")
-Attendance.part = relationship("Parts", back_populates="attendance")
-Attendance.users = relationship("Users", back_populates="attendance")
+LeaveExcludedPart.leave_category = relationship("LeaveCategory", back_populates="leave_excluded_parts")
+
+AutoAnnualLeaveGrant.branch = relationship("Branches", back_populates="auto_annual_leave_grant")
+AutoAnnualLeaveApproval.branch = relationship("Branches", back_populates="auto_annual_leave_approval")
+
+ClosedDays.branch = relationship("Branches", back_populates="closed_days")
+ClosedDays.part = relationship("Parts", back_populates="closed_days")
