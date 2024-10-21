@@ -10,6 +10,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    Table,
 )
 from sqlalchemy.orm import relationship
 
@@ -19,6 +20,19 @@ from typing import Optional
 
 from pydantic import BaseModel
 
+# Users와 Parts의 다대다 관계를 위한 연결 테이블
+user_parts = Table('user_parts', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id')),
+    Column('part_id', Integer, ForeignKey('parts.id'))
+)
+
+user_menus = Table('user_menus', Base.metadata,
+    Column('user_id', Integer, ForeignKey('users.id'), nullable=False),
+    Column('part_id', Integer, ForeignKey('parts.id'), nullable=False),
+    Column('menu_name', Enum("P.T관리", "계약관리(P.T)포함", "휴무관리", "O.T관리", "인사관리", "근로관리", "급여정산", "문서설정관리", "휴직관리", "출퇴근기록관리"),
+        nullable=False),
+    Column('is_permitted', Boolean, default=False),
+)
 
 class Users(Base):
     __tablename__ = "users"
