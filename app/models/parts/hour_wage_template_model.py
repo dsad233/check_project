@@ -61,5 +61,3 @@ class HourWageTemplateResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class HourWageTemplateDelete(BaseModel):
-    id: int = Field(description="아이디")

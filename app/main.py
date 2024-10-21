@@ -2,16 +2,24 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.core.database import startup_event
+from app.exceptions.exceptions import add_exception_handlers
 from app.api import main
 from app.api.routes.auth import auth
 from contextlib import asynccontextmanager
+from app.core.log_config import get_logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    logger = await get_logger()
+    await logger.info("Starting FastAPI application")
     await startup_event()
     yield
+    await logger.info("Shutting down FastAPI application")
+    await logger.shutdown()
 
 app = FastAPI(lifespan=lifespan)
+
+add_exception_handlers(app)
 
 origins = [
     "https://workswave-frontend.vercel.app",

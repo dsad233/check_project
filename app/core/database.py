@@ -36,10 +36,6 @@ async def get_db():
     db = async_session()
     try:
         yield db
-    except Exception as err:
-        await db.rollback()
-        print(f"Database error: {err}")
-        raise HTTPException(status_code=500, detail="Database error occurred")
     finally:
         await db.close()
 
