@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir --upgrade pip
 RUN pip install --no-cache-dir poetry
 
 # Poetry 설정 파일 복사
-COPY pyproject.toml poetry.lock /app/
+COPY ./pyproject.toml ./poetry.lock /app/
 
 # 가상환경을 생성하지 않고 패키지 설치
 RUN poetry config virtualenvs.create false
