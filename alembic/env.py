@@ -17,7 +17,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 from app.core.config import settings
-from app.core.database import Base
+# from app.core.database import Base
 from app.models import Base
 
 # 여기서 모든 모델을 import합니다.
@@ -54,6 +54,8 @@ def run_migrations_offline() -> None:
     context.configure(
         url=url,
         target_metadata=target_metadata,
+        compare_type=True,
+        reflect=True,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
     )
@@ -92,7 +94,7 @@ def run_migrations_online() -> None:
     and associate a connection with the context.
 
     """
-    asyncio.run(run_async_migrations())
+    asyncio.get_event_loop().run_until_complete(run_async_migrations())
 
 
 if context.is_offline_mode():
