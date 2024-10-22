@@ -6,9 +6,9 @@ from sqlalchemy.orm import joinedload, load_only, aliased
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token, get_current_user
-from app.models.users.users_model import Users, UserUpdate, RoleUpdate, PartUpdate
+from app.models.users.users_model import Users, UserUpdate, RoleUpdate
 from app.models.branches.branches_model import Branches
-from app.models.parts.parts_model import Parts
+from app.models.parts.parts_model import Parts, PartUpdate
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
 from app.middleware.permission import UserPermission  

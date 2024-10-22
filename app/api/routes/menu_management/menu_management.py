@@ -1,21 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, insert, update
+from sqlalchemy import select, insert, update, and_
 from typing import List
+from pydantic import BaseModel
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.api.routes.auth.auth import get_current_user
 from app.models.users.users_model import Users, user_menus, user_parts
-from app.models.menu_permission.menu_permission import UserMenuPermissionsUpdate, MenuPermissionUpdate
+
 from app.middleware.permission import UserPermission
 from app.models.parts.parts_model import Parts
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
+# 요청 데이터 모델 정의
+class MenuPermission(BaseModel):
+    part_id: int
+    menu_name: str
+    is_permitted: bool
+
+class UpdateUserMenuPermissions(BaseModel):
+    user_id: int
+    permissions: List[MenuPermission]
+
 @router.post("/update")
 async def update_user_menu_permissions(
-    update_data: UserMenuPermissionsUpdate,
+    update_data: UpdateUserMenuPermissions,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -48,9 +59,11 @@ async def update_user_menu_permissions(
                 # 기존 권한 확인 또는 새 권한 추가
                 existing_perm = await session.execute(
                     select(user_menus).where(
-                        (user_menus.c.user_id == update_data.user_id) &
-                        (user_menus.c.part_id == perm.part_id) &
-                        (user_menus.c.menu_name == perm.menu_name)
+                        and_(
+                            user_menus.c.user_id == update_data.user_id,
+                            user_menus.c.part_id == perm.part_id,
+                            user_menus.c.menu_name == perm.menu_name
+                        )
                     )
                 )
                 existing_perm = existing_perm.first()
@@ -59,9 +72,11 @@ async def update_user_menu_permissions(
                     # 기존 권한 업데이트
                     await session.execute(
                         update(user_menus).where(
-                            (user_menus.c.user_id == update_data.user_id) &
-                            (user_menus.c.part_id == perm.part_id) &
-                            (user_menus.c.menu_name == perm.menu_name)
+                            and_(
+                                user_menus.c.user_id == update_data.user_id,
+                                user_menus.c.part_id == perm.part_id,
+                                user_menus.c.menu_name == perm.menu_name
+                            )
                         ).values(is_permitted=perm.is_permitted)
                     )
                 else:

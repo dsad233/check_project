@@ -7,7 +7,7 @@ from app.models.users.overtimes_model import Overtimes
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
-from .parts.parts_model import Parts
+from .parts.parts_model import Parts, PartUpdate, PartCreate
 from .parts.user_salary import UserSalary
 from .branches.branches_model import Branches
 
@@ -123,5 +123,6 @@ ClosedDays.branch = relationship("Branches", back_populates="closed_days")
 ClosedDays.part = relationship("Parts", back_populates="closed_days")
 
 Parts.users = relationship("Users", secondary=user_parts, back_populates="parts")
+Users.parts = relationship("Parts", secondary=user_parts, back_populates="users")
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")

@@ -16,6 +16,7 @@ from app.api.routes.hour_wage_template import hour_wage_template
 from app.api.routes.attendance import attendance
 from app.api.routes.commutes_manager import commutes_manager
 from app.api.routes.leave_policies import leave_policies
+from app.api.routes.menu_management import menu_management
 
 app = APIRouter()
 
@@ -40,6 +41,8 @@ app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
 app.include_router(commutes_manager.router, prefix="/branches", tags=["commutes_manager"])
 
 app.include_router(leave_policies.router, prefix='/branches/{branch_id}/leave-policies', tags=['Leave_Policies'])
+app.include_router(menu_management.router, prefix='/menu-management', tags=['Menu_Management'])
+
 @app.get("/health")
 def health_check():
     return {"status": "healthy"}

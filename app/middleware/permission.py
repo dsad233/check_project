@@ -1,7 +1,6 @@
 from typing import List
 from app.models.parts.parts_model import Parts
 from app.models.users.users_model import Users
-from app.models.menu_permission.menu_permission import MenuPermission
 from fastapi import HTTPException
 from sqlalchemy import select
 
