@@ -7,7 +7,7 @@ FROM python:3.10
 WORKDIR /app
 
 # 프로젝트 파일 복사
-COPY ./app .
+COPY ./ /app
 
 # 필요한 패키지 설치
 RUN pip install --no-cache-dir --upgrade pip
