@@ -9,6 +9,7 @@ from sqlalchemy.exc import IntegrityError, NoResultFound
 from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.auto_annual_leave_grant_model import AutoAnnualLeaveGrant
 from app.exceptions.exceptions import NotFoundError, BadRequestError
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ async def update(*, session: AsyncSession, branch_id: int, auto_annual_leave_gra
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in AutoAnnualLeaveGrant.__table__.columns:
-        if column.name not in ['id', 'branch_id']:
+        if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(auto_annual_leave_grant_update, column.name)
             if new_value is not None and getattr(auto_annual_leave_grant, column.name) != new_value:
                 changed_fields[column.name] = new_value
@@ -55,6 +56,7 @@ async def update(*, session: AsyncSession, branch_id: int, auto_annual_leave_gra
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(AutoAnnualLeaveGrant).where(AutoAnnualLeaveGrant.branch_id == branch_id).values(**changed_fields)
         await session.execute(stmt)
+        auto_annual_leave_grant.updated_at = datetime.now()
         await session.commit()
         await session.refresh(auto_annual_leave_grant)
     else:

@@ -37,7 +37,7 @@ async def update(
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in WorkPolicies.__table__.columns:
-        if column.name not in ['id', 'branch_id']:
+        if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(work_policies_update, column.name)
             if new_value is not None and getattr(work_policies, column.name) != new_value:
                 changed_fields[column.name] = new_value
@@ -46,6 +46,7 @@ async def update(
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(WorkPolicies).where(WorkPolicies.branch_id == branch_id).values(**changed_fields)
         await session.execute(stmt)
+        work_policies.updated_at = datetime.now()
         await session.commit()
         await session.refresh(work_policies)
     else:

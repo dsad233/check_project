@@ -59,7 +59,7 @@ async def update(
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in HourWageTemplate.__table__.columns:
-        if column.name not in ['id', 'branch_id']:
+        if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(hour_wage_template_update, column.name)
             if column.name == 'part_id' and new_value is None:
                 changed_fields[column.name] = None
@@ -70,6 +70,7 @@ async def update(
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.id == hour_wage_template_id).values(**changed_fields)
         await session.execute(stmt)
+        hour_wage_template.updated_at = datetime.now()
         await session.commit()
         await session.refresh(hour_wage_template)
     else:

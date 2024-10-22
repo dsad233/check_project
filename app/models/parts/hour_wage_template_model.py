@@ -44,7 +44,7 @@ class HourWageTemplateCreate(BaseModel):
     @field_validator('part_id', mode='before')
     @classmethod
     def set_part_id(cls, v):
-        return None if v is 0 else v
+        return None if v == 0 else v
 
 class HourWageTemplateUpdate(BaseModel):
     part_id: Optional[int] = Field(description="직책 ID")
@@ -57,7 +57,7 @@ class HourWageTemplateUpdate(BaseModel):
     @field_validator('part_id', mode='before')
     @classmethod
     def set_part_id(cls, v):
-        return None if v is 0 else v
+        return None if v == 0 else v
 
 class HourWageTemplateResponse(BaseModel):
     id: int = Field(description="아이디")

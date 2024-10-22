@@ -28,6 +28,8 @@ from .branches.leave_excluded_parts_model import LeaveExcludedPart
 
 from .branches.auto_annual_leave_grant_model import AutoAnnualLeaveGrant
 from .branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
+from .branches.salary_template_model import SalaryTemplate
+from .common.minimum_wage_policies_model import MinimumWagePolicy
 
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
@@ -53,12 +55,14 @@ Branches.auto_annual_leave_grant = relationship("AutoAnnualLeaveGrant", back_pop
 Branches.auto_annual_leave_approval = relationship("AutoAnnualLeaveApproval", back_populates="branch", uselist=False)
 
 LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
+Branches.salary_templates = relationship("SalaryTemplate", back_populates="branch")
 
 Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
 Parts.hour_wage_templates = relationship("HourWageTemplate", back_populates="part")
 Parts.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="part")
 
+Parts.salary_templates = relationship("SalaryTemplate", back_populates="part")
 Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
@@ -121,8 +125,11 @@ AutoAnnualLeaveApproval.branch = relationship("Branches", back_populates="auto_a
 
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
 ClosedDays.part = relationship("Parts", back_populates="closed_days")
+SalaryTemplate.branch = relationship("Branches", back_populates="salary_templates")
+SalaryTemplate.part = relationship("Parts", back_populates="salary_templates")
 
 Parts.users = relationship("Users", secondary=user_parts, back_populates="parts")
 Users.parts = relationship("Parts", secondary=user_parts, back_populates="users")
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
+

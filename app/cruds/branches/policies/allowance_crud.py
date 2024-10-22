@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 from typing import Optional
 from fastapi import HTTPException
 from sqlalchemy import func, select, update as sa_update
@@ -34,7 +35,7 @@ async def update(
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in AllowancePolicies.__table__.columns:
-        if column.name not in ['id', 'branch_id']:
+        if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(allowance_policies_update, column.name)
             if new_value is not None and getattr(allowance_policies, column.name) != new_value:
                 changed_fields[column.name] = new_value
@@ -43,6 +44,7 @@ async def update(
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(AllowancePolicies).where(AllowancePolicies.branch_id == branch_id).values(**changed_fields)
         await session.execute(stmt)
+        allowance_policies.updated_at = datetime.now()
         await session.commit()
         await session.refresh(allowance_policies)
     else:

@@ -27,17 +27,23 @@ async def check_admin_role(*, session: AsyncSession, current_user_id: int):
     if user.role.strip() != "MSO 최고권한":
         raise ForbiddenError(detail="MSO 최고권한만 접근할 수 있습니다.")
 
-@router.get("/list", response_model=BranchListResponse)
+@router.get("/get", response_model=BranchListResponse)
 async def read_branches(
     *, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends(), current_user_id: int = Depends(get_current_user_id)
 ) -> BranchListResponse:
     """
     지점 목록을 조회합니다.
-
+    - MSO면 모든 리스트 이외는 해당 지점의 리스트만 반환합니다.
     - **page**: 페이지 번호. 0을 입력하면 페이지네이션 없이 모든 결과를 반환합니다.
     - 기본적으로 페이지네이션이 적용되며, `search` 파라미터를 통해 offset과 record_size를 조정할 수 있습니다.
     """
-    await check_admin_role(session=session, current_user_id=current_user_id)
+    user = await users_crud.find_by_id(session=session, user_id=current_user_id)
+    if user.role.strip() != "MSO 최고권한":
+        branch = await branches_crud.find_by_id(session=session, branch_id=user.branch_id)
+        if branch is None:
+            raise NotFoundError(detail=f"{user.branch_id}번 지점이 없습니다.")
+        return BranchListResponse(list=[branch], pagination=PaginationDto(total_record=1))
+
 
     count = await branches_crud.count_all(session=session)
     if search.page == 0:

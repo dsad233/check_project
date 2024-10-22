@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload, load_only
 
 from app.api.routes.auth.auth import hashPassword
 from app.core.database import async_session, get_db
-from app.middleware.tokenVerify import get_current_user_id, validate_token
+from app.middleware.tokenVerify import get_current_user_id, validate_token, get_current_user
 from app.models.users.users_model import Users, UserUpdate
 from app.models.branches.branches_model import Branches
 from typing import Annotated
@@ -83,7 +83,7 @@ async def get_users(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=
 
 # 현재 로그인한 사용자 조회
 @router.get("/me")
-async def get_current_user(current_user_id: int = Depends(get_current_user_id)):
+async def get_current_me_user(current_user_id: int = Depends(get_current_user_id)):
     try:
         # password를 제외한 모든 컬럼 선택
         stmt = (
@@ -271,21 +271,3 @@ async def delete_user(id: int):
         print("에러가 발생하였습니다.")
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
-    
-
-
-@router.get('/{branch_id}')
-async def my_branch(branch_id : int, token : Annotated[Users, Depends(get_current_user)]):
-    try:
-        find_user = await db.execute(select(Users, Branches).join(Branches.id == Users.branch_id).where(Users.deleted_yn == "N", Branches.id == branch_id, Branches.deleted_yn == "N"))
-        result_branch = find_user.fetchall()
-
-        fetch_data = [
-            {
-                {data}
-            }
-            for data in result_branch
-        ]
-    except Exception as err:
-        print(err)
-        raise HTTPException(detail="서버 오류가 발생했습니다.")

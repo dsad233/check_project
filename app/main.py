@@ -10,16 +10,10 @@ from app.core.log_config import get_logger
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    logger = await get_logger()
-    await logger.info("Starting FastAPI application")
     await startup_event()
     yield
-    await logger.info("Shutting down FastAPI application")
-    await logger.shutdown()
 
 app = FastAPI(lifespan=lifespan)
-
-add_exception_handlers(app)
 
 origins = [
     "https://workswave-frontend.vercel.app",

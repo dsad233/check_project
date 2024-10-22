@@ -1,5 +1,6 @@
 import logging
 from typing import Optional
+from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 from fastapi import HTTPException
 from sqlalchemy import func, select, update as sa_update
@@ -34,7 +35,7 @@ async def update(
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in OverTimePolicies.__table__.columns:
-        if column.name not in ['id', 'branch_id']:
+        if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(overtime_policies_update, column.name)
             if new_value is not None and getattr(overtime_policies, column.name) != new_value:
                 changed_fields[column.name] = new_value
@@ -43,6 +44,7 @@ async def update(
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(OverTimePolicies).where(OverTimePolicies.branch_id == branch_id).values(**changed_fields)
         await session.execute(stmt)
+        overtime_policies.updated_at = datetime.now()
         await session.commit()
         await session.refresh(overtime_policies)
     else:
