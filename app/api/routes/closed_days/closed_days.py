@@ -20,8 +20,10 @@ db = async_session()
 @router.post("/{branch_id}/closed-days")
 async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
-            raise HTTPException(status_code=403, detail="생성 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         new_closed_day = ClosedDays(
             branch_id=branch_id,
@@ -49,8 +51,12 @@ async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate,
 async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)]):
     try:
 
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id or token.part_id != part_id and token.role.strip() not in ["최고관리자", "관리자", "사원", "통합 관리자"]):
-            raise HTTPException(status_code=400, detail="생성 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() in ["최고관리자", "관리자", "사원", "통합 관리자"]:
+            pass  
+        elif token.branch_id != branch_id or token.part_id != part_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         
         new_closed_day = ClosedDays(
@@ -81,8 +87,10 @@ async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, 
 async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
     try:
 
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=400, detail="생성 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         
         
         results = []
@@ -113,8 +121,12 @@ async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
 async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
     try:
 
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id or token.part_id != part_id and token.role.strip() not in ["최고관리자", "관리자", "사원", "통합 관리자"]):
-            raise HTTPException(status_code=400, detail="생성 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() in ["최고관리자", "관리자", "사원", "통합 관리자"]:
+            pass  
+        elif token.branch_id != branch_id or token.part_id != part_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         
         
         results = []
@@ -254,8 +266,10 @@ async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_
 @router.get("/{branch_id}/closed-days/branch-month/{date}")
 async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
         date_start_day = date_obj.replace(day=1)
@@ -281,10 +295,16 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
 @router.get("/{branch_id}/parts/{part_id}/closed-days/part-month/{date}")
 async def get_part_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한":
-            if token.branch_id != branch_id and token.role != "최고관리자":
-                if token.role != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() == "최고관리자":
+            pass  
+        elif token.role.strip() == "통합 관리자" and token.part_id == part_id:
+            pass  
+        elif token.branch_id == branch_id:
+            pass  
+        else:
+            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
         date_start_day = date_obj.replace(day=1)
@@ -312,8 +332,10 @@ async def get_part_month_closed_days(branch_id : int, part_id : int, date : str,
 async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
     try:
         # 권한 확인
-        if token.role.strip() != "MSO 최고권한" and (token.branch_id != branch_id or token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         
         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
         date_start_day = date_obj.replace(day=1)
@@ -378,8 +400,10 @@ async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: 
 @router.patch("/{branch_id}/closed-days/sunday-result")
 async def branch_sunday_result_closed_days(branch_id : int, id : int, token : Annotated[Users, Depends(get_current_user)], sundayOff: bool):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         stmt = select(ClosedDays).join(WorkPolicies, WorkPolicies.branch_id == id).where(ClosedDays.branch_id == branch_id, WorkPolicies.branch_id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -416,8 +440,10 @@ async def branch_sunday_result_closed_days(branch_id : int, id : int, token : An
 @router.get("/{branch_id}/closed-days/branch-week/{date}")
 async def get_branch_week_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="조회 권한이 존재하지 않습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         
         kr_tz = ZoneInfo("Asia/Seoul")
@@ -447,10 +473,16 @@ async def get_branch_week_closed_days(branch_id : int, date : str, token : Annot
 @router.get("/{branch_id}/parts/{part_id}/closed-days/part-week/{date}")
 async def get_part_week_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한":
-            if token.branch_id != branch_id and token.role.strip() != "최고관리자":
-                if token.role.strip() != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() == "최고관리자":
+            pass  
+        elif token.role.strip() == "통합 관리자" and token.part_id == part_id:
+            pass  
+        elif token.branch_id == branch_id:
+            pass  
+        else:
+            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         
         kr_tz = ZoneInfo("Asia/Seoul")
         date_obj = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=kr_tz)
@@ -592,8 +624,10 @@ async def get_part_one_closed_days(branch_id : int, part_id : int, id : int):
 @router.patch("/{branch_id}/closed-days/{id}")
 async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
-            raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         
         find_one_closed_day = await db.execute(select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N"))
         result = find_one_closed_day.scalar_one_or_none()
@@ -624,10 +658,16 @@ async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: 
 @router.patch("/{branch_id}/parts/{part_id}/closed-days/{id}")
 async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한":
-            if token.branch_id != branch_id and token.role != "최고관리자":
-                if token.rolestrip() != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="수정 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() == "최고관리자":
+            pass  
+        elif token.role.strip() == "통합 관리자" and token.part_id == part_id:
+            pass  
+        elif token.branch_id == branch_id:
+            pass  
+        else:
+            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         
         find_one_closed_day = await db.execute(select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N"))
         result = find_one_closed_day.scalar_one_or_none()
@@ -657,8 +697,10 @@ async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed
 @router.delete("/{branch_id}/closed-days/{id}")
 async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         # 휴무일 존재 여부 확인
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -687,10 +729,16 @@ async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Use
 @router.delete("/{branch_id}/parts/{part_id}/closed-days/{id}")
 async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한":
-            if token.branch_id != branch_id and token.role.strip() != "최고관리자":
-                if token.role.strip() != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() == "최고관리자":
+            pass  
+        elif token.role.strip() == "통합 관리자" and token.part_id == part_id:
+            pass  
+        elif token.branch_id == branch_id:
+            pass  
+        else:
+            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         # 휴무일 존재 여부 확인
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -719,9 +767,10 @@ async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:
 @router.delete("/{branch_id}/closed-days/arrays/delete")
 async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[int] = Body(...)):
     try:
-    
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자"):
-            raise HTTPException(status_code=400, detail="삭제 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         
         for data in array_list:
             find_one_closed_days = await db.execute(select(ClosedDays).where(ClosedDays.id == data, ClosedDays.branch_id == branch_id, ClosedDays.deleted_yn == "N"))
@@ -749,8 +798,10 @@ async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
 @router.patch("/{branch_id}/closed-days/softdelete/{id}")
 async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
-            raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         # 휴무일 존재 여부 확인
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -780,10 +831,16 @@ async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotat
 @router.patch("/{branch_id}/parts/{part_id}/closed-days/softdelete/{id}")
 async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한":
-            if token.branch_id != branch_id and token.role != "최고관리자":
-                if token.role.strip() != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="삭제 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() == "최고관리자":
+            pass  
+        elif token.role.strip() == "통합 관리자" and token.part_id == part_id:
+            pass  
+        elif token.branch_id == branch_id:
+            pass  
+        else:
+            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         # 휴무일 존재 여부 확인
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -814,8 +871,10 @@ async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, t
 @router.patch("/{branch_id}/closed-days/restore/{id}")
 async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한" or (token.branch_id != branch_id and token.role.strip() != "최고관리자") :
-            raise HTTPException(status_code=403, detail="복구 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
+            pass 
+        elif token.branch_id != branch_id:
+            raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         # 휴무일 존재 여부 확인
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -846,10 +905,16 @@ async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Us
 @router.patch("/{branch_id}/parts/{part_id}/closed-days/restore/{id}")
 async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
     try:
-        if token.role.strip() != "MSO 최고권한":
-            if token.branch_id != branch_id and token.role.strip() != "최고관리자":
-                if token.role.strip() != "통합 관리자" or token.part_id != part_id:
-                    raise HTTPException(status_code=403, detail="복구 권한이 없습니다.")
+        if token.role.strip() == "MSO 최고권한":
+            pass 
+        elif token.role.strip() == "최고관리자":
+            pass  
+        elif token.role.strip() == "통합 관리자" and token.part_id == part_id:
+            pass  
+        elif token.branch_id == branch_id:
+            pass  
+        else:
+            raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         # 휴무일 존재 여부 확인
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)

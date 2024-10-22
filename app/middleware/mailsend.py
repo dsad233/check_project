@@ -1,16 +1,17 @@
 from fastapi import FastAPI, BackgroundTasks
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.core.config import settings
+from pydantic_settings import BaseSettings
 
 app = FastAPI()
 
-class EmailSchema(BaseModel):
-    email: EmailStr
-    subject: str
-    message: str
+class MailSend(BaseSettings):
+    to_email : EmailStr
+    title : str = Field(None, description="메일 전송 제목")
+    context : str = Field(None, description= "메일 전송 내용")
 
 # SMTP 설정 (예시: Gmail SMTP 서버)
 SMTP_SERVER = "smtp.gmail.com"
