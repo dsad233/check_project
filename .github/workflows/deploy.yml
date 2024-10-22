@@ -3,7 +3,7 @@ name: Deploy to Server
 on:
   push:
     branches:
-      - main
+      - deploy_only
 
 jobs:
   build-and-deploy:
@@ -12,6 +12,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+        with:
+          ref: deploy_only
 
       - name: Deploy to server
         uses: appleboy/ssh-action@master
@@ -22,9 +24,9 @@ jobs:
           port: ${{ secrets.AWS_SSH_PORT }}
           script: |
             cd ~/checks-be/workswave-backend 
-            git stash
-            git switch main
-            git pull origin main
+            git fetch origin
+            git checkout deploy_only
+            git reset --hard origin/deploy_only
             docker stop $(docker ps -aq) || true
             docker rm $(docker ps -aq) || true
             docker rmi $(docker images -q) || true

@@ -70,7 +70,4 @@ async def get_current_user_id(req: Request):
 
 # 현재 사용자를 가져오는 함수
 async def get_current_user(req: Request):
-    user = req.state.user
-    if isinstance(user, Users):
-        return await UserPermission.create(user)
-    return None
+    return req.state.user
