@@ -5,7 +5,13 @@ from fastapi import HTTPException
 from sqlalchemy import select
 
 class UserPermission:
-    def __init__(self, user):
+    @classmethod
+    async def create(cls, user):
+        self = cls.__new__(cls)
+        await self.init(user)
+        return self
+
+    async def init(self, user):
         if isinstance(user, dict):
             user = Users(**user)
         self._user = user
@@ -17,7 +23,7 @@ class UserPermission:
         self.branch_id = user.branch_id
         self.menu_permissions = {}
         self.part_menu_permissions = {}
-        self.load_menu_permissions()
+        await self.load_menu_permissions()
 
     def get_accessible_users_query(self, base_query, UserAlias):
         if self.role == "MSO 최고권한":
@@ -78,13 +84,13 @@ class UserPermission:
         else:  # 관리자, 사원, 퇴사자, 휴직자 등
             return False
 
-    def load_menu_permissions(self):
+    async def load_menu_permissions(self):
         for perm in self._user.part_menu_permissions:
             if perm.part_id not in self.part_menu_permissions:
                 self.part_menu_permissions[perm.part_id] = {}
             self.part_menu_permissions[perm.part_id][perm.menu_permission_id] = perm.is_permitted
 
-    def has_menu_permission(self, menu_name):
+    async def has_menu_permission(self, menu_name):
         if self.role == "MSO 최고권한":
             return True
         menu_permission = next((perm for perm in self._user.part_menu_permissions if perm.menu_permission.name == menu_name), None)
@@ -95,8 +101,8 @@ class UserPermission:
                 return self.part_menu_permissions[part_id][menu_permission.menu_permission_id]
         return False
 
-    def check_menu_permission(self, menu_name):
-        if not self.has_menu_permission(menu_name):
+    async def check_menu_permission(self, menu_name):
+        if not await self.has_menu_permission(menu_name):
             raise HTTPException(status_code=403, detail=f"{menu_name} 메뉴에 접근할 권한이 없습니다.")
 
     def __getattr__(self, name):

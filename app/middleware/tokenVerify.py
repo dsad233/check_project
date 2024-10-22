@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import async_session, get_db
 from app.middleware.jwt.jwtService import JWTDecoder, JWTService
 from app.models.users.users_model import Users
+from app.middleware.permission import UserPermission
 
 users = async_session()
 
@@ -58,8 +59,10 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
         print(f"HTTP 에러가 발생하였습니다: {http_err.detail}")
         raise
     except Exception as err:
-        print(f"예상치 못한 에러가 발생하였습니다: {str(err)}")
-        raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다.")
+       print(f"예상치 못한 에러가 발생하였습니다: {str(err)}")
+       import traceback
+       traceback.print_exc()
+       raise HTTPException(status_code=500, detail="서버 내부 오류가 발생했습니다.")
 
 # 현재 사용자 ID를 가져오는 함수
 async def get_current_user_id(req: Request):
@@ -67,4 +70,7 @@ async def get_current_user_id(req: Request):
 
 # 현재 사용자를 가져오는 함수
 async def get_current_user(req: Request):
-    return req.state.user
+    user = req.state.user
+    if isinstance(user, Users):
+        return await UserPermission.create(user)
+    return None
