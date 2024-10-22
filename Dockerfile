@@ -1,5 +1,5 @@
-# Use an official Python runtime as the base image
-FROM python:3.10
+# Use Python 3.11 slim image as the base
+FROM python:3.11-slim
 
 # Set environment variables to optimize Python's behavior in Docker
 ENV PYTHONDONTWRITEBYTECODE=1
