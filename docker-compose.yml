@@ -9,7 +9,9 @@ services:
     restart: always
     expose:
       - "8000"
-    command: MODE=prod uvicorn app.main:app
+    command: uvicorn app.main:app
+    environment:
+      - MODE=prod
 
   nginx:
     build:
