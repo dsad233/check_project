@@ -1,13 +1,11 @@
-# ProductOrder-BE/Dockerfile
-
-# Python 3.10 기반 이미지 사용
+# Use an official Python runtime as the base image
 FROM python:3.10
 
-# Set environment variables to prevent Python from writing pyc files and to buffer stdout/stderr
+# Set environment variables to optimize Python's behavior in Docker
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Install system dependencies
+# Install system dependencies required for building Python packages with C extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
@@ -16,24 +14,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# Upgrade pip and install Poetry
+RUN pip install --upgrade pip
+RUN pip install poetry
 
-# 작업 디렉토리 설정
+# Set the working directory inside the container
 WORKDIR /app
 
-# 프로젝트 파일 복사
-COPY ./ /app
-
-# 필요한 패키지 설치
-RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir poetry
-
-# Poetry 설정 파일 복사
+# Copy only the dependency files first to leverage Docker's caching
 COPY ./pyproject.toml ./poetry.lock /app/
 
-# 가상환경을 생성하지 않고 패키지 설치
+# Configure Poetry to not create virtual environments within the Docker container
 RUN poetry config virtualenvs.create false
 
+# Install project dependencies
 RUN poetry install --no-interaction --no-ansi
 
-# uvicorn을 통해 애플리케이션 실행
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Copy the rest of the application code
+COPY . /app/
+
+# Expose the port your FastAPI app runs on (adjust if necessary)
+EXPOSE 8000
+
+# Define the default command to run your application
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
