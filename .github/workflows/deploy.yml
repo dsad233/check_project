@@ -15,13 +15,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Push to deploy_only branch
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git checkout -B deploy_only
-          git push origin deploy_only --force
-
       - name: Deploy to server
         uses: appleboy/ssh-action@master
         with:
@@ -32,8 +25,8 @@ jobs:
           script: |
             cd ~/checks-be/workswave-backend 
             git fetch origin
-            git checkout deploy_only
-            git reset --hard origin/deploy_only
+            git checkout code_add
+            git reset --hard origin/code_add
             docker stop $(docker ps -aq) || true
             docker rm $(docker ps -aq) || true
             docker rmi $(docker images -q) || true
