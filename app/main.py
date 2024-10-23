@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 origins = [
-    "https://workswave-frontend.vercel.app",
+    "https://workswave-frontend-one.vercel.app",
     "http://localhost:5173",
     "http://52.78.246.46"
 
