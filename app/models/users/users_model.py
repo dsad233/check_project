@@ -48,7 +48,7 @@ class Users(Base):
     birth_date = Column(Date, nullable=True)
     hire_date = Column(Date, nullable=True)
     resignation_date = Column(Date, nullable=True)
-    gender = Column(Enum(Gender, name="user_gender"), nullable=False)
+    gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
@@ -56,7 +56,7 @@ class Users(Base):
     last_position = Column(String(255), nullable=True)
     last_career_start_date = Column(Date, nullable=True)
     last_career_end_date = Column(Date, nullable=True)
-    role = Column(Enum(Role, name="user_role"), nullable=False, default=Role.EMPLOYEE)
+    role = Column(Enum(*[e.value for e in Role], name="user_role"), nullable=False, default=Role.EMPLOYEE)
 
 
     created_at = Column(DateTime, default=datetime.now)
