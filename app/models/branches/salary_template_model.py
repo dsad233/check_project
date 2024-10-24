@@ -14,6 +14,8 @@ from sqlalchemy import (
     Time,
 )
 from app.core.database import Base
+
+# 임금정책
 class SalaryTemplate(Base):
     __tablename__ = "salary_templates"
     id = Column(Integer, primary_key=True, autoincrement=True) #템플릿ID
@@ -36,9 +38,17 @@ class SalaryTemplate(Base):
     annual_leave_allowance = Column(Integer, nullable=False, default=0) #연차수당
     annual_leave_allowance_hour = Column(Integer, nullable=False, default=0) #연차수당시간
     annual_leave_allowance_day = Column(Integer, nullable=False, default=0) #연차수당일수
+
+    holiday_allowance = Column(Integer, nullable=False, default=0) # 휴일수당 컬럼
+    job_allowance = Column(Integer, nullable=False, default=0)# 직무(직책)수당 컬럼
+    meal_allowance = Column(Integer, nullable=False, default=0)# 식대 컬럼
+    hire_year = Column(Integer, nullable=False, default=0) # 입사년도 컬럼 ( 몇년도 기준 임금정책인지 )
+    
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
+
+
 class SalaryTemplateDto(BaseModel):
     id: Optional[int] = Field(default=None, description="템플릿ID")
     part_id: int = Field(description="직책ID")
@@ -59,5 +69,11 @@ class SalaryTemplateDto(BaseModel):
     annual_leave_allowance: int = Field(description="연차수당")
     annual_leave_allowance_hour: int = Field(description="연차수당시간")
     annual_leave_allowance_day: int = Field(description="연차수당일수")
+
+    holiday_allowance: int = Field(description="휴일수당")
+    job_allowance: int = Field(description="직무(직책)수당")
+    meal_allowance: int = Field(description="식대")
+    hire_year: int = Field(descriptio="입사년도 ( 몇년도 기준 임금정책인지 )")
+    
     class Config:
         from_attributes = True
