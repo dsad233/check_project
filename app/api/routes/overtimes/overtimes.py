@@ -7,6 +7,8 @@ from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
 from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, OvertimeUpdate, Overtimes
 from app.models.users.users_model import Users
+from app.models.branches.branches_model import Branches
+from app.models.parts.parts_model import Parts
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -110,29 +112,45 @@ async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, cur
 
 # 초과 근무 목록 조회
 @router.get("")
-async def get_overtimes(current_user: Users = Depends(get_current_user), skip: int = 0, limit: int = 100):
+async def get_overtimes(current_user: Users = Depends(get_current_user), skip: int = 0, limit: int = 100, name: str = None, phone_number: str = None, branch: str = None, part: str = None, status: str = None):
     try:
         stmt = None
-        if current_user.role == "사원":
-            stmt = (
-                select(Overtimes)
-                .where((Overtimes.applicant_id == current_user.id) & (Overtimes.deleted_yn == "N"))
-                .order_by(Overtimes.application_date.desc())
-                .offset(skip)
-                .limit(limit)
-            )
-        else:
-            stmt = (
-                select(Overtimes)
-                .where((Overtimes.deleted_yn == "N"))
-                .order_by(Overtimes.application_date.desc())
-                .offset(skip)
-                .limit(limit)
-            )
-
-        if stmt is None:
-            raise HTTPException(status_code=400, detail="권한이 없습니다.")
+        base_query = (
+            select(Overtimes)
+            .where(Overtimes.deleted_yn == "N")
+        )
         
+        # 사원인 경우 자신의 기록만 조회
+        if current_user.role == "사원":
+            base_query = base_query.where(Overtimes.applicant_id == current_user.id)
+
+        # Users 테이블과 JOIN (검색 조건이 있는 경우)
+        if name or phone_number or branch or part:
+            base_query = base_query.join(Users, Overtimes.applicant_id == Users.id)
+
+        # 이름 검색 조건
+        if name:
+            base_query = base_query.where(Users.name.like(f"%{name}%"))
+        # 전화번호 검색 조건
+        elif phone_number:
+            base_query = base_query.where(Users.phone_number.like(f"%{phone_number}%"))
+        # 지점 검색 조건
+        if branch:
+            base_query = base_query.join(Branches, Users.branch_id == Branches.id)\
+                .where(Branches.name.like(f"%{branch}%"))
+        # 파트 검색 조건
+        if part:
+            base_query = base_query.join(Parts, Users.part_id == Parts.id)\
+                .where(Parts.name.like(f"%{part}%"))
+        # 상태 검색 조건
+        if status:
+            base_query = base_query.where(Overtimes.status.like(f"%{status}%"))
+
+        # 정렬, 페이징 적용
+        stmt = base_query.order_by(Overtimes.application_date.desc())\
+            .offset(skip)\
+            .limit(limit)
+
         result = await db.execute(stmt)
         overtimes = result.scalars().all()
 
@@ -204,7 +222,7 @@ async def update_overtime(overtime_id: int, overtime_update: OvertimeUpdate, cur
             "message": "초과 근무 기록이 수정되었습니다.",
         }
     except HTTPException as http_err:
-        await db.rollback()
+        await db.rollback() 
         raise http_err
     except Exception as err:
         await db.rollback()
