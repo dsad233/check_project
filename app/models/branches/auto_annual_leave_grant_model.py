@@ -25,26 +25,26 @@ class AutoAnnualLeaveGrant(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
     account_based_january_1st = Column(
-        Enum(LeaveResetOption, name="account_january_1st"),
+        Enum(*[e.value for e in LeaveResetOption], name="account_january_1st"),
         nullable=False,
         default=LeaveResetOption.RESET,
         comment="매 년 1월 1일기준",
     )
     account_based_less_than_year = Column(
-        Enum(LeaveGrantOption, name="account_less_than_year"),
+        Enum(*[e.value for e in LeaveGrantOption], name="account_less_than_year"),
         nullable=False,
         default=LeaveGrantOption.SAME_YEAR_GRANT,
         comment="근속년수 1년 미만",
     )
     account_based_decimal_point = Column(
-        Enum(DecimalRoundingPolicy, name="account_decimal_point"),
+        Enum(*[e.value for e in DecimalRoundingPolicy], name="account_decimal_point"),
         nullable=False,
         default=DecimalRoundingPolicy.ROUND_UP_0_5,
         comment="소수점처리",
     )
     entry_date_based_remaining_leave = Column(
         Enum(
-            LeaveResetOption, name="entry_date_based"
+            *[e.value for e in LeaveResetOption], name="entry_date_based"
         ),
         nullable=False,
         default=LeaveResetOption.RESET,
@@ -53,7 +53,7 @@ class AutoAnnualLeaveGrant(Base):
     condition_based_month = Column(Integer, nullable=False, default=0)
     condition_based_cnt = Column(Integer, nullable=False, default=0)
     condition_based_type = Column(
-        Enum(TimeUnit, name="condition_based_type"),
+        Enum(*[e.value for e in TimeUnit], name="condition_based_type"),
         nullable=False,
         default=TimeUnit.MONTH,
     )

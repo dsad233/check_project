@@ -43,7 +43,7 @@ class LeaveHistories(Base):
     admin_description = Column(String(255), nullable=True)
     
     status = Column(
-        Enum(StatusKor, name="leave_history_status"),
+        Enum(*[e.value for e in StatusKor], name="leave_history_status"),
         nullable=False,
         default=StatusKor.PENDING,
     )

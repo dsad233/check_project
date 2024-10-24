@@ -32,7 +32,7 @@ class Parts(Base):
     leave_granting_authority = Column(Boolean, default=False)
 
     auto_annual_leave_grant = Column(
-        Enum(PartAutoAnnualLeaveGrant, name="part_auto_annual_leave_grant"),
+        Enum(*[e.value for e in PartAutoAnnualLeaveGrant], name="part_auto_annual_leave_grant"),
         nullable=False,
         default=PartAutoAnnualLeaveGrant.MANUAL_GRANT
     )
