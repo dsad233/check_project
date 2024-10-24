@@ -16,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 
 from app.core.database import Base
+from app.enums.parts import PartAutoAnnualLeaveGrant
 
 
 class Parts(Base):
@@ -31,13 +32,10 @@ class Parts(Base):
     leave_granting_authority = Column(Boolean, default=False)
 
     auto_annual_leave_grant = Column(
-        Enum(
-            "수동부여", "회계기준 부여", "입사일 기준 부여", "조건별 부여", name="part_auto_annual_leave_grant"
-        ),
+        Enum(PartAutoAnnualLeaveGrant, name="part_auto_annual_leave_grant"),
         nullable=False,
-        default="수동부여",
+        default=PartAutoAnnualLeaveGrant.MANUAL_GRANT
     )
-
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(

@@ -15,6 +15,8 @@ from sqlalchemy import (
 )
 
 from app.core.database import Base
+from app.enums.branches import LeaveResetOption, LeaveGrantOption, DecimalRoundingPolicy, TimeUnit
+
 
 class AutoAnnualLeaveGrant(Base):
     __tablename__ = "auto_annual_leave_grant"
@@ -23,45 +25,37 @@ class AutoAnnualLeaveGrant(Base):
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
     account_based_january_1st = Column(
-        Enum(
-            "초기화", "다음해로 이월", name="account_january_1st"
-        ),
+        Enum(LeaveResetOption, name="account_january_1st"),
         nullable=False,
-        default="초기화",
+        default=LeaveResetOption.RESET,
         comment="매 년 1월 1일기준",
     )
     account_based_less_than_year = Column(
-        Enum(
-            "당해년도 일괄 부여", "매 월 1개씩 부여", name="account_less_than_year"
-        ),
+        Enum(LeaveGrantOption, name="account_less_than_year"),
         nullable=False,
-        default="당해년도 일괄 부여",
+        default=LeaveGrantOption.SAME_YEAR_GRANT,
         comment="근속년수 1년 미만",
     )
     account_based_decimal_point = Column(
-        Enum(
-            "0.5 기준 올림", "절삭", "올림", "반올림", name="account_decimal_point"
-        ),
+        Enum(DecimalRoundingPolicy, name="account_decimal_point"),
         nullable=False,
-        default="0.5 기준 올림",
+        default=DecimalRoundingPolicy.ROUND_UP_0_5,
         comment="소수점처리",
     )
     entry_date_based_remaining_leave = Column(
         Enum(
-            "초기화", "다음해로 이월", name="entry_date_based"
+            LeaveResetOption, name="entry_date_based"
         ),
         nullable=False,
-        default="초기화",
+        default=LeaveResetOption.RESET,
         comment="매 년 입사일 기준",
     )
     condition_based_month = Column(Integer, nullable=False, default=0)
     condition_based_cnt = Column(Integer, nullable=False, default=0)
     condition_based_type = Column(
-        Enum(
-            "월", "일", name="condition_based_type"
-        ),
+        Enum(TimeUnit, name="condition_based_type"),
         nullable=False,
-        default="월",
+        default=TimeUnit.MONTH,
     )
 
     created_at = Column(DateTime, default=datetime.now)

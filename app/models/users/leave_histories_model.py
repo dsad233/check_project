@@ -18,6 +18,9 @@ from app.core.database import Base
 from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
+from app.enums.users import StatusKor
+
+
 class LeaveHistories(Base):
     
     __tablename__ = "leave_histories"
@@ -40,11 +43,9 @@ class LeaveHistories(Base):
     admin_description = Column(String(255), nullable=True)
     
     status = Column(
-        Enum(
-            "확인중", "승인", "반려", name="leave_history_status"
-        ),
+        Enum(StatusKor, name="leave_history_status"),
         nullable=False,
-        default="확인중",
+        default=StatusKor.PENDING,
     )
     
     created_at = Column(DateTime, default=datetime.now)

@@ -4,6 +4,7 @@ from typing import Optional
 from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer, String
 
 from app.core.database import Base
+from app.enums.users import OverTimeHours, Status
 
 
 class Overtimes(Base):
@@ -12,8 +13,8 @@ class Overtimes(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     applicant_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    overtime_hours = Column(Enum("30", "60", "90", "120", name="overtime_hours_options"), nullable=False)
-    status = Column(Enum("pending", "approved", "rejected", name="overtime_status"), nullable=False, default="pending")
+    overtime_hours = Column(Enum(OverTimeHours, name="overtime_hours_options"), nullable=False)
+    status = Column(Enum(Status, name="overtime_status"), nullable=False, default="pending")
     application_date = Column(Date, nullable=False, default=datetime.now(UTC).date())
     application_memo = Column(String(500), nullable=True)
     manager_memo = Column(String(500), nullable=True)
