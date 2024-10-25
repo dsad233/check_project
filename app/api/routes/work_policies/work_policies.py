@@ -68,7 +68,7 @@ async def get_work_policies(*,
                                     holiday_allowance_policies=HolidayAllowancePoliciesDto.model_validate(allowance_policies or {}))
     except Exception as e:
         print(f"Error in get_work_policies: {e}")
-        raise InternalServerError(detail="근무정책 조회에 실패하였습니다.")
+        raise HTTPException(detail="근무정책 조회에 실패하였습니다.")
 
 @router.patch("/update", response_model=str)
 async def update_work_policies(*,
