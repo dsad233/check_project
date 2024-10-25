@@ -74,6 +74,25 @@ class BranchResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class BranchUpdate(BaseModel):
+    name: Optional[str] = Field(None, description="지점 이름")
+    representative_name: Optional[str] = Field(None, description="대표 원장 이름")
+    registration_number: Optional[str] = Field(None, description="사업자번호")
+    call_number: Optional[str] = Field(None, description="전화번호")
+    address: Optional[str] = Field(None, description="지점 주소")
+    corporate_seal: Optional[str] = Field(None, description="법인 도장")
+    nameplate: Optional[str] = Field(None, description="명판")
+    mail_address: Optional[str] = Field(None, description="메일 주소")
+
+    @field_validator("corporate_seal", "nameplate")
+    def validate_file_extension(cls, v):
+        if v == "":
+            return None
+        return v
+
+    class Config:
+        from_attributes = True
+
 
 class BranchListResponse(BaseModel):
     list: List[BranchResponse] = Field(description="지점 목록")

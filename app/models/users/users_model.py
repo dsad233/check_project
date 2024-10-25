@@ -86,6 +86,65 @@ class UserCreate(BaseModel):
     last_career_start_date: Optional[date] = None
     last_career_end_date: Optional[date] = None
 
+
+class AdminUserDto(BaseModel):
+    id: int
+    name: str
+    phone_number: str
+    part_id: int
+    email: str
+    role: str
+    part_list: list[int] = []
+
+    @classmethod
+    async def build(cls, user: Users):
+        return cls(
+            id=user.id,
+            name=user.name,
+            phone_number=user.phone_number,
+            part_id=user.part_id,
+            email=user.email,
+            role=user.role
+        )
+
+class AdminUsersDto(BaseModel):
+    admin_users: list[AdminUserDto]
+
+    @classmethod
+    async def build(cls, users: list[Users]):
+        return cls(
+            super_users=[await AdminUserDto.build(user) for user in users]
+        )
+
+
+class CreatedUserDto(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    education: Optional[str] = None
+    birth_date: Optional[date] = None
+    hire_date: Optional[date] = None
+    resignation_date: Optional[date] = None
+
+    class Config:
+        from_attributes = True  # ORM 모드 사용
+
+    @classmethod
+    async def build(cls, user: Users):
+        return cls(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            phone_number=user.phone_number,
+            address=user.address,
+            education=user.education,
+            birth_date=user.birth_date,
+            hire_date=user.hire_date,
+            resignation_date=user.resignation_date
+        )
+
 # 유저 정보 업데이트를 위한 Pydantic 모델
 class UserUpdate(BaseModel):
     name: Optional[str] = None
