@@ -19,6 +19,7 @@ from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
+from app.models.branches.user_leaves_days import UserLeavesDays as UserLeavesDays
 
 from app.enums.users import Role, Gender, MenuPermissions
 
@@ -62,7 +63,9 @@ class Users(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
+    
+    leaves = relationship("UserLeavesDays", back_populates="user", foreign_keys="UserLeavesDays.user_id")
+    
 
 # 유저 정보 추가를 위한 Pydantic 모델
 class UserCreate(BaseModel):
