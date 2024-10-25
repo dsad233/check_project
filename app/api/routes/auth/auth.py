@@ -67,9 +67,7 @@ def verifyPassword(password: str, hashed_password: str) -> bool:
 @router.post("/login")
 async def login(login: Login, res : Response):
     try:
-        stmt = select(Users).where(
-            (Users.email == login.email) & (Users.deleted_yn == "N")
-        )
+        stmt = select(Users).where(Users.email == login.email).where(Users.deleted_yn == "N")
         result = await users.execute(stmt)
         findUser = result.scalar_one_or_none()
 

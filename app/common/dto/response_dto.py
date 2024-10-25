@@ -5,7 +5,7 @@ from pydantic import BaseModel
 T = TypeVar('T')
 
 # Response DTO 선언
-class ResponseDTO(Generic[T], BaseModel):
+class ResponseDTO(BaseModel, Generic[T]):
     status: str
     message: Optional[str]
     data: Optional[T]
