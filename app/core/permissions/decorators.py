@@ -32,21 +32,17 @@ def available_higher_than(minimum_role: Role):
             if not user.role:
                 raise HTTPException(status_code=401, detail="권한 정보가 없습니다.")
 
-            print(f"Checking roles: user role={user.role}, minimum_role={minimum_role}")  # 역할 확인
             if ROLE_LEVELS[user.role] <= ROLE_LEVELS[minimum_role]:
-                print("Permission granted")  # 권한 승인
                 return await func(*args, **kwargs)
 
-            print("Permission denied")  # 권한 거부
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
 
         return wrapper
-
     return decorator
 
 
 async def can_manage_user_permissions(current_user: Users, target_user: Users) -> bool:
-    """사용자가 다른 사용자의 권한을 관리할 수 있는지 확인"""
+    """사용자가 다른 사용자의 권한을 관리할 수 있는지 확인하는 함수"""
     if not current_user.role or not target_user.role:
         return False
 
@@ -54,26 +50,29 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users) -
     target_level = ROLE_LEVELS[target_user.role]
 
     # 1. MSO 관련 로직 먼저 체크
-    # MSO를 관리하는 것은 불가능하게끔 예외 처리
     if target_user.role == Role.MSO:
-        raise HTTPException(
-            status_code=403,
-            detail="MSO의 권한은 관리할 수 없습니다."
-        )
+        # MSO만 다른 MSO의 권한을 관리할 수 있음
+        if current_user.role != Role.MSO:
+            raise HTTPException(
+                status_code=403,
+                detail="MSO 관련 권한은 오직 MSO만 관리할 수 있습니다."
+            )
     # MSO는 모든 지점의 모든 사용자 관리 가능
     if current_user.role == Role.MSO:
         return True
 
-    # 2. 지점 확인 (최고관리자, 통합관리자)
-    if current_user.role in [Role.SUPER_ADMIN, Role.INTEGRATED_ADMIN]:
+    # 2. 지점 확인 (MSO를 제외한 모든 관리자급)
+    if current_user.role in [Role.SUPER_ADMIN, Role.INTEGRATED_ADMIN, Role.ADMIN]:
         if current_user.branch_id != target_user.branch_id:
             raise HTTPException(status_code=403, detail="다른 지점의 사용자의 권한은 관리할 수 없습니다.")
 
-    # 최고 관리자
+    # 3. 역할별 권한 체크
+    # 최고 관리자 (MSO를 제외한 모든 권한 관리 가능)
     if current_user.role == Role.SUPER_ADMIN:
         return True
 
-    # 통합 관리자는 자기 지점의, 자신보다 낮은 레벨의 같은 지점 사용자 관리 가능
+    # 통합 관리자
+    # 자기 지점의, 자신보다 숫자가 같거나 높은 레벨 권한을 관리하려고 하면 Error
     if current_user.role == Role.INTEGRATED_ADMIN:
         if target_level <= current_level:
             raise HTTPException(
@@ -82,13 +81,57 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users) -
             )
         return True
 
-    if current_level == target_level and current_user.role not in [Role.MSO, Role.SUPER_ADMIN]:
-        raise HTTPException(
-            status_code=403,
-            detail="MSO, 최고 관리자 등급이 아니면, 같은 등급의 사용자 권한을 관리할 수 없습니다."
-        )
-
     raise HTTPException(
         status_code=403,
         detail="해당 파트 관리 권한이 없습니다."
     )
+
+
+def check_menu_permission(required_menu: MenuPermissions):
+    """
+        특정 메뉴에 대한 접근 권한을 확인하는 데코레이터
+            사용할 때 의존성 주입
+            - db: AsyncSession = Depends(get_db),
+            - current_user: Users = Depends(get_current_user)
+
+        - MSO를 제외한 모든 역할은 자신의 지점 데이터만 조회 가능
+        - 데이터 조회 시 branch_id 필터링 필요
+    """
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Depends를 통해 주입된 db 세션과 current_user를 찾음
+            db = kwargs.get('db')
+            current_user = kwargs.get('current_user')
+
+            if not db or not current_user:
+                raise HTTPException(
+                    status_code=500,
+                    detail="Database session or current user not found"
+                )
+
+            # MSO와 SUPER_ADMIN은 모든 메뉴 접근 가능
+            if current_user.role in [Role.MSO, Role.SUPER_ADMIN]:
+                return await func(*args, **kwargs)
+
+            # 사용자의 메뉴 권한 조회
+            query = select(user_menus).where(
+                and_(
+                    user_menus.c.user_id == current_user.id,
+                    user_menus.c.menu_name == required_menu,
+                    user_menus.c.is_permitted == True
+                )
+            )
+            result = await db.execute(query)
+            permission = result.first()
+
+            if not permission:
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"{required_menu.value} 메뉴에 대한 접근 권한이 없습니다."
+                )
+
+            return await func(*args, **kwargs)
+
+        return wrapper
+    return decorator
