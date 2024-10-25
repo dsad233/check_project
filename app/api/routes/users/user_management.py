@@ -166,26 +166,7 @@ class UserManagement:
             print(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
-    """
-    class UserCreate(BaseModel):
-    name: str
-    email: str
-    password: str
-    phone_number: Optional[str] = None
-    address: Optional[str] = None
-    education: Optional[str] = None
-    birth_date: Optional[date] = None
-    hire_date: Optional[date] = None
-    resignation_date: Optional[date] = None
-    gender: Optional[str] = None
-    part_id: Optional[int] = None
-    branch_id: Optional[int] = None
-    last_company: Optional[str] = None
-    last_position: Optional[str] = None
-    last_career_start_date: Optional[date] = None
-    last_career_end_date: Optional[date] = None
-    """
-    @router.post("")
+    @router.post("", response_model=CreatedUserDto)
     async def create_user(user: UserCreate, session: AsyncSession = Depends(get_db), current_user: Users = Depends(get_current_user)):
         if await find_by_email(session=session, email=user.email):
             raise HTTPException(status_code=400, detail="이미 등록된 이메일 주소입니다.")
