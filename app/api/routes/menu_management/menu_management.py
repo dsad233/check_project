@@ -5,7 +5,7 @@ from typing import List
 from pydantic import BaseModel
 
 from app.core.database import get_db
-from app.core.permissions.decorators import available_higher_than, can_manage_user_permissions
+from app.core.permissions.auth_utils import available_higher_than, can_manage_user_permissions
 from app.middleware.tokenVerify import get_current_user, validate_token
 from app.models.users.users_model import Users, user_menus, user_parts
 from app.enums.users import Role, MenuPermissions
@@ -63,7 +63,6 @@ async def update_menu_permissions(
         # 권한 업데이트
         for perm in body.permissions:
             menu_enum = get_menu_enum(perm.menu_name)
-            print(f"Processing menu: {menu_enum} (name={menu_enum.name}, value={menu_enum.value})")
 
             existing = await db.execute(
                 select(user_menus).where(
