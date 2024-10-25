@@ -1,12 +1,14 @@
 import logging
-from typing import Any
+from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
+from app.schemas.users_schemas import UserLeaveResponse
+from app.api.service import user_service
 from app.cruds.branches import branches_crud
 from app.cruds.users import users_crud
 from app.cruds.branches.policies import holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud, allowance_crud
@@ -22,6 +24,11 @@ from app.models.branches.branches_model import (
 )
 
 router = APIRouter(dependencies=[Depends(validate_token)])
+
+class ManualGrantRequest(BaseModel):
+    count: int
+    user_ids: list[int]
+    memo: Optional[str] = None
 
 async def check_admin_role(*, session: AsyncSession, current_user_id: int):
     user = await users_crud.find_by_id(session=session, user_id=current_user_id)
@@ -155,3 +162,30 @@ async def revive_branch(
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     await branches_crud.revive(session=session, branch_id=branch_id)
     return f"{branch_id}번 지점이 복구되었습니다."
+
+@router.get("/{branch_id}/users/leave", response_model=list[UserLeaveResponse], summary="지점 내 유저들의 잔여 연차 수 및 연차 부여 방식 조회")
+async def read_branch_users_leave(
+    *, session: AsyncSession = Depends(get_db), branch_id: int, current_user_id: int = Depends(get_current_user_id)
+) -> list[UserLeaveResponse]:
+    # await check_admin_role(session=session, current_user_id=current_user_id)
+    return await user_service.get_branch_users_leave(session=session, branch_id=branch_id)
+
+@router.patch("/{branch_id}/users/leave/plus", response_model=bool)
+async def manual_grant_annual_leave(
+    *, session: AsyncSession = Depends(get_db), branch_id: int, manual_grant_request: ManualGrantRequest, current_user_id: int = Depends(get_current_user_id)
+) -> bool:
+    # await check_admin_role(session=session, current_user_id=current_user_id)
+    memo = manual_grant_request.memo
+    for user_id in manual_grant_request.user_ids:
+        await user_service.plus_remaining_annual_leave(session=session, user_id=user_id, count=manual_grant_request.count)
+    return True
+
+@router.patch("/{branch_id}/users/leave/minus", response_model=bool)
+async def manual_minus_annual_leave(
+    *, session: AsyncSession = Depends(get_db), branch_id: int, manual_minus_request: ManualGrantRequest, current_user_id: int = Depends(get_current_user_id)
+) -> bool:
+    # await check_admin_role(session=session, current_user_id=current_user_id)
+    for user_id in manual_minus_request.user_ids:
+        await user_service.minus_remaining_annual_leave(session=session, user_id=user_id, count=manual_minus_request.count)
+    return True
+
