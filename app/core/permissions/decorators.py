@@ -60,11 +60,11 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users) -
     # 최고 관리자는 자기 지점의, MSO가 아닌 사용자 관리 가능
     if current_user.role == Role.SUPER_ADMIN:
         return (current_user.branch_id == target_user.branch_id and 
-                target_user.role != Role.MSO)
+                target_level != 0 ) # target이 MSO(0)만 아니면 됨
                 
     # 통합 관리자는 자기 지점의, 자신보다 낮은 레벨의 같은 지점 사용자 관리 가능
     if current_user.role == Role.INTEGRATED_ADMIN:
         return (current_user.branch_id == target_user.branch_id and 
-                target_level > current_level)
+                target_level > current_level)  # 10보다 큰 레벨만 관리 가능
                 
     return False
