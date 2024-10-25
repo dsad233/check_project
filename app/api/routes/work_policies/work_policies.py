@@ -39,7 +39,7 @@ class CombinedPoliciesDto(BaseModel):
     holiday_allowance_policies: HolidayAllowancePoliciesDto
 
 
-@router.get("/get", response_model=CombinedPoliciesDto)
+@router.get("/get", response_model=CombinedPoliciesDto) 
 async def get_work_policies(*,
     session: AsyncSession = Depends(get_db),
     branch_id: int,
