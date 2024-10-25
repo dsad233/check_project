@@ -1,15 +1,14 @@
-from typing import Generic, TypeVar, Optional
+from typing import Generic, TypeVar, Optional, Any
 from pydantic import BaseModel
 
-# 제네릭 타입 선언
-T = TypeVar('T')
+T = TypeVar("T")
 
-# Response DTO 선언
-class ResponseDTO(BaseModel, Generic[T]):
+
+class ResponseDTO(BaseModel):
     status: str
-    message: Optional[str]
-    data: Optional[T]
+    message: str
+    data: Any
 
     @classmethod
-    def build(cls, status: str, message: Optional[str], data: Optional[T]):
+    def build(cls, status: str, message: str, data: Any = None) -> "ResponseDTO":
         return cls(status=status, message=message, data=data)

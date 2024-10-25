@@ -179,12 +179,15 @@ class UserManagement:
         created_user = await add_user(session=db, user=new_user)
         data = await CreatedUserDto.build(user=created_user)
 
-        return ResponseDTO.build(
-            status="SUCCESS",
-            message="유저가 성공적으로 생성되었습니다.",
-            data=data
-        )
-
+        try:
+            return ResponseDTO.build(
+                status="SUCCESS",
+                message="유저가 성공적으로 생성되었습니다.",
+                data=data
+            )
+        except Exception as err:
+            print("에러가 발생하였습니다.", err)
+            raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.get("/me")
     async def get_user(current_user: Users = Depends(get_current_user)):
@@ -213,12 +216,12 @@ class UserManagement:
 
     @router.get("/admin")
     async def get_admin_user(current_user: Users = Depends(get_current_user)):
-        users = await find_all_by_branch_id_and_role(session=db, branch_id=current_user.branch_id, role=Role.SUPER_ADMIN)
+        users = await find_all_by_branch_id_and_role(session=db, branch_id=current_user.branch_id, role=Role.ADMIN)
         if not users:
             return ResponseDTO.build(
                 status="SUCCESS",
                 message="조건에 맞는 유저가 없습니다.",
-                data=AdminUsersDto(super_users=[])
+                data=[]
             )
 
         data = await AdminUsersDto.build(users=users)
