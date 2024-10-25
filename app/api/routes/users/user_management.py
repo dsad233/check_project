@@ -1,12 +1,17 @@
 from datetime import UTC, datetime
+from pyexpat.errors import messages
 from typing import Optional, List, Union
 from fastapi import APIRouter, Depends, HTTPException, Query, Body
 from sqlalchemy import func, select, update, case, func, distinct, literal_column
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, aliased
+from sqlalchemy.util import await_only
 
-from app.core.database import async_session
+from app.common.dto.response_dto import ResponseDTO
+from app.core.database import async_session, get_db
+from app.cruds.users.users_crud import find_by_email, add_user
 from app.middleware.tokenVerify import validate_token, get_current_user
-from app.models.users.users_model import Users, UserUpdate, RoleUpdate
+from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts, PartUpdate
 from app.models.commutes.commutes_model import Commutes
@@ -160,7 +165,44 @@ class UserManagement:
             import traceback
             print(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
-        
+
+    """
+    class UserCreate(BaseModel):
+    name: str
+    email: str
+    password: str
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    education: Optional[str] = None
+    birth_date: Optional[date] = None
+    hire_date: Optional[date] = None
+    resignation_date: Optional[date] = None
+    gender: Optional[str] = None
+    part_id: Optional[int] = None
+    branch_id: Optional[int] = None
+    last_company: Optional[str] = None
+    last_position: Optional[str] = None
+    last_career_start_date: Optional[date] = None
+    last_career_end_date: Optional[date] = None
+    """
+    @router.post("")
+    async def create_user(user: UserCreate, session: AsyncSession = Depends(get_db), current_user: Users = Depends(get_current_user)):
+        if await find_by_email(session=session, email=user.email):
+            raise HTTPException(status_code=400, detail="이미 등록된 이메일 주소입니다.")
+
+        # TODO: 메서드를 사용하는 사용자의 권한 조회 로직 필요
+
+        new_user = Users(**user.model_dump())
+        created_user = await add_user(session=session, user=new_user)
+        data = await CreatedUserDto.build(user=created_user)
+
+        return ResponseDTO.build(
+            status="SUCCESS",
+            message="유저가 성공적으로 생성되었습니다.",
+            data=data
+        )
+
+
     @router.get("/me")
     async def get_current_user(current_user: Users = Depends(get_current_user)):
         try:
@@ -187,10 +229,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.get("/{id}")
-    async def get_user_detail(
-        id: int,
-        current_user: Users = Depends(get_current_user)
-    ):
+    async def get_user_detail(id: int, current_user: Users = Depends(get_current_user)):
         """
         ID를 입력 시 세부정보가 조회되며, 권한에 따른 정보 접근이 가능합니다. 세부정보는 관리자만 볼 수 있습니다.
         """
