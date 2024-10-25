@@ -176,8 +176,10 @@ async def get_branch_filters(current_user: Users) -> List:
     """
     conditions = [Users.deleted_yn == "N"]  # 기본 조건
 
+    current_level = ROLE_LEVELS[current_user.role]
+
     # MSO가 아닌 경우 지점 필터링 추가
-    if current_user.role != Role.MSO:
+    if current_level > ROLE_LEVELS[Role.MSO]:
         conditions.append(Users.branch_id == current_user.branch_id)
 
     return conditions
@@ -197,19 +199,28 @@ async def get_part_branch_filters(current_user: Users) -> List:
         - SUPER_ADMIN/INTEGRATED_ADMIN: 자신의 지점 데이터 조회 가능
         - ADMIN: 자신의 지점의 특정 파트 데이터만 조회 가능
     """
-    conditions = [Users.deleted_yn == "N"]  # 기본 조건
+    conditions = []
+    current_level = ROLE_LEVELS[current_user.role]
 
-    # MSO가 아닌 경우 지점 필터링 추가
-    if current_user.role != Role.MSO:
+    # 기본 조건
+    conditions.append(Users.deleted_yn == "N")
+
+    # MSO가 아닌 경우 지점 필터링
+    if current_level > ROLE_LEVELS[Role.MSO]:
         conditions.append(Users.branch_id == current_user.branch_id)
 
-    # ADMIN의 경우 파트 필터링 추가
-    if current_user.role == Role.ADMIN:
+    # ADMIN인 경우 파트 필터링
+    if current_level == ROLE_LEVELS[Role.ADMIN]:
         if not current_user.part_id:
             raise HTTPException(
                 status_code=403,
                 detail="파트 정보가 없는 관리자는 조회할 수 없습니다."
             )
         conditions.append(Users.part_id == current_user.part_id)
+
+    # 권한에 따른 조회 가능한 사용자 제한
+    if current_level > ROLE_LEVELS[Role.INTEGRATED_ADMIN]:
+        excluded_roles = [Role.MSO.value, Role.SUPER_ADMIN.value, Role.INTEGRATED_ADMIN.value]
+        conditions.append(Users.role.notin_(excluded_roles))
 
     return conditions
