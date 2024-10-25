@@ -3,6 +3,7 @@ import logging
 from typing import Optional
 from fastapi import Depends
 from sqlalchemy import func, select, update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 from app.models.users.users_model import Users
@@ -30,10 +31,11 @@ async def find_by_email(
 async def find_all_by_branch_id(
     *, session: AsyncSession, branch_id: int
 ) -> Optional[list[Users]]:
-    stmt = select(Users).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N")
+    stmt = select(Users).options(selectinload(Users.part)).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N")
     result = await session.execute(stmt)
-    users = list(result.scalars().all())
+    users = result.scalars().all()
     return users
+
 
 async def find_all_by_branch_id_and_role(
     *, session: AsyncSession, branch_id: int, role: str
@@ -56,3 +58,23 @@ async def add_user(
         logger.error(f"Failed to add user: {e}")
         await session.rollback()
         raise e
+
+async def plus_remaining_annual_leave(
+    *, session: AsyncSession, user: Users, count: int
+) -> Users:
+    user.remaining_annual_leave += count
+    await session.flush()
+    await session.commit()
+    await session.refresh(user)
+    findUser = await find_by_id(session=session, user_id=user.id)
+    print(findUser.remaining_annual_leave)
+    return user
+
+async def minus_remaining_annual_leave(
+    *, session: AsyncSession, user: Users, count: int
+) -> Users:
+    user.remaining_annual_leave -= count
+    await session.flush()
+    await session.commit()
+    await session.refresh(user)
+    return user

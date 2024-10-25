@@ -54,7 +54,7 @@ class Users(Base):
     gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-
+    remaining_annual_leave = Column(Integer, nullable=False, default=0)
     last_company = Column(String(255), nullable=True)
     last_position = Column(String(255), nullable=True)
     last_career_start_date = Column(Date, nullable=True)
