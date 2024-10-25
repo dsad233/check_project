@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
-from datetime import datetime
+from datetime import datetime, date
+from typing import Optional
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token, get_current_user_id
