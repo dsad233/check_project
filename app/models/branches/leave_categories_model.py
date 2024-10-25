@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
     Boolean,
     Column,
@@ -39,6 +39,12 @@ class LeaveCategoryDto(BaseModel):
     name: str = Field(description="휴무 명")
     leave_count: int = Field(description="차감 일수")
     is_paid: bool = Field(description="유급 여부")
+
+    @field_validator("id")
+    def validate_file_extension(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
 
     class Config:
         from_attributes = True
