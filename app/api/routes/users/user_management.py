@@ -9,9 +9,11 @@ from sqlalchemy.util import await_only
 
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import async_session, get_db
-from app.cruds.users.users_crud import find_by_email, add_user
+from app.cruds.users.users_crud import find_by_email, add_user, find_all_by_branch_id, find_all_by_branch_id_and_role
+from app.enums.users import Role
 from app.middleware.tokenVerify import validate_token, get_current_user
-from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto
+from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto, AdminUserDto, \
+    AdminUsersDto
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts, PartUpdate
 from app.models.commutes.commutes_model import Commutes
@@ -167,14 +169,14 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.post("", response_model=CreatedUserDto)
-    async def create_user(user: UserCreate, session: AsyncSession = Depends(get_db), current_user: Users = Depends(get_current_user)):
-        if await find_by_email(session=session, email=user.email):
+    async def create_user(user: UserCreate, current_user: Users = Depends(get_current_user)):
+        if await find_by_email(session=db, email=user.email):
             raise HTTPException(status_code=400, detail="이미 등록된 이메일 주소입니다.")
 
         # TODO: 메서드를 사용하는 사용자의 권한 조회 로직 필요
 
         new_user = Users(**user.model_dump())
-        created_user = await add_user(session=session, user=new_user)
+        created_user = await add_user(session=db, user=new_user)
         data = await CreatedUserDto.build(user=created_user)
 
         return ResponseDTO.build(
@@ -185,7 +187,7 @@ class UserManagement:
 
 
     @router.get("/me")
-    async def get_current_user(current_user: Users = Depends(get_current_user)):
+    async def get_user(current_user: Users = Depends(get_current_user)):
         try:
             if not current_user:
                 raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
@@ -208,6 +210,24 @@ class UserManagement:
         except Exception as err:
             print("에러가 발생하였습니다.", err)
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+
+    @router.get("/admin")
+    async def get_admin_user(current_user: Users = Depends(get_current_user)):
+        users = await find_all_by_branch_id_and_role(session=db, branch_id=current_user.branch_id, role=Role.SUPER_ADMIN)
+        if not users:
+            return ResponseDTO.build(
+                status="SUCCESS",
+                message="조건에 맞는 유저가 없습니다.",
+                data=AdminUsersDto(super_users=[])
+            )
+
+        data = await AdminUsersDto.build(users=users)
+
+        return ResponseDTO.build(
+            status="SUCCESS",
+            message="수퍼관리자 유저를 정상적으로 조회하였습니다.",
+            data=data
+        )
 
     @router.get("/{id}")
     async def get_user_detail(id: int, current_user: Users = Depends(get_current_user)):
