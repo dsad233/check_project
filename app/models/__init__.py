@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes
+from app.models.users.users_work_contract_model import WorkContract
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -133,3 +134,4 @@ Users.parts = relationship("Parts", secondary=user_parts, back_populates="users"
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
+WorkContract.fixed_rest_days = relationship("FixedRestDay", backref="work_contract")
