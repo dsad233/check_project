@@ -21,7 +21,7 @@ class UserManagement:
 
     @router.get("")
     async def get_users(
-        current_user: UserPermission = Depends(get_current_user),
+        current_user: Users = Depends(get_current_user),
         page: int = Query(1, ge=1),
         record_size: int = Query(10, ge=1),
         status: Optional[str] = None, 
@@ -49,13 +49,15 @@ class UserManagement:
             )
 
             # 1. 사용자 역할에 따른 1차 필터링
-            query = current_user.get_accessible_users_query(base_query, UserAlias)
+            # query = current_user.get_accessible_users_query(base_query, UserAlias)
+
+            query = base_query
 
             # 권한 체크
-            if branch_id and not current_user.can_access_branch(branch_id):
-                return {"message": "해당 지점에 접근할 권한이 없습니다."}
-            if part_id and not current_user.can_access_parts([part_id]):
-                return {"message": "해당 파트에 접근할 권한이 없습니다."}
+            # if branch_id and not current_user.can_access_branch(branch_id):
+            #     return {"message": "해당 지점에 접근할 권한이 없습니다."}
+            # if part_id and not current_user.can_access_parts([part_id]):
+            #     return {"message": "해당 파트에 접근할 권한이 없습니다."}
 
             # 2. 상태 검색 조건 적용
             if status:
@@ -102,23 +104,37 @@ class UserManagement:
                     "gender": user.gender,
                     "email": user.email,
                     "hire_date": user.hire_date,
-                    "parts": [{"id": part.id, "name": part.name} for part in user.parts] if user.parts else None,
-                    "branch": {"id": user.branch.id, "name": user.branch.name} if user.branch else None,
+                    # "parts": [{"id": part.id, "name": part.name} for part in user.parts] if user.parts else None,
+                    # "branch": {"id": user.branch.id, "name": user.branch.name} if user.branch else None,
+                    "parts": None,
+                    "branch": None,
                     "role": user.role,
                     "last_activity": last_activity
                 }
                 
                 # 전체 정보 접근 권한 확인
-                if current_user.can_access_full_user_info(user):
-                    user_dict.update({
-                        "birth_date": user.birth_date,
-                        "phone_number": user.phone_number,
-                        "retirement_date": user.retirement_date,
-                        "leave_date": user.leave_date,
-                        "monthly_salary": monthly_salary,
-                        "annual_salary": annual_salary,
-                    })
-                
+                # if current_user.can_access_full_user_info(user):
+                #     user_dict.update({
+                #         "birth_date": user.birth_date,
+                #         "phone_number": user.phone_number,
+                #         "retirement_date": user.retirement_date,
+                #         "leave_date": user.leave_date,
+                #         "monthly_salary": monthly_salary,
+                #         "annual_salary": annual_salary,
+                #     })
+
+                user_dict.update({
+                    "birth_date": user.birth_date,
+                    "phone_number": user.phone_number,
+                    # "retirement_date": user.retirement_date,
+                    # "leave_date": user.leave_date,
+                    "retirement_date": None,
+                    "leave_date": None,
+                    "monthly_salary": monthly_salary,
+                    "annual_salary": annual_salary,
+                })
+
+
                 user_data.append(user_dict)
 
             if not user_data:
@@ -146,7 +162,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
         
     @router.get("/me")
-    async def get_current_user(current_user: UserPermission = Depends(get_current_user)):
+    async def get_current_user(current_user: Users = Depends(get_current_user)):
         try:
             if not current_user:
                 raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
@@ -156,8 +172,10 @@ class UserManagement:
                 "name": current_user.name,
                 "email": current_user.email,
                 "role": current_user.role,
-                "parts": [{"id": part.id, "name": part.name} for part in current_user.parts] if current_user.parts else None,
-                "branch": {"id": current_user.branch.id, "name": current_user.branch.name} if current_user.branch else None,
+                "parts": None,
+                "branch": None,
+                # "parts": [{"id": part.id, "name": part.name} for part in current_user.parts] if current_user.parts else None,
+                # "branch": {"id": current_user.branch.id, "name": current_user.branch.name} if current_user.branch else None,
             }
 
             return {
@@ -171,7 +189,7 @@ class UserManagement:
     @router.get("/{id}")
     async def get_user_detail(
         id: int,
-        current_user: UserPermission = Depends(get_current_user)
+        current_user: Users = Depends(get_current_user)
     ):
         """
         ID를 입력 시 세부정보가 조회되며, 권한에 따른 정보 접근이 가능합니다. 세부정보는 관리자만 볼 수 있습니다.
@@ -196,7 +214,9 @@ class UserManagement:
             )
 
             # 사용자 역할에 따른 쿼리 필터링
-            query = current_user.get_accessible_users_query(base_query, UserAlias)
+            # query = current_user.get_accessible_users_query(base_query, UserAlias)
+
+            query = base_query
 
             # 쿼리 실행
             result = await db.execute(query)
@@ -214,22 +234,34 @@ class UserManagement:
                 "gender": user.gender,
                 "email": user.email,
                 "hire_date": user.hire_date,
-                "parts": [{"id": part.id, "name": part.name} for part in user.parts] if user.parts else None,
-                "branch": {"id": user.branch.id, "name": user.branch.name} if user.branch else None,
+                "parts": None,
+                "branch": None,
+                # "parts": [{"id": part.id, "name": part.name} for part in user.parts] if user.parts else None,
+                # "branch": {"id": user.branch.id, "name": user.branch.name} if user.branch else None,
                 "role": user.role,
                 "last_activity": last_activity
             }
 
+
             # 전체 정보 접근 권한 확인
-            if current_user.can_access_full_user_info(user):
-                user_dict.update({
-                    "birth_date": user.birth_date,
-                    "phone_number": user.phone_number,
-                    "retirement_date": user.retirement_date,
-                    "leave_date": user.leave_date,
-                    "monthly_salary": monthly_salary,
-                    "annual_salary": annual_salary,
-                })
+            # if current_user.can_access_full_user_info(user):
+            #     user_dict.update({
+            #         "birth_date": user.birth_date,
+            #         "phone_number": user.phone_number,
+            #         "retirement_date": user.retirement_date,
+            #         "leave_date": user.leave_date,
+            #         "monthly_salary": monthly_salary,
+            #         "annual_salary": annual_salary,
+            #     })
+
+            user_dict.update({
+                "birth_date": user.birth_date,
+                "phone_number": user.phone_number,
+                "retirement_date": None,
+                "leave_date": None,
+                "monthly_salary": monthly_salary,
+                "annual_salary": annual_salary,
+            })
 
             return {
                 "message": "유저를 정상적으로 조회하였습니다.",
@@ -245,7 +277,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}")
-    async def update_user(id: int, user_update: UserUpdate, current_user: UserPermission = Depends(get_current_user)):
+    async def update_user(id: int, user_update: UserUpdate, current_user: Users = Depends(get_current_user)):
         """
         유저의 세부 정보를 수정합니다.
         """
@@ -257,8 +289,8 @@ class UserManagement:
             if not target_user:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
-            if not current_user.can_edit_user(target_user):
-                raise HTTPException(status_code=403, detail="해당 사용자의 정보를 수정할 권한이 없습니다.")
+            # if not current_user.can_edit_user(target_user):
+            #     raise HTTPException(status_code=403, detail="해당 사용자의 정보를 수정할 권한이 없습니다.")
 
             update_data = user_update.model_dump(exclude_unset=True)
             if not update_data:
@@ -281,7 +313,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}/role")
-    async def update_user_role(id: int, role_update: RoleUpdate, current_user: UserPermission = Depends(get_current_user)):
+    async def update_user_role(id: int, role_update: RoleUpdate, current_user: Users = Depends(get_current_user)):
         """
         유저의 권한을 수정합니다. "role" : "최고관리자" 이렇게 수정합니다.
         가능한 역할: "MSO 최고권한", "최고관리자", "통합관리자", "관리자", "사원", "퇴사자", "휴직자"
@@ -294,8 +326,8 @@ class UserManagement:
             if not target_user:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
-            if not current_user.can_edit_user(target_user):
-                raise HTTPException(status_code=403, detail="역할을 수정할 권한이 없습니다.")
+            # if not current_user.can_edit_user(target_user):
+            #     raise HTTPException(status_code=403, detail="역할을 수정할 권한이 없습니다.")
 
             if role_update.role not in ["MSO 최고권한", "최고관리자", "통합관리자", "관리자", "사원", "퇴사자", "휴직자"]:
                 raise HTTPException(status_code=400, detail="유효하지 않은 역할입니다.")
@@ -315,7 +347,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}/parts")
-    async def update_user_parts(id: int, part_update: PartUpdate, current_user: UserPermission = Depends(get_current_user)):
+    async def update_user_parts(id: int, part_update: PartUpdate, current_user: Users = Depends(get_current_user)):
         """
         유저의 파트를 수정합니다. 
         "part_ids": [1, 2, 3] 형식으로 파트 ID 리스트를 전달합니다.
@@ -328,8 +360,8 @@ class UserManagement:
             if not target_user:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
-            if not current_user.can_edit_user(target_user):
-                raise HTTPException(status_code=403, detail="파트를 수정할 권한이 없습니다.")
+            # if not current_user.can_edit_user(target_user):
+            #     raise HTTPException(status_code=403, detail="파트를 수정할 권한이 없습니다.")
 
             new_parts = await db.execute(select(Parts).where(Parts.id.in_(part_update.part_ids)))
             new_parts = new_parts.scalars().all()
@@ -355,7 +387,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.delete("/{id}")
-    async def delete_user(id: int, current_user: UserPermission = Depends(get_current_user)):
+    async def delete_user(id: int, current_user: Users = Depends(get_current_user)):
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
@@ -369,8 +401,8 @@ class UserManagement:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
             # 권한 체크
-            if not current_user.can_delete_user(target_user):
-                raise HTTPException(status_code=403, detail="사용자를 삭제할 권한이 없습니다.")
+            # if not current_user.can_delete_user(target_user):
+            #     raise HTTPException(status_code=403, detail="사용자를 삭제할 권한이 없습니다.")
 
             if target_user.deleted_yn == "Y":
                 raise HTTPException(status_code=400, detail="이미 삭제된 유저입니다.")
@@ -393,7 +425,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
         
     @router.delete("/{id}/hard-delete")
-    async def hard_delete_user(id: int, current_user: UserPermission = Depends(get_current_user)):
+    async def hard_delete_user(id: int, current_user: Users = Depends(get_current_user)):
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
@@ -407,8 +439,8 @@ class UserManagement:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
             # 권한 체크
-            if not current_user.can_delete_user(target_user):
-                raise HTTPException(status_code=403, detail="사용자를 완전히 삭제할 권한이 없습니다.")
+            # if not current_user.can_delete_user(target_user):
+            #     raise HTTPException(status_code=403, detail="사용자를 완전히 삭제할 권한이 없습니다.")
             
             # deleted_yn이 'Y'인 경우에만 완전 삭제 가능
             if target_user.deleted_yn != "Y":
@@ -431,7 +463,7 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
         
     @router.patch("/{id}/restore")
-    async def restore_user(id: int, current_user: UserPermission = Depends(get_current_user)):
+    async def restore_user(id: int, current_user: Users = Depends(get_current_user)):
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
@@ -445,8 +477,8 @@ class UserManagement:
                 raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
 
             # 권한 체크 (can_delete_user 메서드 사용)
-            if not current_user.can_delete_user(target_user):
-                raise HTTPException(status_code=403, detail="해당 사용자를 복구할 권한이 없습니다.")
+            # if not current_user.can_delete_user(target_user):
+            #     raise HTTPException(status_code=403, detail="해당 사용자를 복구할 권한이 없습니다.")
 
             if target_user.deleted_yn == "N":
                 raise HTTPException(status_code=400, detail="이미 복구된 유저입니다.")
