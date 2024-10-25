@@ -6,7 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.models.branches.branches_model import (
-    Branches
+    Branches,
+    BranchUpdate
 )
 
 logger = logging.getLogger(__name__)
@@ -106,3 +107,19 @@ async def count_deleted_all(*, session: AsyncSession) -> int:
     statement = select(func.count()).select_from(Branches).where(Branches.deleted_yn == "Y")
     result = await session.execute(statement)
     return result.scalar_one()
+
+async def update(*, session: AsyncSession, branch_id: int, branch_update: BranchUpdate) -> Branches:
+    branch = await find_by_id(session=session, branch_id=branch_id)
+    if branch is None:
+        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
+    
+    update_data = branch_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(branch, key, value)
+    
+    branch.updated_at = datetime.now()
+    
+    await session.commit()
+    await session.refresh(branch)
+    
+    return branch

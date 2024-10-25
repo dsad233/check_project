@@ -45,27 +45,30 @@ async def get_work_policies(*,
     branch_id: int,
     user: Annotated[Users, Depends(get_current_user)]
 ) -> CombinedPoliciesDto:
-    
-    if user.role.strip() == "MSO 최고권한":
-        pass
-    elif user.role.strip() in ["최고관리자", "통합관리자", "파트관리자"]:
-        if user.branch_id != branch_id:
-            raise ForbiddenError(detail="다른 지점의 정보에 접근할 수 없습니다.")
-    else:
-        raise ForbiddenError(detail="권한이 없습니다.")
-    
-    work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
-    auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
-    holiday_work_policies = await holiday_work_crud.find_by_branch_id(session=session, branch_id=branch_id)
-    overtime_policies = await overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
-    allowance_policies = await allowance_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    try:
+        if user.role.strip() == "MSO 최고권한":
+            pass
+        elif user.role.strip() in ["최고관리자", "통합관리자", "파트관리자"]:
+            if user.branch_id != branch_id:
+                raise ForbiddenError(detail="다른 지점의 정보에 접근할 수 없습니다.")
+        else:
+            raise ForbiddenError(detail="권한이 없습니다.")
+        
+        work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        holiday_work_policies = await holiday_work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        overtime_policies = await overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        allowance_policies = await allowance_crud.find_by_branch_id(session=session, branch_id=branch_id)
 
-    return CombinedPoliciesDto(work_policies=WorkPoliciesDto.model_validate(work_policies or {}),
+        return CombinedPoliciesDto(work_policies=WorkPoliciesDto.model_validate(work_policies or {}),
                                     auto_overtime_policies=AutoOvertimePoliciesDto.model_validate(auto_overtime_policies or {}),
                                     holiday_work_policies=HolidayWorkPoliciesDto.model_validate(holiday_work_policies or {}),
                                     overtime_policies=OverTimePoliciesDto.model_validate(overtime_policies or {}),
                                     default_allowance_policies=DefaultAllowancePoliciesDto.model_validate(allowance_policies or {}),
                                     holiday_allowance_policies=HolidayAllowancePoliciesDto.model_validate(allowance_policies or {}))
+    except Exception as e:
+        print(f"Error in get_work_policies: {e}")
+        raise InternalServerError(detail="근무정책 조회에 실패하였습니다.")
 
 @router.patch("/update", response_model=str)
 async def update_work_policies(*,

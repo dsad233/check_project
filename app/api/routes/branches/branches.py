@@ -16,6 +16,7 @@ from app.exceptions.exceptions import ForbiddenError, NotFoundError, BadRequestE
 from app.models.branches.branches_model import (
     Branches,
     BranchCreate,
+    BranchUpdate, 
     BranchListResponse,
     BranchResponse,
 )
@@ -91,6 +92,26 @@ async def read_branch(
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     return branch
+
+@router.patch("/{branch_id}/update", response_model=str)
+async def update_branch(
+    *, session: AsyncSession = Depends(get_db), branch_id: int, branch_update: BranchUpdate, current_user_id: int = Depends(get_current_user_id)
+) -> str:
+    try:
+        await check_admin_role(session=session, current_user_id=current_user_id)
+
+        branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+        if branch is None:
+            raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
+        
+        updated_branch = await branches_crud.update(session=session, branch_id=branch_id, branch_update=branch_update)
+        return f"{updated_branch.id}번 지점이 수정되었습니다."
+    except Exception as e:
+        print(f"에러 발생: {str(e)}")
+        print(f"에러 타입: {type(e).__name__}")
+        print(f"에러 발생 위치: {e.__traceback__.tb_frame.f_code.co_filename}, 라인 {e.__traceback__.tb_lineno}")
+        raise
+
 
 @router.delete("/{branch_id}/delete", response_model=str)
 async def delete_branch(

@@ -2,12 +2,14 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import PartCreate, PartResponse, Parts, PartUpdate
 from app.models.users.users_model import Users
+from app.core.database import get_db
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -52,6 +54,7 @@ async def createPart(
     branch_id: int,
     part_create: PartCreate,
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
 ):
     try:
         user_query = select(Users).where(
@@ -87,15 +90,18 @@ async def createPart(
         if part_exist:
             raise HTTPException(status_code=400, detail="이미 존재하는 부서입니다.")
 
-        create = Parts(branch_id = branch_id, **part_create.model_dump())
+        create = Parts(branch_id=branch_id, **part_create.model_dump())
         db.add(create)
         await db.commit()
+        await db.refresh(create)
 
-        return {"message": "부서 생성에 성공하였습니다."}
+        return {"message": "부서 생성에 성공하였습니다.", "part_id": create.id}
     except Exception as err:
         await db.rollback()
-        print(err)
-        raise HTTPException(status_code=500, detail=str(err))
+        print(f"Error creating part: {err}")
+        if "unique constraint" in str(err).lower():
+            raise HTTPException(status_code=400, detail="이미 존재하는 부서입니다.")
+        raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. 관리자에게 문의하세요.: {str(err)}")
 
 
 @router.delete("/{part_id}")
@@ -168,16 +174,18 @@ async def updatePart(
         if not part:
             raise HTTPException(status_code=400, detail="존재하지 않는 부서입니다.")
 
-        part_query = select(Parts).where(
-            (Parts.name == part_update.name)
-            & (Parts.branch_id == branch_id)
-            & (Parts.deleted_yn == "N")
-        )
-        part_result = await db.execute(part_query)
-        part_exist = part_result.scalar_one_or_none()
+        if part_update.name and part_update.name != part.name:
+            part_query = select(Parts).where(
+                (Parts.name == part_update.name)
+                & (Parts.branch_id == branch_id)
+                & (Parts.deleted_yn == "N")
+                & (Parts.id != part_id)  # 현재 부서 제외
+            )
+            part_result = await db.execute(part_query)
+            part_exist = part_result.scalar_one_or_none()
 
-        if part_exist:
-            raise HTTPException(status_code=400, detail="이미 존재하는 부서입니다.")
+            if part_exist:
+                raise HTTPException(status_code=400, detail="이미 존재하는 부서입니다.")
 
         if part_update.name:
             part.name = part_update.name
