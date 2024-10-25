@@ -23,7 +23,7 @@ class UpdateMenuPermissionsRequest(BaseModel):
     user_id: int
     permissions: List[MenuPermissionUpdate]
 
-@router.post("/update")
+@router.post("/update") 
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_menu_permissions(
     request: Request,
