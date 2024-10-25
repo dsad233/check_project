@@ -30,7 +30,7 @@ class RestDays(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     date = Column(Date, nullable=False)
-    rest_type = Column(Enum(RestDayType, name="rest_day_type"), nullable=False)
+    rest_type = Column(Enum(*[e.value for e in RestDayType], name="rest_day_type"), nullable=False)
     description = Column(String(255), nullable=True)
     is_paid = Column(Boolean, default=False)  # 유급 휴일 여부
     is_holiday_work_allowed = Column(Boolean, default=False)  # 휴일근무 허용 여부
