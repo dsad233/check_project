@@ -11,6 +11,8 @@ from app.cruds.salary_template import salary_template_crud
 from app.middleware.tokenVerify import validate_token, get_current_user_id
 from app.models.branches.salary_template_model import SalaryTemplate, SalaryTemplateDto
 router = APIRouter(dependencies=[Depends(validate_token)])
+
+
 @router.get("/list", response_model=List[SalaryTemplateDto])
 async def get_salary_templates(
     *,
@@ -22,6 +24,8 @@ async def get_salary_templates(
     if salary_templates is None:
         return []
     return salary_templates
+
+
 @router.post("/create", response_model=str)
 async def create_salary_template(
     *,
@@ -37,6 +41,7 @@ async def create_salary_template(
     salary_template_create_in = SalaryTemplate(branch_id=branch_id, **salary_template_create.model_dump())
     salary_template_id = await salary_template_crud.create(session=session, salary_template_create=salary_template_create_in, branch_id=branch_id)
     return f"{salary_template_id}번 급여 템플릿이 생성되었습니다."
+    
     
 @router.patch("/{salary_template_id}/update", response_model=str)
 async def update_salary_template(
