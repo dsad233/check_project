@@ -6,24 +6,29 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.salary_template_model import SalaryTemplate
 from app.exceptions.exceptions import NotFoundError, BadRequestError
+
+
 async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> List[SalaryTemplate]:
     stmt = (
         select(SalaryTemplate).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalars().all()
+
 async def find_by_id(*, session: AsyncSession, id: int) -> Optional[SalaryTemplate]:
     stmt = (
         select(SalaryTemplate).where(SalaryTemplate.id == id).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
 async def find_by_branch_id_and_name(*, session: AsyncSession, branch_id: int, name: str) -> Optional[SalaryTemplate]:
     stmt = (
         select(SalaryTemplate).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.name == name).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
 async def create(*, session: AsyncSession, salary_template_create: SalaryTemplate, branch_id: int) -> int:
     # salary_template = await find_by_branch_id_and_name(session=session, branch_id=branch_id, name=salary_template_create.name)
     # if salary_template is not None:
@@ -32,6 +37,7 @@ async def create(*, session: AsyncSession, salary_template_create: SalaryTemplat
     await session.commit()
     await session.refresh(salary_template_create)
     return salary_template_create.id
+
 async def update(*, session: AsyncSession, salary_template_update: SalaryTemplate, branch_id: int, id: int) -> SalaryTemplate:
     # 기존 정책 조회
     salary_template = await find_by_id(

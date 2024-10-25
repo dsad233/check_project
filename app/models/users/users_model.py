@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Numeric
 )
 from sqlalchemy.orm import relationship
 
@@ -19,6 +20,7 @@ from datetime import date
 from typing import Optional
 
 from pydantic import BaseModel
+from app.models.branches.user_leaves_days import UserLeavesDays as UserLeavesDays
 
 from app.enums.users import Role, Gender, MenuPermissions
 
@@ -51,6 +53,7 @@ class Users(Base):
     birth_date = Column(Date, nullable=True)
     hire_date = Column(Date, nullable=True)
     resignation_date = Column(Date, nullable=True)
+    total_leave_days = Column(Numeric(10, 2), nullable=True) # 총 연차 일수
     gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
@@ -65,7 +68,9 @@ class Users(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
+    
+    leaves = relationship("UserLeavesDays", back_populates="user", foreign_keys="UserLeavesDays.user_id")
+    
 
 # 유저 정보 추가를 위한 Pydantic 모델
 class UserCreate(BaseModel):
