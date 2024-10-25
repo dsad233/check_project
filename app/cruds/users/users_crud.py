@@ -26,3 +26,17 @@ async def find_by_email(
     result = await session.execute(stmt)
     user = result.scalar_one_or_none()
     return user
+
+async def add_user(
+        *, session: AsyncSession, user: Users
+) -> Users:
+    try:
+        user.created_at = datetime.now()
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        return user
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to add user: {e}")
+        await session.rollback()
+        raise e
