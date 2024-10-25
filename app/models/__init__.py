@@ -68,6 +68,8 @@ Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
+# Users.documents = relationship("Document", back_populates="user")
+# Users.contracts = relationship("Contract", back_populates="user")
 
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
@@ -133,5 +135,7 @@ Parts.users = relationship("Users", secondary=user_parts, back_populates="parts"
 Users.parts = relationship("Parts", secondary=user_parts, back_populates="users")
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
+
+
 
 WorkContract.fixed_rest_days = relationship("FixedRestDay", backref="work_contract")
