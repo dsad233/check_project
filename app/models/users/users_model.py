@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
+    Numeric
 )
 from sqlalchemy.orm import relationship
 
@@ -49,9 +50,11 @@ class Users(Base):
     birth_date = Column(Date, nullable=True)
     hire_date = Column(Date, nullable=True)
     resignation_date = Column(Date, nullable=True)
+    total_leave_days = Column(Numeric(10, 2), nullable=True) # 총 연차 일수
     gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+
 
     last_company = Column(String(255), nullable=True)
     last_position = Column(String(255), nullable=True)

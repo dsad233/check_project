@@ -35,8 +35,7 @@ class UserLeavesDays(Base):
     is_paid = Column(Boolean, default=True)
     is_approved = Column(Boolean, default=False)
     approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    
-
+    total_leave_days = Column(Numeric(10, 2), nullable=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
