@@ -13,7 +13,6 @@ from sqlalchemy.orm import load_only
 from sqlalchemy import or_
 from datetime import datetime
 from calendar import monthrange
-from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 import pandas as pd
 import io
@@ -34,6 +33,9 @@ async def get_commutes_manager(
     name: Optional[str] = Query(None, description="사용자 이름"),
     phone_number: Optional[str] = Query(None, description="전화번호")
 ):
+    if part and not branch:
+        raise HTTPException(status_code=400, detail="지점 정보가 필요합니다.")
+    
     try:
         base_query = (
             select(
@@ -60,18 +62,18 @@ async def get_commutes_manager(
         if year_month:
             try:
                 date_obj = datetime.strptime(year_month, "%Y-%m")
-                year = date_obj.year
-                month = date_obj.month
-                days_in_month = monthrange(year, month)[1]
-                start_date = datetime(year, month, 1)
-                end_date = datetime(year, month, days_in_month, 23, 59, 59)
-                
-                base_query = base_query.where(
-                    Commutes.clock_in >= start_date,
-                    Commutes.clock_in <= end_date
-                )
             except ValueError:
                 raise HTTPException(status_code=400, detail="올바른 년월 형식이 아닙니다. (YYYY-MM)")
+            year = date_obj.year
+            month = date_obj.month
+            days_in_month = monthrange(year, month)[1]
+            start_date = datetime(year, month, 1)
+            end_date = datetime(year, month, days_in_month, 23, 59, 59)
+            
+            base_query = base_query.where(
+                Commutes.clock_in >= start_date,
+                Commutes.clock_in <= end_date
+            )
 
         # 필터 조건 추가
         if branch:
@@ -138,6 +140,9 @@ async def get_commutes_manager(
             "data": formatted_data
         }
 
+    except HTTPException as http_err:
+        raise http_err
+    
     except Exception as err:
         print(f"Error: {str(err)}")
         raise HTTPException(status_code=500, detail="출퇴근 데이터 조회에 실패하였습니다.")
@@ -145,86 +150,6 @@ async def get_commutes_manager(
 
 
 """ 유틸 """
-
-# @router.get('/commutes-manager/excel')
-# async def get_all_commutes_manager_excel(token: Annotated[Users, Depends(get_current_user)]):
-#     try:
-#         # ... existing query code ...
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(select(Commutes).where(Commutes.deleted_yn == "N").order_by(Commutes.clock_in.asc()))
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(select(ClosedDays).where(ClosedDays.deleted_yn == "N").options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date)))
-#         result_closed_day = find_closed_day.scalars().all()
-        
-#         find_data = await commutes_manager.execute(select(Users, Branches, Parts).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).options(load_only(Users.id, Users.name, Users.gender), load_only(Branches.name), load_only(Parts.name)).distinct(Users.id).where(Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N").order_by(Users.name.asc()))
-#         result = find_data.fetchall()
-
-#         # DataFrame 생성 (encoding 옵션 제거)
-#         df_users = pd.DataFrame([
-#             {
-#                 "사용자 ID": row.Users.id,
-#                 "이름": row.Users.name,
-#                 "성별": row.Users.gender,
-#                 "부서": row.Parts.name,
-#                 "지점": row.Branches.name,
-#             }
-#             for row in result
-#         ])
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-        
-
-#         # Excel 파일 생성 시 인코딩 및 폰트 설정
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-#             workbook = writer.book
-#             # 기본 폰트를 한글 지원 폰트로 설정
-#             workbook.formats[0].set_font_name('맑은 고딕')
-            
-#             # 각 시트에 데이터 쓰기
-#             df_users.to_excel(writer, sheet_name='사용자 정보', index=False)
-#             df_commutes.to_excel(writer, sheet_name='출퇴근 기록', index=False)
-#             df_closed_days.to_excel(writer, sheet_name='휴가 기록', index=False)
-
-#         output.seek(0)
-
-#         # 파일명에 한글 처리를 위한 인코딩 추가
-#         filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_commutes_report.xlsx"
-#         encoded_filename = filename.encode('utf-8')
-
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename.decode('utf-8')}"
-#             }
-#         )
-
-#     except Exception as err:
-#         print(f"Error: {str(err)}")
-#         raise HTTPException(status_code=500, detail="출퇴근 데이터 엑셀 파일 생성에 실패하였습니다.")
-    
-    
-    
-    
 
 # 출 퇴근 관리 기록 전체 조회 엑셀 다운로드
 @router.get('/commutes-manager/excel')
