@@ -84,13 +84,17 @@ async def create_daily_records(session, year: int, month: int, user) -> List[Dic
     daily_records = []
     for day in range(1, last_day + 1):
         check_date = date(year, month, day)
-        daily_record = {
-            "date": check_date.strftime("%Y-%m-%d"),
-            "clock_in": None,
-            "clock_out": None,
-            "work_hours": None,
-            "status": await get_absence_status(session, user, check_date)
-        }
+        # 일요일 체크 (weekday()가 6이면 일요일)
+        if check_date.weekday() == 6:
+            daily_record = {
+                "date": check_date.strftime("%Y-%m-%d"),
+                "status": "일요일 정기휴무",
+            }
+        else:
+            daily_record = {
+                "date": check_date.strftime("%Y-%m-%d"),
+                "status": await get_absence_status(session, user, check_date),
+            }
         daily_records.append(daily_record)
     
     return daily_records
@@ -143,6 +147,8 @@ async def get_commutes_manager(
                     selectinload(Users.part),
                     selectinload(Users.commutes)
                 )
+                .join(Branches, Users.branch_id == Branches.id)
+                .join(WorkPolicies, Branches.id == WorkPolicies.branch_id)
                 .where(
                     Users.deleted_yn == "N"
                 )
@@ -168,25 +174,47 @@ async def get_commutes_manager(
 
             formatted_data = []
             for user in users:
-                daily_records = await create_daily_records(commutes_manager, year, month, user)
+                # 근무 정책 조회
+                work_policy = await session.execute(
+                    select(WorkPolicies).where(WorkPolicies.branch_id == user.branch_id)
+                )
+                work_policy = work_policy.scalar_one_or_none()
+                
+                daily_records = await create_daily_records(session, year, month, user)
                 
                 # 출퇴근 기록 매핑
                 for commute in user.commutes:
                     if (commute.deleted_yn == "N" and 
                         start_date <= commute.clock_in.date() <= end_date):
                         day_idx = commute.clock_in.day - 1
+                        
+                        # 지각, 초과근무 체크
+                        if work_policy:
+                            if commute.clock_in and work_policy.weekday_start_time:
+                                policy_start = datetime.combine(commute.clock_in.date(), work_policy.weekday_start_time)
+                                late = (commute.clock_in - policy_start).total_seconds() > 0
+                            
+                            if commute.clock_out and work_policy.weekday_end_time:
+                                policy_end = datetime.combine(commute.clock_in.date(), work_policy.weekday_end_time)
+                                overtime = (commute.clock_out - policy_end).total_seconds() > 0
+                        
                         daily_records[day_idx].update({
                             "clock_in": commute.clock_in.strftime("%H:%M:%S"),
                             "clock_out": commute.clock_out.strftime("%H:%M:%S") if commute.clock_out else None,
                             "work_hours": commute.work_hours,
-                            "status": "출근"
+                            "status": "출근",
+                            "late": late,
+                            "overtime": overtime
                         })
 
                 user_data = {
                     "user_id": user.id,
                     "user_name": user.name,
+                    "user_gender": user.gender,
+                    "branch_id": user.branch_id,
                     "branch_name": user.branch.name,
                     "part_name": user.part.name,
+                    "weekly_work_days": work_policy.weekly_work_days if work_policy else None,
                     "commute_records": daily_records
                 }
                 formatted_data.append(user_data)
@@ -201,7 +229,6 @@ async def get_commutes_manager(
                     "total_pages": (total_count + size - 1) // size
                 }
             }
-
 
     except HTTPException as http_err:
         raise http_err
