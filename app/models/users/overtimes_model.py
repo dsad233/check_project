@@ -73,3 +73,9 @@ class OvertimeSelect(OvertimeBase):
         if v is not None and len(v) > 500 and len(v) < 1:
             raise ValueError("승인자 메모는 1자 이상 500자 이하여야 합니다.")
         return v
+    
+
+class OvertimeUpdate(OvertimeBase):
+    overtime_hours: Optional[str] = Field(None, description="초과 근무 시간")
+    application_memo: Optional[str] = Field(None, max_length=500, description="신청 메모")
+    manager_memo: Optional[str] = Field(None, max_length=500, description="승인자 메모")
