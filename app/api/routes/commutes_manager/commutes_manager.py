@@ -1,17 +1,22 @@
+import re
 from fastapi import APIRouter, Body, Depends, HTTPException, Query
-from typing import Annotated, Optional
+from typing import Annotated, Any, Dict, List, Optional
 from app.core.database import async_session
+from app.enums.users import Role
 from app.middleware.tokenVerify import validate_token, get_current_user
+from app.models.branches.leave_categories_model import LeaveCategory
+from app.models.branches.rest_days_model import RestDays
 from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.users.leave_histories_model import LeaveHistories
 from app.models.users.users_model import Users
 from app.models.parts.parts_model import Parts
 from app.models.commutes.commutes_model import Commutes
 from app.models.branches.branches_model import Branches
 from app.models.branches.work_policies_model import WorkPolicies
 from sqlalchemy.future import select
-from sqlalchemy.orm import load_only
-from sqlalchemy import or_
-from datetime import datetime
+from sqlalchemy.orm import load_only, selectinload
+from sqlalchemy import and_, distinct, func, or_
+from datetime import date, datetime
 from calendar import monthrange
 from fastapi.responses import StreamingResponse
 import pandas as pd
@@ -22,130 +27,188 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 commutes_manager = async_session()
 
 
+""" 출퇴근 관리 결근 상태 조회 """
+
+async def get_absence_status(session, user, check_date: date) -> str:
+    try:
+        if user.resignation_date and check_date > user.resignation_date:
+            return "퇴사"
+        if check_date < user.hire_date:
+            return "미입사"
+        if user.role == Role.ON_LEAVE:
+            return "휴직"
+        
+        # 휴무일 체크
+        rest_day = await session.scalar(
+                select(RestDays)
+                .where(
+                    and_(
+                        RestDays.branch_id == user.branch_id,
+                        RestDays.date == check_date,
+                        RestDays.deleted_yn == "N"
+                    )
+                )
+            )
+        
+        if rest_day:
+            return f"휴무({rest_day.rest_type})"
+        
+        # 휴점일 체크
+        closed_day_query = select(ClosedDays).where(
+            and_(
+                ClosedDays.branch_id == user.branch_id,
+                ClosedDays.closed_day_date == check_date,
+                ClosedDays.deleted_yn == "N"
+            )
+        )
+        closed_day = await session.scalar(closed_day_query)
+        
+        if closed_day:
+            return "휴점"
+    
+        return "결근"
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail="출퇴근 기록 조회 실패: {str(e)}")
+
+
+""" 출퇴근 관리 한 달 기록 생성 """
+
+async def create_daily_records(session, year: int, month: int, user) -> List[Dict]:
+    today = date.today()
+    _, last_day = monthrange(year, month)
+    
+    if year == today.year and month == today.month:
+        last_day = today.day
+    
+    daily_records = []
+    for day in range(1, last_day + 1):
+        check_date = date(year, month, day)
+        daily_record = {
+            "date": check_date.strftime("%Y-%m-%d"),
+            "clock_in": None,
+            "clock_out": None,
+            "work_hours": None,
+            "status": await get_absence_status(session, user, check_date)
+        }
+        daily_records.append(daily_record)
+    
+    return daily_records
+
+
+
 """ 출퇴근 관리 기록 조회 """
 
-@router.get('/commutes-manager')
+@router.get("/commutes-manager", response_model=Dict[str, Any])
 async def get_commutes_manager(
     token: Annotated[Users, Depends(get_current_user)],
-    year_month: Optional[str] = Query(None, description="YYYY-MM 형식의 년월"),
     branch: Optional[int] = Query(None, description="지점 ID"),
     part: Optional[int] = Query(None, description="파트 ID"),
     name: Optional[str] = Query(None, description="사용자 이름"),
-    phone_number: Optional[str] = Query(None, description="전화번호")
+    phone_number: Optional[str] = Query(None, description="전화번호"),
+    year_month: Optional[str] = Query(
+        None, 
+        description="조회 년월 (YYYY-MM 형식)"
+    ),
+    page: int = 1,
+    size: int = 10
 ):
     if part and not branch:
         raise HTTPException(status_code=400, detail="지점 정보가 필요합니다.")
     
     try:
-        base_query = (
-            select(
-                Users.id.label('user_id'),
-                Users.name.label('user_name'),
-                Users.gender.label('user_gender'),
-                Users.phone_number.label('phone_number'),
-                Branches.id.label('branch_id'),
-                Branches.name.label('branch_name'),
-                Parts.id.label('part_id'),
-                Parts.name.label('part_name'),
-                WorkPolicies.weekly_work_days,
-                Commutes.clock_in,
-                Commutes.clock_out
-            )
-            .join(Branches, Users.branch_id == Branches.id)
-            .join(Parts, Users.part_id == Parts.id)
-            .join(WorkPolicies, Branches.id == WorkPolicies.branch_id)
-            .outerjoin(Commutes, Users.id == Commutes.user_id)
-        )
-
-
-        # 년월 필터링 (기존 코드와 동일)
-        if year_month:
-            try:
+        async with commutes_manager as session:
+            today = datetime.now()
+            if year_month:
+                if not re.match(r'^\d{4}-(0[1-9]|1[0-2])$', year_month):
+                    raise HTTPException(status_code=400, detail="올바른 년월 형식이 아닙니다. (YYYY-MM)")
                 date_obj = datetime.strptime(year_month, "%Y-%m")
-            except ValueError:
-                raise HTTPException(status_code=400, detail="올바른 년월 형식이 아닙니다. (YYYY-MM)")
-            year = date_obj.year
-            month = date_obj.month
-            days_in_month = monthrange(year, month)[1]
-            start_date = datetime(year, month, 1)
-            end_date = datetime(year, month, days_in_month, 23, 59, 59)
+                year = date_obj.year
+                month = date_obj.month
+            else:
+                year = today.year
+                month = today.month
             
-            base_query = base_query.where(
-                Commutes.clock_in >= start_date,
-                Commutes.clock_in <= end_date
+            start_date = date(year, month, 1)
+            end_date = min(
+                date(year, month, monthrange(year, month)[1]),
+                date.today()
             )
 
-        # 필터 조건 추가
-        if branch:
-            base_query = base_query.where(Branches.id == branch)
+            # 사용자 및 출퇴근 기록 조회
+            query = (
+                select(Users)
+                .options(
+                    selectinload(Users.branch),
+                    selectinload(Users.part),
+                    selectinload(Users.commutes)
+                )
+                .where(
+                    Users.deleted_yn == "N"
+                )
+            )
+
+            if branch:
+                query = query.where(Users.branch_id == branch)
             if part:
-                base_query = base_query.where(Parts.id == part)
-        if name:
-            base_query = base_query.where(Users.name==name)
-        if phone_number:
-            base_query = base_query.where(Users.phone_number==phone_number)
-        
-        
-        # 삭제되지 않은 레코드만 조회
-        final_query = base_query.where(
-            Users.deleted_yn == "N",
-            Branches.deleted_yn == "N",
-            Parts.deleted_yn == "N",
-            or_(Commutes.deleted_yn == "N", Commutes.deleted_yn == None)
-        ).order_by(Users.id, Commutes.clock_in)
+                query = query.where(Users.part_id == part)
+            if name:
+                query = query.where(Users.name == name)
+            if phone_number:
+                query = query.where(Users.phone_number == phone_number)
 
-        result = await commutes_manager.execute(final_query)
-        records = result.fetchall()
+            total_count = await session.scalar(
+                select(func.count()).select_from(query.subquery())
+            )
 
-        formatted_data = []
-        current_user = None
-        user_data = None
+            users = await session.execute(
+                query.offset((page - 1) * size).limit(size)
+            )
+            users = users.scalars().unique().all()
 
-        for record in records:
-            if current_user != record.user_id:
-                if user_data:
-                    formatted_data.append(user_data)
+            formatted_data = []
+            for user in users:
+                daily_records = await create_daily_records(commutes_manager, year, month, user)
                 
+                # 출퇴근 기록 매핑
+                for commute in user.commutes:
+                    if (commute.deleted_yn == "N" and 
+                        start_date <= commute.clock_in.date() <= end_date):
+                        day_idx = commute.clock_in.day - 1
+                        daily_records[day_idx].update({
+                            "clock_in": commute.clock_in.strftime("%H:%M:%S"),
+                            "clock_out": commute.clock_out.strftime("%H:%M:%S") if commute.clock_out else None,
+                            "work_hours": commute.work_hours,
+                            "status": "출근"
+                        })
+
                 user_data = {
-                    "user_id": record.user_id,
-                    "branch_name": record.branch_name,
-                    "user_name": record.user_name,
-                    "user_gender": record.user_gender,
-                    "phone_number": record.phone_number,
-                    "parts": {
-                        "part_id": record.part_id,
-                        "part_name": record.part_name,
-                        "weekly_work_days": record.weekly_work_days
-                    }
+                    "user_id": user.id,
+                    "user_name": user.name,
+                    "branch_name": user.branch.name,
+                    "part_name": user.part.name,
+                    "commute_records": daily_records
                 }
-                
-                if year_month:
-                    for day in range(1, days_in_month + 1):
-                        user_data[f"{day}day"] = {"check_in": None, "check_out": None}
-                
-                current_user = record.user_id
+                formatted_data.append(user_data)
 
-            if record.clock_in:
-                day = record.clock_in.day
-                user_data[f"{day}day"] = {
-                    "check_in": record.clock_in.strftime("%H:%M"),
-                    "check_out": record.clock_out.strftime("%H:%M") if record.clock_out else None
+            return {
+                "message": "출퇴근 기록 조회 성공",
+                "data": formatted_data,
+                "pagination": {
+                    "total": total_count,
+                    "page": page,
+                    "size": size,
+                    "total_pages": (total_count + size - 1) // size
                 }
+            }
 
-        if user_data:
-            formatted_data.append(user_data)
-
-        return {
-            "message": "성공적으로 출퇴근 정보를 조회하였습니다.",
-            "data": formatted_data
-        }
 
     except HTTPException as http_err:
         raise http_err
     
-    except Exception as err:
-        print(f"Error: {str(err)}")
-        raise HTTPException(status_code=500, detail="출퇴근 데이터 조회에 실패하였습니다.")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"출퇴근 기록 조회 실패: {str(e)}")
 
 
 
