@@ -1,13 +1,19 @@
 import os
 from typing import Union
-
 from pydantic_settings import BaseSettings
+from pydantic import Field
 
-
-class DevSettings(BaseSettings):
+class BaseAppSettings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
+    MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
+    MODUSIGN_WEBHOOK_URL: str = Field(..., env="MODUSIGN_WEBHOOK_URL")
 
+    class Config:
+        env_file = ".env"
+        case_sensitive = False
+
+class DevSettings(BaseAppSettings):
     MYSQL_USER: str
     MYSQL_PASSWORD: str
     MYSQL_HOST: str
@@ -22,11 +28,7 @@ class DevSettings(BaseSettings):
     class Config:
         env_file = (".env", ".env.dev")
 
-
-class ProdSettings(BaseSettings):
-    JWT_SECRET_KEY: str
-    JWT_ALGORITHM: str
-
+class ProdSettings(BaseAppSettings):
     RDS_USER: str
     RDS_PASSWORD: str
     RDS_HOST: str
@@ -40,7 +42,6 @@ class ProdSettings(BaseSettings):
     class Config:
         env_file = (".env", ".env.prod")
 
-
 def load_settings() -> Union[DevSettings, ProdSettings]:
     mode = os.getenv("MODE", "dev")
 
@@ -50,6 +51,5 @@ def load_settings() -> Union[DevSettings, ProdSettings]:
         return ProdSettings()
     else:
         raise ValueError(f"Unsupported environment: {mode}")
-
 
 settings = load_settings()
