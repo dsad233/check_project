@@ -1,25 +1,27 @@
-from datetime import UTC, date, datetime, time
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select, update
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
-from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, OvertimeUpdate, Overtimes
-from app.models.users.users_model import Users
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
+from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes
+from app.models.users.users_model import Users
+from sqlalchemy.orm import load_only
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
 
-# 초과 근무 생성(신청)
-@router.post("")
+# 오버타임 초과 근무 생성(신청)
+@router.post("", summary="오버타임 초과 근무 생성")
 async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depends(get_current_user_id)):
     try:        
         new_overtime = Overtimes(
             applicant_id=current_user_id,
+            application_date = overtime.application_date,
             overtime_hours=overtime.overtime_hours,
             application_memo=overtime.application_memo,
         )
@@ -39,12 +41,55 @@ async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depen
         await db.rollback()
         print("에러가 발생하였습니다.")
         print(err)
+        raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. Error : {err}")
+
+
+# 오버타임 관리자 메모 상세 조회
+@router.get('/manager/{id}', summary="오버타임 관리자 메모 상세 조회")
+async def get_manager(id : int):
+    try:
+        find_manager_data = await db.execute(select(Overtimes).where(Overtimes.id == id, Overtimes.deleted_yn == "N"))
+
+        return {
+            "message": "관리자 메모 조회가 완료 되었습니다.",
+            "data": find_manager_data,
+        }
+    except Exception as err:
+        print(err)
+        raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. Error : {err}")
+
+# 오버타임 승인만 조회 (페이지)
+router.get('/approve/get/{id}')
+async def get_approve_page(id : int):
+    try:
+        find_data = await db.execute(select(Users, Overtimes).options(load_only(Users.name), load_only(Overtimes.overtime_hours, Overtimes.application_memo, Overtimes.processed_date, Overtimes.manager_id, Overtimes.manager_name)).where(Users.deleted_yn == "N", Overtimes.id == id, Overtimes.status == "pending", Overtimes.deleted_yn == "N"))
+        result = find_data.scalar_one_or_none()
+
+        return {
+            "message": "오버타임 승인 페이지 조회가 완료되었습니다.", 
+            "data" : result
+        }
+    except Exception as err:
+        print(err)
+        raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+    
+# 오버타임 반려만 조회 (페이지)
+router.get('/reject/get/{id}')
+async def get_reject_page(id : int):
+    try:
+        find_data = await db.execute(select(Users, Overtimes).options(load_only(Users.name), load_only(Overtimes.overtime_hours, Overtimes.application_memo, Overtimes.processed_date, Overtimes.manager_id, Overtimes.manager_name)).where(Users.deleted_yn == "N", Overtimes.id == id, Overtimes.status == "pending", Overtimes.deleted_yn == "N").options())
+        result = find_data.scalar_one_or_none()
+
+        return {
+            "message": "오버타임 반려 페이지 조회가 완료되었습니다.", 
+            "data" : result
+        }
+    except Exception as err:
+        print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
-
-
-# 초과 근무 승인
-@router.patch("/approve/{overtime_id}")
+# 오버타임 초과 근무 승인
+@router.patch("/approve/{overtime_id}", summary="오버타임 승인")
 async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
     try:
         stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N") & (Overtimes.status == "pending"))
@@ -77,8 +122,8 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 
-# 초과 근무 거절
-@router.patch("/reject/{overtime_id}")
+# 오버타임 초과 근무 거절
+@router.patch("/reject/{overtime_id}", summary="오버타임 반려")
 async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
     try:
         stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N") & (Overtimes.status == "pending"))
