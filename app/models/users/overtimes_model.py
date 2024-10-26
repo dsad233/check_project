@@ -5,6 +5,7 @@ from sqlalchemy import Column, Date, DateTime, Enum, Float, ForeignKey, Integer,
 
 from app.core.database import Base
 from app.enums.users import OverTimeHours, Status
+from datetime import date
 
 
 class Overtimes(Base):
@@ -13,6 +14,7 @@ class Overtimes(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     applicant_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    manager_name = Column(String(10), nullable=True)
     overtime_hours = Column(Enum(*[e.value for e in OverTimeHours], name="overtime_hours_options"), nullable=False)
     status = Column(Enum(*[e.value for e in Status], name="overtime_status"), nullable=False, default="pending")
     application_date = Column(Date, nullable=False, default=datetime.now(UTC).date())
@@ -41,6 +43,7 @@ class OvertimeBase(BaseModel):
 
 class OvertimeCreate(BaseModel):
     overtime_hours: str = Field(..., description="초과 근무 시간")
+    application_date : date = Field (..., description= "O.T 신청 날짜")
     application_memo: str = Field(None, max_length=500, description="신청 메모")
     
     @field_validator("overtime_hours")
@@ -70,10 +73,9 @@ class OvertimeSelect(OvertimeBase):
         if v is not None and len(v) > 500 and len(v) < 1:
             raise ValueError("승인자 메모는 1자 이상 500자 이하여야 합니다.")
         return v
-
+    
 
 class OvertimeUpdate(OvertimeBase):
     overtime_hours: Optional[str] = Field(None, description="초과 근무 시간")
     application_memo: Optional[str] = Field(None, max_length=500, description="신청 메모")
     manager_memo: Optional[str] = Field(None, max_length=500, description="승인자 메모")
-
