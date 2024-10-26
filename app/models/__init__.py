@@ -4,6 +4,8 @@ from sqlalchemy.orm import relationship
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes
+from app.models.users.users_contract_model import Contract
+from app.models.users.users_document_model import Document
 from app.models.users.users_work_contract_model import WorkContract
 
 # models.py에서 정의된 모델들
@@ -68,8 +70,11 @@ Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
-# Users.documents = relationship("Document", back_populates="user")
-# Users.contracts = relationship("Contract", back_populates="user")
+
+Users.documents = relationship("Document", back_populates="user")
+Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
+Users.contracts_manager_id = relationship("Contract", foreign_keys=[Contract.manager_id], back_populates="manager")
+DocumentPolicies.contracts = relationship("Contract", back_populates="document_policies")
 
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
@@ -137,5 +142,9 @@ Users.menu_permissions = relationship("Parts", secondary=user_menus, back_popula
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
 
-
 WorkContract.fixed_rest_days = relationship("FixedRestDay", backref="work_contract")
+
+Document.user = relationship('Users', back_populates="documents")
+Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
+Contract.manager = relationship("Users", foreign_keys=[Contract.manager_id], back_populates="contracts_manager_id")
+Contract.document_policies = relationship("DocumentPolicies", back_populates="contracts")

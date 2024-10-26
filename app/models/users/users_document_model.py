@@ -15,4 +15,3 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-    user = relationship("Users", back_populates="documents")
