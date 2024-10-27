@@ -1,5 +1,6 @@
 from typing import List
 from app.cruds.labor_management.repositories.part_timer_repository_interface import IPartTimerRepository
+from app.cruds.labor_management.dto.part_timer_work_history_response_dto import PartTimerWorkHistoryResponseDTO
 from app.cruds.labor_management.dto.part_timers_response_dto import PartTimerSummaryResponseDTO
 
 from typing import List
@@ -28,6 +29,14 @@ class PartTimerRepository(IPartTimerRepository):
         part_timer_work_hour_and_total_wage = await self.get_part_timer_work_hours_and_total_wage(self.session, year, month)
         return PartTimerSummaryResponseDTO.get_part_timer_list_response(part_timer_summary, part_timer_work_hour_and_total_wage)
 
+    async def get_part_timer_work_history(self, user_id: int, year: int, month: int) -> List[PartTimerWorkHistoryResponseDTO]:
+        return []
+    
+    async def get_all_part_timers_by_branch_id(self, branch_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
+        return []
+
+    async def get_all_part_timers_by_part_id(self, part_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
+        return []
 
 
     '''
