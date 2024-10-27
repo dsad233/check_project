@@ -4,6 +4,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from sqlalchemy.orm import selectinload
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.models.branches.branches_model import (
     Branches,
@@ -77,6 +78,24 @@ async def find_by_id(
     statement = select(Branches).filter(Branches.id == branch_id)
     result = await session.execute(statement)
     return result.scalar_one_or_none()
+
+
+async def find_by_id_with_policies(
+    *, session: AsyncSession, branch_id: int
+) -> Optional[Branches]:
+    print("=============find 전=======================")
+    stmt = select(Branches).options(
+        selectinload(Branches.overtime_policies),
+        selectinload(Branches.holiday_work_policies),
+        selectinload(Branches.auto_overtime_policies),
+        selectinload(Branches.auto_annual_leave_grant),
+        selectinload(Branches.auto_annual_leave_approval),
+        selectinload(Branches.work_policies),
+        selectinload(Branches.allowance_policies)
+        ).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    result = await session.execute(stmt)
+    branch = result.scalar_one_or_none()
+    return branch
 
 
 async def delete(*, session: AsyncSession, branch_id: int) -> None:

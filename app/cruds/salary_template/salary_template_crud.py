@@ -6,18 +6,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.salary_template_model import SalaryTemplate
 from app.exceptions.exceptions import NotFoundError, BadRequestError
+from sqlalchemy.orm import selectinload
 
 
-async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> List[SalaryTemplate]:
+async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> list[SalaryTemplate]:
     stmt = (
-        select(SalaryTemplate).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.deleted_yn == "N")
+        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalars().all()
 
 async def find_by_id(*, session: AsyncSession, id: int) -> Optional[SalaryTemplate]:
     stmt = (
-        select(SalaryTemplate).where(SalaryTemplate.id == id).where(SalaryTemplate.deleted_yn == "N")
+        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.id == id).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
@@ -62,6 +63,8 @@ async def update(*, session: AsyncSession, salary_template_update: SalaryTemplat
     else:
         pass
     return salary_template
+
+
 async def delete(*, session: AsyncSession, branch_id: int, id: int) -> None:
     salary_template = await find_by_id(session=session, id=id)
     if salary_template is None:

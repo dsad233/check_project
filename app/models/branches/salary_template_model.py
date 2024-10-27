@@ -21,7 +21,6 @@ class SalaryTemplate(Base):
     id = Column(Integer, primary_key=True, autoincrement=True) #템플릿ID
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False) #회사ID
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False) #직책ID
-    part_name = Column(String(255), nullable=False) #직책명
     name = Column(String(255), nullable=False) #템플릿명
     is_january_entry = Column(Boolean, nullable=False, default=False) #1월입사여부
     weekly_work_days = Column(Integer, nullable=False, default=5) #주간근무일수
@@ -38,16 +37,17 @@ class SalaryTemplate(Base):
     annual_leave_allowance = Column(Integer, nullable=False, default=0) #연차수당
     annual_leave_allowance_hour = Column(Integer, nullable=False, default=0) #연차수당시간
     annual_leave_allowance_day = Column(Integer, nullable=False, default=0) #연차수당일수
+    hire_year = Column(Integer, nullable=False) # 입사년도 컬럼 ( 몇년도 기준 임금정책인지 )
 
-    holiday_allowance = Column(Integer, nullable=False, default=0) # 휴일수당 컬럼
-    job_allowance = Column(Integer, nullable=False, default=0)# 직무(직책)수당 컬럼
-    meal_allowance = Column(Integer, nullable=False, default=0)# 식대 컬럼
-    hire_year = Column(Integer, nullable=False, default=0) # 입사년도 컬럼 ( 몇년도 기준 임금정책인지 )
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
 
 class SalaryTemplateDto(BaseModel):
     id: Optional[int] = Field(default=None, description="템플릿ID")
     part_id: int = Field(description="직책ID")
-    part_name: str = Field(description="직책명")
+    part_name: Optional[str] = Field(description="직책명", default=None)
     name: str = Field(description="템플릿명")
     is_january_entry: bool = Field(description="1월입사여부")
     weekly_work_days: int = Field(description="주간근무일수")
@@ -64,8 +64,11 @@ class SalaryTemplateDto(BaseModel):
     annual_leave_allowance: int = Field(description="연차수당")
     annual_leave_allowance_hour: int = Field(description="연차수당시간")
     annual_leave_allowance_day: int = Field(description="연차수당일수")
-
-    holiday_allowance: int = Field(description="휴일수당")
-    job_allowance: int = Field(description="직무(직책)수당")
-    meal_allowance: int = Field(description="식대")
     hire_year: int = Field(descriptio="입사년도 ( 몇년도 기준 임금정책인지 )")
+
+    holiday_allowance: Optional[int] = Field(description="휴일수당", default=None)
+    job_allowance: Optional[int] = Field(description="직무(직책)수당", default=None)
+    meal_allowance: Optional[int] = Field(description="식대", default=None)
+
+    class Config:
+        from_attributes = True
