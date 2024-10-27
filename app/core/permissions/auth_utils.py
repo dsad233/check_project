@@ -1,9 +1,12 @@
 from functools import wraps
 from typing import List
 from fastapi import HTTPException, Request
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.enums.users import Role, MenuPermissions
 from sqlalchemy import select, and_
 
+from app.models.parts.parts_model import Parts
 from app.models.users.users_model import Users, user_menus, user_parts
 
 ROLE_LEVELS = {
@@ -117,9 +120,21 @@ def check_menu_permission(required_menu: MenuPermissions):
         return wrapper
     return decorator
 
+async def check_part_in_branch(db: AsyncSession, part_id: int, branch_id: int) -> bool:
+    """파트가 해당 지점에 속하는지 확인"""
+    query = select(Parts).where(
+        and_(
+            Parts.id == part_id,
+            Parts.branch_id == branch_id,
+            Parts.deleted_yn == "N"
+        )
+    )
+    result = await db.execute(query)
+    return result.scalar_one_or_none() is not None
 
 
-async def can_manage_user_permissions(current_user: Users, target_user: Users) -> bool:
+
+async def can_manage_user_permissions(current_user: Users, target_user: Users, db: AsyncSession, part_id: int = None) -> bool:
     """사용자가 다른 사용자의 권한을 관리할 수 있는지 확인하는 메서드"""
     if not current_user.role or not target_user.role:
         return False
@@ -137,12 +152,24 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users) -
             )
     # MSO는 모든 지점의 모든 사용자 관리 가능
     if current_user.role == Role.MSO:
+        if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
+            raise HTTPException(
+                status_code=400,
+                detail=f"파트 ID {part_id}는 해당 사용자가 속한 지점에 존재하지 않습니다."
+            )
         return True
 
     # 2. 지점 확인 (MSO를 제외한 모든 관리자급)
     if current_user.role in [Role.SUPER_ADMIN, Role.INTEGRATED_ADMIN, Role.ADMIN]:
         if current_user.branch_id != target_user.branch_id:
             raise HTTPException(status_code=403, detail="다른 지점의 사용자의 권한은 관리할 수 없습니다.")
+
+    # 파트가 해당 지점에 속하는지 확인
+    if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
+        raise HTTPException(
+            status_code=400,
+            detail=f"파트 ID {part_id}는 해당 사용자가 속한 지점에 존재하지 않습니다."
+        )
 
     # 3. 역할별 권한 체크
     # 최고 관리자 (MSO를 제외한 모든 권한 관리 가능)
