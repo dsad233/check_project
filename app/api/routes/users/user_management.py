@@ -6,6 +6,7 @@ from sqlalchemy import func, select, update, case, func, distinct, literal_colum
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, aliased
 from sqlalchemy.util import await_only
+from starlette import status
 
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import async_session, get_db
@@ -111,14 +112,35 @@ class UserManagement:
                     "gender": user.gender,
                     "email": user.email,
                     "hire_date": user.hire_date,
-                    # "parts": [{"id": part.id, "name": part.name} for part in user.parts] if user.parts else None,
-                    # "branch": {"id": user.branch.id, "name": user.branch.name} if user.branch else None,
-                    "parts": None,
-                    "branch": None,
+                    "parts": [
+                        {"id": part.id, "name": part.name} for part in user.parts
+                    ] if user.parts else None,
+                    "branch": {
+                        "id": user.branch.id,
+                        "name": user.branch.name
+                    } if user.branch else None,
                     "role": user.role,
                     "last_activity": last_activity
                 }
-                
+
+                # user_dict = {
+                #     "id": user.id,
+                #     "branch": {
+                #         "id": user.branch.id,
+                #         "name": user.branch.name
+                #     },
+                #     "name": user.name,
+                #     "work_part": user.part.name,
+                #     "birth_date": user.birth_date,
+                #     "phone_number": user.phone_number,
+                #     "email": user.email,
+                #     "hire_date": user.hire_date,
+                #     "monthly_salary": monthly_salary,
+                #     "annual_salary": annual_salary,
+                #     # 근무 기간 추가
+                #     # 계약 기간 추가
+                # }
+
                 # 전체 정보 접근 권한 확인
                 # if current_user.can_access_full_user_info(user):
                 #     user_dict.update({
@@ -168,7 +190,7 @@ class UserManagement:
             print(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
-    @router.post("", response_model=CreatedUserDto)
+    @router.post("", response_model=ResponseDTO[CreatedUserDto])
     async def create_user(user: UserCreate, current_user: Users = Depends(get_current_user)):
         if await find_by_email(session=db, email=user.email):
             raise HTTPException(status_code=400, detail="이미 등록된 이메일 주소입니다.")
@@ -179,14 +201,13 @@ class UserManagement:
         created_user = await add_user(session=db, user=new_user)
         data = await CreatedUserDto.build(user=created_user)
 
-        return ResponseDTO.build(
+        return ResponseDTO(
             status="SUCCESS",
             message="유저가 성공적으로 생성되었습니다.",
-            data=data
+            data=data,
         )
 
-
-    @router.get("/me")
+    @router.get("/me", response_model=ResponseDTO[dict])
     async def get_user(current_user: Users = Depends(get_current_user)):
         try:
             if not current_user:
@@ -197,39 +218,43 @@ class UserManagement:
                 "name": current_user.name,
                 "email": current_user.email,
                 "role": current_user.role,
-                "parts": None,
-                "branch": None,
-                # "parts": [{"id": part.id, "name": part.name} for part in current_user.parts] if current_user.parts else None,
-                # "branch": {"id": current_user.branch.id, "name": current_user.branch.name} if current_user.branch else None,
+                "parts": [
+                    {"id": part.id, "name": part.name} for part in current_user.parts
+                ] if current_user.parts else None,
+                "branch": {
+                    "id": current_user.branch.id,
+                    "name": current_user.branch.name
+                } if current_user.branch else None,
             }
 
-            return {
-                "message": "현재 로그인한 사용자를 정상적으로 조회하였습니다.",
-                "data": user_dict,
-            }
+            return ResponseDTO(
+                status="SUCCESS",
+                message="현재 로그인한 사용자를 정상적으로 조회하였습니다.",
+                data=user_dict,
+            )
+
         except Exception as err:
             print("에러가 발생하였습니다.", err)
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
-    @router.get("/admin")
+    @router.get("/admin", response_model=ResponseDTO[AdminUsersDto])
     async def get_admin_user(current_user: Users = Depends(get_current_user)):
-        users = await find_all_by_branch_id_and_role(session=db, branch_id=current_user.branch_id, role=Role.SUPER_ADMIN)
+        users = await find_all_by_branch_id_and_role(session=db, branch_id=current_user.branch_id, role=Role.ADMIN)
         if not users:
-            return ResponseDTO.build(
-                status="SUCCESS",
+            return ResponseDTO(
+                status="FAIL",
                 message="조건에 맞는 유저가 없습니다.",
-                data=AdminUsersDto(super_users=[])
             )
 
         data = await AdminUsersDto.build(users=users)
 
-        return ResponseDTO.build(
+        return ResponseDTO(
             status="SUCCESS",
             message="수퍼관리자 유저를 정상적으로 조회하였습니다.",
-            data=data
+            data=data,
         )
 
-    @router.get("/{id}")
+    @router.get("/{id}", response_model=ResponseDTO[dict])
     async def get_user_detail(id: int, current_user: Users = Depends(get_current_user)):
         """
         ID를 입력 시 세부정보가 조회되며, 권한에 따른 정보 접근이 가능합니다. 세부정보는 관리자만 볼 수 있습니다.
@@ -274,10 +299,13 @@ class UserManagement:
                 "gender": user.gender,
                 "email": user.email,
                 "hire_date": user.hire_date,
-                "parts": None,
-                "branch": None,
-                # "parts": [{"id": part.id, "name": part.name} for part in user.parts] if user.parts else None,
-                # "branch": {"id": user.branch.id, "name": user.branch.name} if user.branch else None,
+                "parts": [
+                    {"id": part.id, "name": part.name} for part in user.parts
+                ] if user.parts else None,
+                "branch": {
+                    "id": user.branch.id,
+                    "name": user.branch.name
+                } if user.branch else None,
                 "role": user.role,
                 "last_activity": last_activity
             }
@@ -303,11 +331,11 @@ class UserManagement:
                 "annual_salary": annual_salary,
             })
 
-            return {
-                "message": "유저를 정상적으로 조회하였습니다.",
-                "data": user_dict,
-            }
-
+            return ResponseDTO(
+                status="SUCCESS",
+                message="유저를 정상적으로 조회하였습니다.",
+                data=user_dict,
+            )
         except HTTPException as http_exc:
             raise http_exc
         except Exception as err:

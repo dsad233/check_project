@@ -118,7 +118,7 @@ class AdminUsersDto(BaseModel):
     @classmethod
     async def build(cls, users: list[Users]):
         return cls(
-            super_users=[await AdminUserDto.build(user) for user in users]
+            admin_users=[await AdminUserDto.build(user=user) for user in users]
         )
 
 
