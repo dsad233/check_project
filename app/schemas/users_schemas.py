@@ -6,3 +6,4 @@ class UserLeaveResponse(BaseModel):
     part_name: str
     grant_type: str
     remaining_annual_leave: int
+

@@ -2,8 +2,6 @@ from datetime import datetime, UTC
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
 from app.core.database import Base
 
-from sqlalchemy.orm import relationship
-
 
 class Document(Base):
     __tablename__ = "document"
