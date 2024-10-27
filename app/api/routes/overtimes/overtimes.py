@@ -17,7 +17,7 @@ db = async_session()
 
 # 오버타임 초과 근무 생성(신청)
 @router.post("", summary="오버타임 초과 근무 생성")
-async def create_overtime(overtime: OvertimeCreate, overTime_History : OverTime_History, current_user_id: int = Depends(get_current_user_id)):
+async def create_overtime(overtime: OvertimeCreate, overTime_History_Create : OverTime_History_Create, current_user_id: int = Depends(get_current_user_id)):
     try:        
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -32,12 +32,12 @@ async def create_overtime(overtime: OvertimeCreate, overTime_History : OverTime_
 
         
         new_overtime_history = OverTime_History(
-            ot_30_total = overTime_History.ot_30_total,
-            ot_60_total = overTime_History.ot_60_total,
-            ot_90_total = overTime_History.ot_90_total,
-            ot_30_money = overTime_History.ot_30_money,
-            ot_60_money = overTime_History.ot_60_money,
-            ot_90_money = overTime_History.ot_90_money,
+            ot_30_total = overTime_History_Create.ot_30_total,
+            ot_60_total = overTime_History_Create.ot_60_total,
+            ot_90_total = overTime_History_Create.ot_90_total,
+            ot_30_money = overTime_History_Create.ot_30_money,
+            ot_60_money = overTime_History_Create.ot_60_money,
+            ot_90_money = overTime_History_Create.ot_90_money,
         )
 
         db.add(new_overtime_history)

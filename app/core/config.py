@@ -43,7 +43,7 @@ class ProdSettings(BaseAppSettings):
         env_file = (".env", ".env.prod")
 
 def load_settings() -> Union[DevSettings, ProdSettings]:
-    mode = os.getenv("MODE", "prod")
+    mode = os.getenv("MODE", "dev")
 
     if mode == "dev":
         return DevSettings()

@@ -3,7 +3,7 @@ from sqlalchemy.orm import relationship
 
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
-from app.models.users.overtimes_model import Overtimes
+from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_document_model import Document
 from app.models.users.users_work_contract_model import WorkContract
@@ -75,6 +75,7 @@ Users.documents = relationship("Document", back_populates="user")
 Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
 Users.contracts_manager_id = relationship("Contract", foreign_keys=[Contract.manager_id], back_populates="manager")
 DocumentPolicies.contracts = relationship("Contract", back_populates="document_policies")
+Users.overtime_history = relationship("OverTime_History", back_populates="user")
 
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
@@ -148,3 +149,4 @@ Document.user = relationship('Users', back_populates="documents")
 Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
 Contract.manager = relationship("Users", foreign_keys=[Contract.manager_id], back_populates="contracts_manager_id")
 Contract.document_policies = relationship("DocumentPolicies", back_populates="contracts")
+OverTime_History.user = relationship("Users", back_populates="overtime_history")
