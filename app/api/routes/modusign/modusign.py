@@ -10,9 +10,11 @@ from app.schemas.sign_schemas import (
     DocumentListResponse,
     CreateSignWebhookRequest
 )
-from app.api.modusign.service import document_service, webhook_service
+from app.api.service import webhook_service
+from app.api.service import document_service
 
 router = APIRouter(dependencies=[Depends(validate_token)])
+db = async_session()
 
 @router.get("/documents", summary="문서 목록 조회", response_model=DocumentListResponse)
 async def get_documents(

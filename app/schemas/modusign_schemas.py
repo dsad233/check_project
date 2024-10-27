@@ -2,7 +2,13 @@ from typing import List, Optional
 
 from pydantic import BaseModel
 
+class CreateDocumentResponse(BaseModel):
+    document_id: str | None = None
+    participant_id: str | None = None
+    embedded_url: str | None = None
 
+
+# -----------------------------
 class DeleteSignCancelPayload(BaseModel):
     accessibleByParticipant: bool
     message: str

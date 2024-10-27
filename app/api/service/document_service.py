@@ -75,3 +75,30 @@ async def get_document_history(document_id: str, db: Session) -> Dict[str, Any]:
     response = requests.get(url, headers=MODUSIGN_HEADERS)
     response.raise_for_status()
     return response.json()
+
+async def update_document_status(document_id: str, status: str, db: Session) -> Dict[str, Any]:
+    # 실제로는 DB 업데이트 로직이 필요합니다. 여기서는 모두싸인 API를 호출하여 상태를 업데이트합니다.
+    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}"
+    payload = {"status": status}
+    response = requests.put(url, json=payload, headers=MODUSIGN_HEADERS)
+    response.raise_for_status()
+    return response.json()
+
+async def get_participant_fields(document_id: str, db: Session) -> Dict[str, Any]:
+    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/participant-fields"
+    response = requests.get(url, headers=MODUSIGN_HEADERS)
+    response.raise_for_status()
+    return response.json()
+
+async def get_requester_inputs(document_id: str, db: Session) -> Dict[str, Any]:
+    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/requester-inputs"
+    response = requests.get(url, headers=MODUSIGN_HEADERS)
+    response.raise_for_status()
+    return response.json()
+
+async def forward_document_bundle(document_id: str, email: str, db: Session) -> Dict[str, Any]:
+    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/forward"
+    payload = {"email": email}
+    response = requests.post(url, json=payload, headers=MODUSIGN_HEADERS)
+    response.raise_for_status()
+    return response.json()
