@@ -11,21 +11,21 @@ from sqlalchemy.orm import selectinload
 
 async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> list[SalaryTemplate]:
     stmt = (
-        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.branch_id == branch_id)
+        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalars().all()
 
 async def find_by_id(*, session: AsyncSession, id: int) -> Optional[SalaryTemplate]:
     stmt = (
-        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.id == id)
+        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.id == id).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
 async def find_by_branch_id_and_name(*, session: AsyncSession, branch_id: int, name: str) -> Optional[SalaryTemplate]:
     stmt = (
-        select(SalaryTemplate).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.name == name)
+        select(SalaryTemplate).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.name == name).where(SalaryTemplate.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
