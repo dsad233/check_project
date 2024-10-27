@@ -1,47 +1,65 @@
-from fastapi import Query
+from pydantic import BaseModel, Field
+from typing import List, Optional
 
-from feynman_api.app.common.schemas import CamelAliasModel
+class ParticipantMapping(BaseModel):
+    role: str
+    name: str
+    signingMethod: dict = Field(..., example={
+        "type": "EMAIL",
+        "value": "modu.kim@modusign.co.kr"
+    })
+    excluded: Optional[bool] = None
+    signingDuration: Optional[int] = None
+    locale: Optional[str] = None
+    verification: Optional[dict] = None
+    attachmentRequests: Optional[List[dict]] = None
 
-from ..constants import NationEnum, SignChannelEnum, SignDocumentStatusEnum
+class RequesterInputMapping(BaseModel):
+    dataLabel: str
+    value: str
 
+class Metadata(BaseModel):
+    key: str
+    value: str
 
-class ConsentFormTypesRequest(CamelAliasModel):
-    name: str | None = Query(None)
+class CreateDocumentRequest(BaseModel):
+    templateId: str
+    document: dict = Field(..., example={
+        "title": "2020_근로계약서_홍길동",
+        "participantMappings": List[ParticipantMapping],
+        "requesterInputMappings": Optional[List[RequesterInputMapping]],
+        "metadatas": Optional[List[Metadata]]
+    })
 
+class CreateDocumentResponse(BaseModel):
+    id: str
+    title: str
+    status: str
+    participants: List[dict]
+    createdAt: str
+    updatedAt: str
 
-class ConsentFormTypesResponse(CamelAliasModel):
-    class ConsentFormType(CamelAliasModel):
-        id: int
-        name: str
-        nation: NationEnum
-        is_self: bool
-        template_id: str
+class EmbeddedSignLinkResponse(BaseModel):
+    embeddedUrl: str
 
-    data: list[ConsentFormType]
+class WebhookEvent(BaseModel):
+    type: str
 
+class WebhookDocument(BaseModel):
+    id: str
 
-class CreateConsentFormRequest(CamelAliasModel):
-    booking_id: int
-    consent_form_type_id: int
-    sign_method_type: SignChannelEnum
-    sign_method_value: str
+class WebhookRequester(BaseModel):
+    email: str
 
+class CreateSignWebhookRequest(BaseModel):
+    requester: WebhookRequester
+    event: WebhookEvent
+    document: WebhookDocument
 
-class CreateSignWebhookRequest(CamelAliasModel):
-    class EventObj(CamelAliasModel):
-        type: SignDocumentStatusEnum
+class DocumentListRequest(BaseModel):
+    page: int = Field(1, ge=1)
+    per_page: int = Field(10, ge=1, le=100)
 
-    class DocumentObj(CamelAliasModel):
-        id: str
-
-        class RequesterObj(CamelAliasModel):
-            email: str
-
-        requester: RequesterObj
-
-    event: EventObj
-    document: DocumentObj
-
-
-class DeleteConsentFormsRequest(CamelAliasModel):
-    consent_form_ids: list[int]
+class DocumentListResponse(BaseModel):
+    data: List[dict]
+    total_count: int
