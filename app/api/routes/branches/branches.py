@@ -8,7 +8,7 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.schemas.users_schemas import UserLeaveResponse
-from app.api.service import user_service
+from app.service import user_service
 from app.cruds.branches import branches_crud
 from app.cruds.users import users_crud
 from app.cruds.branches.policies import holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud, allowance_crud
