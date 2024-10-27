@@ -22,7 +22,7 @@ async def get_all_overtime_history(skip: int = 0, limit: int = 10, page: int = 1
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_application = await overtime_history.scalars(select(Overtimes).join(Users, Users.id == Overtimes.applicant_id))
+        find_overtime_application = await overtime_history.scalars(select(Overtimes).join(Users, Users.id == Overtimes.applicant_id, Overtimes.overtime_hours == "30").options(load_only(Overtimes.applicant_id, Overtimes.overtime_hours)))
         result = find_overtime_application.all()
 
         find_overtime_history = await overtime_history.execute(select(Users, Branches, Parts, Overtimes, OverTimePolicies).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(OverTimePolicies.branch_id == Branches.id).options(load_only(Users.name, Users.gender, Users.resignation_date), load_only(Branches.name), load_only(Parts.name), load_only(OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90, OverTimePolicies.common_ot_120, OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.doctor_ot_120)))

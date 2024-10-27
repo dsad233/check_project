@@ -17,7 +17,7 @@ db = async_session()
 
 # 오버타임 초과 근무 생성(신청)
 @router.post("", summary="오버타임 초과 근무 생성")
-async def create_overtime(overtime: OvertimeCreate, overTime_History_Create : OverTime_History_Create, current_user_id: int = Depends(get_current_user_id)):
+async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depends(get_current_user_id)):
     try:        
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -30,19 +30,6 @@ async def create_overtime(overtime: OvertimeCreate, overTime_History_Create : Ov
         await db.commit()
         await db.refresh(new_overtime)
 
-        
-        new_overtime_history = OverTime_History(
-            ot_30_total = overTime_History_Create.ot_30_total,
-            ot_60_total = overTime_History_Create.ot_60_total,
-            ot_90_total = overTime_History_Create.ot_90_total,
-            ot_30_money = overTime_History_Create.ot_30_money,
-            ot_60_money = overTime_History_Create.ot_60_money,
-            ot_90_money = overTime_History_Create.ot_90_money,
-        )
-
-        db.add(new_overtime_history)
-        await db.commit()
-        await db.refresh(new_overtime_history)
         
         return {
             "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
@@ -104,7 +91,7 @@ async def get_reject_page(id : int):
 
 # 오버타임 초과 근무 승인
 @router.patch("/approve/{overtime_id}", summary="오버타임 승인")
-async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
+async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, overTime_History_Create : OverTime_History_Create, current_user: Users = Depends(get_current_user)):
     try:
         stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N") & (Overtimes.status == "pending"))
         result = await db.execute(stmt)
@@ -122,6 +109,28 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
         overtime.is_approved = "Y"
         overtime.manager_memo = overtime_select.manager_memo
         await db.commit()
+
+
+        # 기존 데이터의 테이블이 쌓이는 문제가 발생
+        if(overtime.overtime_hours != None and overtime.overtime_hours == "30"):
+            new_overtime_history = OverTime_History(
+            ot_30_total = overTime_History_Create.ot_30_total,
+            ot_30_money = overTime_History_Create.ot_30_money,
+            ) 
+        elif(overtime.overtime_hours != None and overtime.overtime_hours == "60"):
+            new_overtime_history = OverTime_History(
+            ot_60_total = overTime_History_Create.ot_60_total,
+            ot_60_money = overTime_History_Create.ot_60_money,
+            )
+        elif(overtime.overtime_hours != None and overtime.overtime_hours == "60"):
+            new_overtime_history = OverTime_History(
+            ot_90_total = overTime_History_Create.ot_90_total,
+            ot_90_money = overTime_History_Create.ot_90_money,
+            )
+
+        db.add(new_overtime_history)
+        await db.commit()
+        await db.refresh(new_overtime_history)
         
         return {
             "message": "초과 근무 기록이 승인되었습니다.",
