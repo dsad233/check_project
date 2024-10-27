@@ -1,8 +1,8 @@
-"""10.26
+"""10.27_rds
 
-Revision ID: d2f811db8269
+Revision ID: 86f80abd758c
 Revises: 
-Create Date: 2024-10-26 21:47:38.260029
+Create Date: 2024-10-27 15:25:11.638113
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'd2f811db8269'
+revision: str = '86f80abd758c'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -432,6 +432,21 @@ def upgrade() -> None:
     )
     op.create_index('idx_leave_history_application_date', 'leave_histories', ['application_date'], unique=False)
     op.create_index('idx_leave_history_user_id', 'leave_histories', ['user_id'], unique=False)
+    op.create_table('overtime_history',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('ot_30_total', sa.Integer(), nullable=True),
+    sa.Column('ot_60_total', sa.Integer(), nullable=True),
+    sa.Column('ot_90_total', sa.Integer(), nullable=True),
+    sa.Column('ot_30_money', sa.Integer(), nullable=True),
+    sa.Column('ot_60_money', sa.Integer(), nullable=True),
+    sa.Column('ot_90_money', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.String(length=1), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('overtimes',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('applicant_id', sa.Integer(), nullable=False),
@@ -549,6 +564,7 @@ def downgrade() -> None:
     op.drop_index('idx_user_leaves_days_user_id', table_name='user_leaves_days')
     op.drop_table('user_leaves_days')
     op.drop_table('overtimes')
+    op.drop_table('overtime_history')
     op.drop_index('idx_leave_history_user_id', table_name='leave_histories')
     op.drop_index('idx_leave_history_application_date', table_name='leave_histories')
     op.drop_table('leave_histories')

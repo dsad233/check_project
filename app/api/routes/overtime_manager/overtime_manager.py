@@ -74,7 +74,7 @@ async def get_rejected_all_overtime_manager(skip: int = 0, limit: int = 10, page
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "rejected", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "rejected", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -91,7 +91,7 @@ async def get_rejected_all_overtime_manager(skip: int = 0, limit: int = 10, page
     except Exception as err:
         print(err)
         raise HTTPException(status_code= 500, detail=f"오버타임 관리 반려중 전체 조회에 오류가 발생하였습니다. Error : {err}")
-    
+    manager
 
 # 오버타임 관리 월간 전체 조회 [최고 관리자]
 @router.get("/overtime-manager/month", summary= "오버타임 관리 월간별 전체 조회")
@@ -107,7 +107,7 @@ async def get_month_all_overtime_manager(date : str, skip: int = 0, limit: int =
         date_end_day = date_obj.replace(day=last_day)
 
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= date_start_day, Overtimes.application_date <= date_end_day, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= date_start_day, Overtimes.application_date <= date_end_day, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -146,7 +146,7 @@ async def get_week_all_overtime_manager(date : str, skip: int = 0, limit: int = 
         if end_of_week.day > last_day:
             end_of_week = date_obj.replace(day=last_day)
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= start_of_week, Overtimes.application_date <= end_of_week, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.statu, Overtimes.manager_name)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= start_of_week, Overtimes.application_date <= end_of_week, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -172,7 +172,7 @@ async def get_name_all_overtime_manager(name : str, skip: int = 0, limit: int = 
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Users.name.like(f'%{name}%'), Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Users.name.like(f'%{name}%'), Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -198,7 +198,7 @@ async def get_phone_number_all_overtime_manager(phone_number : str, skip: int = 
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Users.phone_number.like(f'%{phone_number}%'), Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Users.phone_number.like(f'%{phone_number}%'), Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -224,7 +224,7 @@ async def get_status_all_overtime_manager(status : str, skip: int = 0, limit: in
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == status, Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == status, Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -252,7 +252,7 @@ async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit:
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -278,7 +278,7 @@ async def get_branch_approved_all_overtime_manager(branch_id : int, skip: int = 
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "approved", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "approved", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -304,7 +304,7 @@ async def get_branch_rejected_all_overtime_manager(branch_id : int, skip: int = 
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "rejected", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "rejected", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -336,7 +336,7 @@ async def get_branch_month_all_overtime_manager(branch_id : int, date : date, sk
         _, last_day = monthrange(date_obj.year, date_obj.month)
         date_end_day = date_obj.replace(day=last_day)
         
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= date_start_day, Overtimes.application_date <= date_end_day, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= date_start_day, Overtimes.application_date <= date_end_day, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -375,7 +375,7 @@ async def get_branch_week_all_overtime_manager(branch_id : int, date : date, ski
         if end_of_week.day > last_day:
             end_of_week = date_obj.replace(day=last_day)
         
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches.id == Users.branch_id).join(Parts.id == Users.part_id).join(Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Overtimes.application_date >= start_of_week, Overtimes.application_date <= end_of_week, Overtimes.status == "pending",Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches.id == Users.branch_id).join(Parts.id == Users.part_id).join(Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Overtimes.application_date >= start_of_week, Overtimes.application_date <= end_of_week, Overtimes.status == "pending",Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -401,7 +401,7 @@ async def get_branch_name_all_overtime_manager(branch_id : int, name : str, skip
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Users.name.like(f'%{name}%'), Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Users.name.like(f'%{name}%'), Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -427,7 +427,7 @@ async def get_branch_phone_number_all_overtime_manager(branch_id : int, phone_nu
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Users.phone_number.like(f'%{phone_number}%'), Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Users.phone_number.like(f'%{phone_number}%'), Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -453,7 +453,7 @@ async def get_branch_status_all_overtime_manager(branch_id : int, status : str, 
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == status, Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == status, Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -482,7 +482,7 @@ async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: in
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -508,7 +508,7 @@ async def get_part_approved_all_overtime_manager(branch_id : int, part_id : int,
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "approved", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "approved", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -534,7 +534,7 @@ async def get_part_rejected_all_overtime_manager(branch_id : int, part_id : int,
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "rejected", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "rejected", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -567,7 +567,7 @@ async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, da
         date_end_day = date_obj.replace(day=last_day)
 
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= date_start_day, Overtimes.application_date <= date_end_day, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= date_start_day, Overtimes.application_date <= date_end_day, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -606,7 +606,7 @@ async def get_part_week_all_overtime_manager(branch_id : int, part_id : int, dat
         if end_of_week.day > last_day:
             end_of_week = date_obj.replace(day=last_day)
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= start_of_week, Overtimes.application_date <= end_of_week, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Branches.deleted_yn == "N", Parts.id == part_id, Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.application_date >= start_of_week, Overtimes.application_date <= end_of_week, Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -632,7 +632,7 @@ async def get_part_name_all_overtime_manager(branch_id : int, part_id : int, nam
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Parts.id == part_id, Users.name.like(f'%{name}%'), Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Parts.id == part_id, Users.name.like(f'%{name}%'), Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -658,7 +658,7 @@ async def get_part_phone_number_all_overtime_manager(branch_id : int, part_id : 
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Parts.id == part_id, Users.phone_number.like(f'%{phone_number}%'), Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Parts.id == part_id, Users.phone_number.like(f'%{phone_number}%'), Users.deleted_yn == "N", Branches.deleted_yn == "N", Parts.deleted_yn == "N", Overtimes.status == "pending", Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
@@ -685,7 +685,7 @@ async def get_part_status_all_overtime_manager(branch_id : int, part_id : int, s
         if skip == 0:
             skip = (page - 1) * limit
 
-        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status)).where(Branches.id == branch_id, Parts.id == part_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == status, Overtimes.deleted_yn == "N").offset(skip).limit(limit))
+        find_overtime_list = await overtime_manager.execute(select(Users, Branches, Parts, Overtimes).join(Branches, Branches.id == Users.branch_id).join(Parts, Parts.id == Users.part_id).join(Overtimes, Overtimes.applicant_id == Users.id).options(load_only(Users.name), load_only(Parts.name), load_only(Branches.name), load_only(Overtimes.overtime_hours, Overtimes.status, Overtimes.manager_name)).where(Branches.id == branch_id, Parts.id == part_id, Branches.deleted_yn == "N", Parts.deleted_yn == "N", Users.deleted_yn == "N", Overtimes.status == status, Overtimes.deleted_yn == "N").offset(skip).limit(limit))
         result_overtime = find_overtime_list.fetchall()
 
         fetch_data = [
