@@ -16,4 +16,20 @@ class Contract(Base):
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+    start_at = Column(Date, nullable=False)
     expired_at = Column(Date, nullable=True)
+
+
+class ContractSendMailHistory(Base):
+    __tablename__ = "contract_send_mail_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    contract_id = Column(Integer, ForeignKey("contract.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    request_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    contract_start_at = Column(Date, nullable=False)
+    contract_expired_at = Column(Date, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.now(UTC))
+    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))

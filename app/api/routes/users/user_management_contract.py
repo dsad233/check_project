@@ -2,15 +2,19 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import async_session
-from app.cruds.user_management.user_management_contract_crud import find_by_id_with_contracts, add_contracts, \
-    hard_delete_contract
+from app.cruds.user_management.user_management_contract_crud import find_user_by_id_with_contracts, add_contracts, \
+    hard_delete_contract, find_contract_by_contract_id, add_contract_send_mail_history, \
+    find_contract_send_mail_histories_by_user_id
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
 from app.schemas.user_management_contract_schemas import ResponseUserContracts, RequestAddContracts, \
-    ResponseAddedContracts, RequestRemoveContract
+    ResponseAddedContracts, RequestRemoveContract, RequestSendMailContract, ResponseSendMailContract
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
+
+
+
 
 class UserManagementContract:
     router = router
@@ -20,7 +24,7 @@ class UserManagementContract:
         user_id: int,
         current_user: Users = Depends(get_current_user),
     ):
-        user = await find_by_id_with_contracts(session=db, user_id=user_id)
+        user = await find_user_by_id_with_contracts(session=db, user_id=user_id)
         if not user:
             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
 
@@ -43,6 +47,7 @@ class UserManagementContract:
                 "manager_id": contract.manager_id,
                 "contract_name": contract.contract_name,
                 "contract_type_id": contract.contract_type_id,
+                "start_at": contract.start_at,
                 "expired_at": contract.expired_at
             }
             for contract in request_add_contracts.contracts
@@ -76,6 +81,58 @@ class UserManagementContract:
         except Exception as e:
             raise HTTPException(status_code=500, detail=str(e))
 
+    @router.get("/send_mail/{user_id}", response_model=ResponseDTO[ResponseSendMailContract])
+    async def get_send_mail_history(
+        user_id: int,
+        current_user: Users = Depends(get_current_user),
+    ):
+        contract_send_mail_histories = await find_contract_send_mail_histories_by_user_id(
+            session=db,
+            user_id=user_id
+        )
+
+        data = ResponseSendMailContract.build(contract_send_mail_histories)
+
+        return ResponseDTO(
+            status="SUCCESS",
+            message="성공적으로 계약서 메일 전달 이력을 가져왔습니다.",
+            data=data
+        )
+
+
+    @router.post("/send_mail", response_model=ResponseDTO)
+    async def send_mail_contract(
+        request_send_mail_contract: RequestSendMailContract,
+        current_user: Users = Depends(get_current_user),
+    ):
+        # 계약서 정보 가져오기
+        contract = await find_contract_by_contract_id(
+            session=db,
+            user_id=request_send_mail_contract.user_id,
+            contract_id=request_send_mail_contract.request_contract_id
+        )
+
+        # 메일 보내기 로직
+        print(f"메일을 보내는 로직: {contract}")
+
+        # 메일 전달 history
+        contract_send_mail_history_dict = {
+            "contract_id": contract.id,
+            "user_id": request_send_mail_contract.user_id,
+            "request_user_id": request_send_mail_contract.request_user_id,
+            "contract_start_at": contract.start_at,
+            "contract_expired_at": contract.expired_at
+        }
+
+        await add_contract_send_mail_history(
+            session=db,
+            contract_send_mail_history_dict=contract_send_mail_history_dict
+        )
+
+        return ResponseDTO(
+            status="SUCCESS",
+            message="성공적으로 계약서 메일을 발송했습니다."
+        )
 
 
 user_management_contract = UserManagementContract()

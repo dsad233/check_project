@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 
-from app.models.users.users_contract_model import Contract
+from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_model import Users
 
 # ==================== Request ====================
@@ -10,6 +10,7 @@ class AddContract(BaseModel):
     manager_id: int
     contract_name: str
     contract_type_id: int
+    start_at: str
     expired_at: str
 
 class RequestAddContracts(BaseModel):
@@ -18,6 +19,12 @@ class RequestAddContracts(BaseModel):
 class RequestRemoveContract(BaseModel):
     user_id: int
     contract_id: int
+
+class RequestSendMailContract(BaseModel):
+    user_id: int
+    request_user_id: int
+    request_contract_id: int
+
 
 # ==================== Response ====================
 
@@ -76,5 +83,55 @@ class ResponseAddedContracts(BaseModel):
             contracts=[
                 AddedContractDto.build(contract_id=contract_id)
                 for contract_id in contract_ids
+            ]
+        )
+
+
+class SendMailRequestUserDto(BaseModel):
+    id: int
+    name: str
+
+    @classmethod
+    def build(cls, user: Users):
+        return cls(id=user.id, name=user.name)
+
+class SendMailContractDto(BaseModel):
+    contract_id: int
+    contract_name: str
+    contract_start_at: str
+    contract_expired_at: str
+
+    @classmethod
+    def build(cls, contract: Contract):
+        return cls(
+            contract_id=contract.id,
+            contract_name=contract.contract_name,
+            contract_start_at=str(contract.start_at),
+            contract_expired_at=str(contract.expired_at)
+        )
+
+class SendMailHistoryDto(BaseModel):
+    send_mail_history_id: int
+    contract: SendMailContractDto
+    request_user: SendMailRequestUserDto
+
+    @classmethod
+    def build(cls, contract_send_mail_history: ContractSendMailHistory):
+        return cls(
+            send_mail_history_id=contract_send_mail_history.id,
+            contract=SendMailContractDto.build(contract=contract_send_mail_history.contract),
+            request_user=SendMailRequestUserDto.build(user=contract_send_mail_history.request_user)
+        )
+
+
+class ResponseSendMailContract(BaseModel):
+    send_mail_histories: list[SendMailHistoryDto]
+
+    @classmethod
+    def build(cls, contract_send_mail_histories: list[ContractSendMailHistory]):
+        return cls(
+            send_mail_histories=[
+                SendMailHistoryDto.build(contract_send_mail_history=contract_send_mail_history)
+                for contract_send_mail_history in contract_send_mail_histories
             ]
         )
