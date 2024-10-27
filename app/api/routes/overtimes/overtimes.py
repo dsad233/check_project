@@ -7,7 +7,7 @@ from app.core.database import async_session
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
-from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OvertimeUpdate
+from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OvertimeUpdate, OverTime_History, OverTime_History_Create
 from app.models.users.users_model import Users
 from sqlalchemy.orm import load_only
 
@@ -17,7 +17,7 @@ db = async_session()
 
 # 오버타임 초과 근무 생성(신청)
 @router.post("", summary="오버타임 초과 근무 생성")
-async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depends(get_current_user_id)):
+async def create_overtime(overtime: OvertimeCreate, overTime_History : OverTime_History, current_user_id: int = Depends(get_current_user_id)):
     try:        
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -29,6 +29,20 @@ async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depen
         db.add(new_overtime)
         await db.commit()
         await db.refresh(new_overtime)
+
+        
+        new_overtime_history = OverTime_History(
+            ot_30_total = overTime_History.ot_30_total,
+            ot_60_total = overTime_History.ot_60_total,
+            ot_90_total = overTime_History.ot_90_total,
+            ot_30_money = overTime_History.ot_30_money,
+            ot_60_money = overTime_History.ot_60_money,
+            ot_90_money = overTime_History.ot_90_money,
+        )
+
+        db.add(new_overtime_history)
+        await db.commit()
+        await db.refresh(new_overtime_history)
         
         return {
             "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
