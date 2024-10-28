@@ -25,7 +25,7 @@ from app.api.routes.menu_management import menu_management
 from app.api.routes.minimum_wage_policies import minimum_wage_policies
 from app.api.routes.salary_template import salary_template
 from app.api.routes.salary_policies import salary_policies
-# from app.api.routes.modusign import modusign
+from app.api.routes.modusign import document, template
 
 app = APIRouter()
 
@@ -59,7 +59,8 @@ app.include_router(menu_management.router, prefix='/menu-management', tags=['Men
 app.include_router(minimum_wage_policies.router, prefix='/minimum-wage-policies', tags=['Minimum_Wage_Policies'])
 app.include_router(salary_template.router, prefix='/branches/{branch_id}/salary-templates', tags=['Salary_Templates'])
 app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-policies', tags=['Salary_Policies'])
-# app.include_router(modusign.router, prefix='/modusign', tags=['Modusign'])
+app.include_router(document.router, prefix='/modusign-document', tags=['Modusign_Document'])
+app.include_router(template.router, prefix='/modusign-template', tags=['Modusign_Template'])
 
 @app.get("/health")
 def health_check():
