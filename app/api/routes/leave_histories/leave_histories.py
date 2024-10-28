@@ -148,6 +148,92 @@ async def get_leave_histories(
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
 
+@router.get("/approve-list", response_model=LeaveHistoriesListResponse)
+async def get_approve_leave(
+    search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
+    start: Optional[date] = None, # 시작일
+    end: Optional[date] = None, # 종료일
+    branch: Optional[int] = None, # 지점
+    part: Optional[str] = None, # 파트
+    search_name: Optional[str] = None, # 이름
+    search_phone: Optional[str] = None, # 전화번호
+    current_user_id: int = Depends(get_current_user_id)
+) -> LeaveHistoriesListResponse:
+    try:
+        # 사용자 권한 확인
+        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
+
+        if current_user.role.strip() == "MSO 최고권한":
+            pass
+
+        # 쿼리 구성
+        query = select(LeaveHistories).options(
+            joinedload(LeaveHistories.user).joinedload(Users.part),
+            joinedload(LeaveHistories.user),
+            joinedload(LeaveHistories.leave_category),
+            joinedload(LeaveHistories.branch)
+        ).where(
+            LeaveHistories.deleted_yn == 'N',
+            LeaveHistories.status == '승인'
+        )
+        
+        if branch:
+            query = query.filter(LeaveHistories.branch_id.like(f"%{branch}%"))
+        
+        # 기존 필터 적용
+        if search.kind:
+            query = query.join(LeaveHistories.leave_category).filter(LeaveHistories.leave_category.has(name=search.kind))
+        if search.status:
+            query = query.filter(LeaveHistories.status == search.status)
+
+        # 새로운 필터 적용
+        if start and end:
+            query = query.filter(LeaveHistories.application_date.between(start, end))
+        if part:
+            query = query.join(LeaveHistories.user).join(Users.part).filter(Users.part.has(name=part))
+        if search_name:
+            query = query.join(LeaveHistories.user).filter(Users.name.ilike(f"%{search_name}%"))
+        if search_phone:
+            query = query.join(LeaveHistories.user).filter(Users.phone_number.ilike(f"%{search_phone}%"))
+
+        # 전체 레코드 수 계산
+        count_query = query.with_only_columns(func.count())
+        count_result = await db.execute(count_query)
+        total_count = count_result.scalar_one()
+
+        # 페이지네이션 적용
+        query = query.offset(search.offset).limit(search.record_size)
+
+        # 결과 조회
+        result = await db.execute(query)
+        leave_histories = result.scalars().all()
+
+        leave_history_dtos = []
+        for history in leave_histories:
+            dto = LeaveHistoriesResponse(
+                id=history.id,
+                branch_name=history.branch.name,
+                user_name=history.user.name,
+                part_name=history.user.part.name,
+                application_date=history.application_date,
+                leave_category_name=history.leave_category.name,
+                decreased_days=float(history.decreased_days) if history.decreased_days is not None else 0.0,
+                status=history.status,
+                applicant_description=history.applicant_description,
+                admin_description=history.admin_description,
+                approve_date=history.approve_date
+            )
+            leave_history_dtos.append(dto)
+
+        pagination = PaginationDto(total_record=total_count)
+        leave_list_response = LeaveHistoriesListResponse(list=leave_history_dtos, pagination=pagination)
+        return leave_list_response
+
+    except Exception as err:
+        print(err)
+        raise HTTPException(status_code=500, detail=str(err))
 
 @router.post("")
 async def create_leave_history(
