@@ -29,6 +29,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
+# Register exception handlers
+add_exception_handlers(app)
 
 app.include_router(auth.router, prefix="/api")
 

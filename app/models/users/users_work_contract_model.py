@@ -14,16 +14,15 @@ class WorkContract(Base):
     is_fixed_rest_day = Column(Boolean, nullable=False, default=False)
 
     #근로 기본 설정
-    weekly_work_hours = Column(Integer, nullable=False)
     weekly_work_start_time = Column(Time, nullable=False)
+    weekly_work_end_time = Column(Time, nullable=False)
     weekly_is_rest = Column(Boolean, nullable=False, default=False)
-    saturday_work_hours = Column(Integer, nullable=True)
     saturday_work_start_time = Column(Time, nullable=True)
+    saturday_work_end_time = Column(Time, nullable=True)
     saturday_is_rest = Column(Boolean, nullable=False, default=True)
-    sunday_work_hours = Column(Integer, nullable=True)
     sunday_work_start_time = Column(Time, nullable=True)
+    sunday_work_end_time = Column(Time, nullable=True)
     sunday_is_rest = Column(Boolean, nullable=False, default=True)
-    is_part_timer = Column(Boolean, nullable=False, default=False)
 
     # 휴게시간
     break_start_time = Column(Time, nullable=True)
