@@ -49,14 +49,15 @@ async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_i
 
         print("@@@@@@@@@@@")
         print(commute_policy.allowed_ip_commute)
-        print(request.headers)
+        print(request.headers.get("x-real-ip"))
         print("@@@@@@@@@@@")
 
         allowed_ip = commute_policy.allowed_ip_commute.split(",")
-        if request.client.host not in allowed_ip:
-            return {
-                "message": "IP 주소가 허용되지 않습니다.",
-            }
+        if request.client.host.get("x-real-ip") not in allowed_ip:
+            raise HTTPException(
+                status_code=404,
+                detail="IP 주소가 허용되지 않습니다."
+            )
 
         # 새 출근 기록 생성
         new_commute = Commutes(
