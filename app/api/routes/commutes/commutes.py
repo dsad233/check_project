@@ -53,7 +53,8 @@ async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_i
         print("@@@@@@@@@@@")
 
         allowed_ip = commute_policy.allowed_ip_commute.split(",")
-        if request.client.host.get("x-real-ip") not in allowed_ip:
+        client_ip = request.headers.get("x-real-ip", request.client.host)
+        if client_ip not in allowed_ip:
             raise HTTPException(
                 status_code=404,
                 detail="IP 주소가 허용되지 않습니다."
