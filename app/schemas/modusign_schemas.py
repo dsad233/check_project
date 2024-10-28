@@ -1,41 +1,38 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+class SigningMethod(BaseModel):
+    type: str
+    value: str
+
+class ParticipantMapping(BaseModel):
+    role: str
+    name: str
+    signingMethod: SigningMethod
+
+class Metadata(BaseModel):
+    key: str
+    value: str
+
+class RequesterInputMapping(BaseModel):
+    key: str
+    value: str
+
+class DocumentContent(BaseModel):
+    title: str
+    participantMappings: List[ParticipantMapping]
+    requesterInputMappings: List[RequesterInputMapping]
+    metadatas: List[Metadata]
+
 class DocumentListRequest(BaseModel):
     page: int = Field(1, ge=1)
     per_page: int = Field(10, ge=1, le=100)
 
 class CreateDocumentRequest(BaseModel):
-    """문서 생성 요청 스키마"""
     templateId: str
-    document: dict = Field(..., example={
-        "title": "근로계약서",
-        "participantMappings": [
-            {
-                "role": "직원",
-                "name": "홍길동",
-                "signingMethod": {
-                    "type": "EMAIL",
-                    "value": "employee@example.com"
-                }
-            }
-        ],
-        "requesterInputMappings": [
-            {
-                "key": "employee_name",
-                "value": "홍길동"
-            }
-        ],
-        "metadatas": [
-            {
-                "key": "department",
-                "value": "개발팀"
-            }
-        ]
-    })
+    document: DocumentContent
 
 class Document(BaseModel):
-    """문서 정보 스키마"""
     id: str
     title: str
     status: str
@@ -45,7 +42,6 @@ class Document(BaseModel):
     metadatas: Optional[List[dict]] = None
 
 class DocumentListResponse(BaseModel):
-    """문서 목록 응답 스키마"""
     data: List[Document]
     total_count: int
 
