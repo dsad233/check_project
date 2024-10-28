@@ -4,9 +4,11 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
+from sqlalchemy.orm import selectinload
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.models.branches.branches_model import (
-    Branches
+    Branches,
+    BranchUpdate
 )
 
 logger = logging.getLogger(__name__)
@@ -78,6 +80,24 @@ async def find_by_id(
     return result.scalar_one_or_none()
 
 
+async def find_by_id_with_policies(
+    *, session: AsyncSession, branch_id: int
+) -> Optional[Branches]:
+    print("=============find 전=======================")
+    stmt = select(Branches).options(
+        selectinload(Branches.overtime_policies),
+        selectinload(Branches.holiday_work_policies),
+        selectinload(Branches.auto_overtime_policies),
+        selectinload(Branches.auto_annual_leave_grant),
+        selectinload(Branches.auto_annual_leave_approval),
+        selectinload(Branches.work_policies),
+        selectinload(Branches.allowance_policies)
+        ).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    result = await session.execute(stmt)
+    branch = result.scalar_one_or_none()
+    return branch
+
+
 async def delete(*, session: AsyncSession, branch_id: int) -> None:
 
     branch = await find_by_id(session=session, branch_id=branch_id)
@@ -106,3 +126,19 @@ async def count_deleted_all(*, session: AsyncSession) -> int:
     statement = select(func.count()).select_from(Branches).where(Branches.deleted_yn == "Y")
     result = await session.execute(statement)
     return result.scalar_one()
+
+async def update(*, session: AsyncSession, branch_id: int, branch_update: BranchUpdate) -> Branches:
+    branch = await find_by_id(session=session, branch_id=branch_id)
+    if branch is None:
+        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
+    
+    update_data = branch_update.model_dump(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(branch, key, value)
+    
+    branch.updated_at = datetime.now()
+    
+    await session.commit()
+    await session.refresh(branch)
+    
+    return branch

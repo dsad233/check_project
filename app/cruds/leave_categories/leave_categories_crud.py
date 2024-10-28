@@ -10,19 +10,30 @@ from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.leave_categories_model import LeaveCategory
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 
+from fastapi import HTTPException
+
 logger = logging.getLogger(__name__)
 
 async def create(
     *, branch_id: int, session: AsyncSession, leave_category_create: LeaveCategory
 ) -> int:
+    try:
     
-    leave_category = await find_by_name_and_branch_id(session=session, branch_id=branch_id, name=leave_category_create.name)
-    if leave_category:
-        raise BadRequestError(f"{branch_id}번 지점의 휴가 카테고리 이름 {leave_category_create.name}이(가) 이미 존재합니다.")
-    session.add(leave_category_create)
-    await session.commit()
-    await session.refresh(leave_category_create)
-    return leave_category_create.id
+        leave_category = await find_by_name_and_branch_id(session=session, branch_id=branch_id, name=leave_category_create.name)
+        if leave_category:
+            raise HTTPException(status_code=400, detail=f"{branch_id}번 지점의 휴가 카테고리 이름 {leave_category_create.name}이(가) 이미 존재합니다.")
+
+        session.add(leave_category_create)
+        await session.commit()
+        await session.refresh(leave_category_create)
+        return leave_category_create.id
+    
+    except Exception as error:
+        if isinstance(error, HTTPException):
+            raise error
+
+        print(error)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 async def find_by_name_and_branch_id(
     *, session: AsyncSession, branch_id: int, name: str

@@ -3,7 +3,10 @@ from sqlalchemy.orm import relationship
 
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
-from app.models.users.overtimes_model import Overtimes
+from app.models.users.overtimes_model import Overtimes, OverTime_History
+from app.models.users.users_contract_model import Contract, ContractSendMailHistory
+from app.models.users.users_document_model import Document, DocumentSendHistory
+from app.models.users.users_work_contract_model import WorkContract
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -37,19 +40,19 @@ from .parts.hour_wage_template_model import HourWageTemplate
 # Users.salary = relationship("UserSalary", back_populates="user")
 
 # 일 대 다 관계
-Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch")
+Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch", uselist=False)
 Branches.commute_policies = relationship("CommutePolicies", back_populates="branch")
 Branches.document_policies = relationship("DocumentPolicies", back_populates="branch")
-Branches.holiday_work_policies = relationship("HolidayWorkPolicies", back_populates="branch")
+Branches.holiday_work_policies = relationship("HolidayWorkPolicies", back_populates="branch", uselist=False)
 Branches.leave_categories = relationship("LeaveCategory", back_populates="branch")
-Branches.overtime_policies = relationship("OverTimePolicies", back_populates="branch")
+Branches.overtime_policies = relationship("OverTimePolicies", back_populates="branch", uselist=False)
 Branches.rest_days = relationship("RestDays", back_populates="branch")
 Branches.parts = relationship("Parts", back_populates="branch")
 Branches.users = relationship("Users", back_populates="branch")
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Branches.leave_histories = relationship("LeaveHistories", back_populates="branch")
-Branches.work_policies = relationship("WorkPolicies", back_populates="branch")
-Branches.allowance_policies = relationship("AllowancePolicies", back_populates="branch")
+Branches.work_policies = relationship("WorkPolicies", back_populates="branch", uselist=False)
+Branches.allowance_policies = relationship("AllowancePolicies", back_populates="branch", uselist=False)
 Branches.hour_wage_templates = relationship("HourWageTemplate", back_populates="branch")
 Branches.auto_annual_leave_grant = relationship("AutoAnnualLeaveGrant", back_populates="branch", uselist=False)
 Branches.auto_annual_leave_approval = relationship("AutoAnnualLeaveApproval", back_populates="branch", uselist=False)
@@ -67,6 +70,12 @@ Users.leave_histories = relationship("LeaveHistories", back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
+
+Users.documents = relationship("Document", back_populates="user")
+Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
+Users.contracts_manager_id = relationship("Contract", foreign_keys=[Contract.manager_id], back_populates="manager")
+DocumentPolicies.contracts = relationship("Contract", back_populates="document_policies")
+Users.overtime_history = relationship("OverTime_History", back_populates="user")
 
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
@@ -133,3 +142,25 @@ Users.parts = relationship("Parts", secondary=user_parts, back_populates="users"
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
+
+WorkContract.fixed_rest_days = relationship("FixedRestDay", backref="work_contract")
+
+Document.user = relationship('Users', back_populates="documents")
+Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
+Contract.manager = relationship("Users", foreign_keys=[Contract.manager_id], back_populates="contracts_manager_id")
+Contract.document_policies = relationship("DocumentPolicies", back_populates="contracts")
+OverTime_History.user = relationship("Users", back_populates="overtime_history")
+
+ContractSendMailHistory.user = relationship("Users", foreign_keys=[ContractSendMailHistory.user_id], back_populates="contract_send_mail_histories")
+ContractSendMailHistory.contract = relationship("Contract", foreign_keys=[ContractSendMailHistory.contract_id])
+ContractSendMailHistory.request_user = relationship("Users", foreign_keys=[ContractSendMailHistory.request_user_id])
+
+Users.contract_send_mail_histories = relationship("ContractSendMailHistory", foreign_keys=[ContractSendMailHistory.user_id], back_populates="user")
+
+DocumentSendHistory.user = relationship("Users", foreign_keys=[DocumentSendHistory.user_id], back_populates="document_send_histories")
+DocumentSendHistory.document = relationship("Document", foreign_keys=[DocumentSendHistory.document_id], back_populates="document_send_histories")
+DocumentSendHistory.request_user = relationship("Users", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="document_send_histories")
+
+Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.user_id], back_populates="user")
+Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="request_user")
+Document.document_send_histories = relationship("DocumentSendHistory", back_populates="document")

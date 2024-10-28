@@ -13,6 +13,7 @@ from sqlalchemy import (
     Index,
     Integer,
     String,
+    text
 )
 from sqlalchemy.orm import relationship
 
@@ -27,12 +28,14 @@ class AllowancePolicies(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
 
-    comprehensive_overtime = Column(Boolean, default=False)  # 포괄산정 연장근무수당
-    annual_leave = Column(Boolean, default=False)  # 연차수당
-    holiday_work = Column(Boolean, default=False)  # 휴일수당
-    job_duty = Column(Boolean, default=False)  # 직무수당
-    meal = Column(Boolean, default=False)  # 식대
+    comprehensive_overtime = Column(Boolean, default=False)  # 포괄산정 연장근무수당 허용
+    annual_leave = Column(Boolean, default=False)  # 연차수당 허용
+    holiday_work = Column(Boolean, default=False)  # 휴일수당 허용
+    job_duty = Column(Boolean, default=False)  # 직무수당 허용
+    meal = Column(Boolean, default=False)  # 식대 허용
 
+    job_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 직무(직책)수당
+    meal_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 식대
     doctor_holiday_work_pay = Column(Integer, nullable=False, default=0)  # 의사 휴일수당
     common_holiday_work_pay = Column(Integer, nullable=False, default=0)  # 일반 휴일수당
 

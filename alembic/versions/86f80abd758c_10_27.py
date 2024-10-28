@@ -1,8 +1,8 @@
-"""init
+"""10.27_rds
 
-Revision ID: 5cde4ffe5766
+Revision ID: 86f80abd758c
 Revises: 
-Create Date: 2024-10-23 08:48:29.985956
+Create Date: 2024-10-27 15:25:11.638113
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '5cde4ffe5766'
+revision: str = '86f80abd758c'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -319,9 +319,10 @@ def upgrade() -> None:
     sa.Column('annual_leave_allowance', sa.Integer(), nullable=False),
     sa.Column('annual_leave_allowance_hour', sa.Integer(), nullable=False),
     sa.Column('annual_leave_allowance_day', sa.Integer(), nullable=False),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('deleted_yn', sa.String(length=1), nullable=True),
+    sa.Column('holiday_allowance', sa.Integer(), nullable=False),
+    sa.Column('job_allowance', sa.Integer(), nullable=False),
+    sa.Column('meal_allowance', sa.Integer(), nullable=False),
+    sa.Column('hire_year', sa.Integer(), nullable=False),
     sa.ForeignKeyConstraint(['branch_id'], ['branches.id'], ),
     sa.ForeignKeyConstraint(['part_id'], ['parts.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -337,14 +338,17 @@ def upgrade() -> None:
     sa.Column('birth_date', sa.Date(), nullable=True),
     sa.Column('hire_date', sa.Date(), nullable=True),
     sa.Column('resignation_date', sa.Date(), nullable=True),
+    sa.Column('total_leave_days', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('gender', sa.Enum('남자', '여자', name='user_gender'), nullable=False),
     sa.Column('part_id', sa.Integer(), nullable=False),
     sa.Column('branch_id', sa.Integer(), nullable=False),
+    sa.Column('remaining_annual_leave', sa.Integer(), nullable=True),
     sa.Column('last_company', sa.String(length=255), nullable=True),
     sa.Column('last_position', sa.String(length=255), nullable=True),
     sa.Column('last_career_start_date', sa.Date(), nullable=True),
     sa.Column('last_career_end_date', sa.Date(), nullable=True),
     sa.Column('role', sa.Enum('MSO 최고권한', '최고관리자', '통합관리자', '관리자', '사원', '퇴사자', '휴직자', name='user_role'), nullable=False),
+    sa.Column('is_part_timer', sa.Boolean(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('deleted_yn', sa.String(length=1), nullable=True),
@@ -384,6 +388,29 @@ def upgrade() -> None:
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_commutes_id'), 'commutes', ['id'], unique=False)
+    op.create_table('contract',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('manager_id', sa.Integer(), nullable=False),
+    sa.Column('contract_name', sa.String(length=255), nullable=False),
+    sa.Column('contract_type_id', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('expired_at', sa.Date(), nullable=True),
+    sa.ForeignKeyConstraint(['contract_type_id'], ['document_policies.id'], ),
+    sa.ForeignKeyConstraint(['manager_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('document',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('document_name', sa.String(length=255), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('leave_histories',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('branch_id', sa.Integer(), nullable=False),
@@ -405,10 +432,26 @@ def upgrade() -> None:
     )
     op.create_index('idx_leave_history_application_date', 'leave_histories', ['application_date'], unique=False)
     op.create_index('idx_leave_history_user_id', 'leave_histories', ['user_id'], unique=False)
+    op.create_table('overtime_history',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('ot_30_total', sa.Integer(), nullable=True),
+    sa.Column('ot_60_total', sa.Integer(), nullable=True),
+    sa.Column('ot_90_total', sa.Integer(), nullable=True),
+    sa.Column('ot_30_money', sa.Integer(), nullable=True),
+    sa.Column('ot_60_money', sa.Integer(), nullable=True),
+    sa.Column('ot_90_money', sa.Integer(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_at', sa.String(length=1), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('overtimes',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('applicant_id', sa.Integer(), nullable=False),
     sa.Column('manager_id', sa.Integer(), nullable=True),
+    sa.Column('manager_name', sa.String(length=10), nullable=True),
     sa.Column('overtime_hours', sa.Enum('30', '60', '90', '120', name='overtime_hours_options'), nullable=False),
     sa.Column('status', sa.Enum('pending', 'approved', 'rejected', name='overtime_status'), nullable=False),
     sa.Column('application_date', sa.Date(), nullable=False),
@@ -423,10 +466,32 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['manager_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('user_leaves_days',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('branch_id', sa.Integer(), nullable=False),
+    sa.Column('leave_category_id', sa.Integer(), nullable=False),
+    sa.Column('increased_days', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('decreased_days', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('description', sa.String(length=255), nullable=True),
+    sa.Column('is_paid', sa.Boolean(), nullable=True),
+    sa.Column('is_approved', sa.Boolean(), nullable=True),
+    sa.Column('approver_id', sa.Integer(), nullable=True),
+    sa.Column('total_leave_days', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_yn', sa.String(length=1), nullable=True),
+    sa.ForeignKeyConstraint(['approver_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['branch_id'], ['branches.id'], ),
+    sa.ForeignKeyConstraint(['leave_category_id'], ['leave_categories.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_user_leaves_days_user_id', 'user_leaves_days', ['user_id'], unique=False)
     op.create_table('user_menus',
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('part_id', sa.Integer(), nullable=False),
-    sa.Column('menu_name', sa.Enum('P.T관리', '계약관리(P.T)포함', '휴무관리', 'O.T관리', '인사관리', '근로관리', '급여정산', '문서설정관리', '휴직관리', '출퇴근기록관리'), nullable=False),
+    sa.Column('menu_name', sa.Enum('P.T관리', '계약관리(P.T)포함', '휴무관리', 'O.T관리', '인사관리', '근로관리', '급여정산', '문서설정관리', '휴직관리', '출퇴근기록관리', name='menupermissions'), nullable=False),
     sa.Column('is_permitted', sa.Boolean(), nullable=True),
     sa.ForeignKeyConstraint(['part_id'], ['parts.id'], ),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], )
@@ -453,18 +518,58 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('work_contract',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=True),
+    sa.Column('contract_start_date', sa.Date(), nullable=False),
+    sa.Column('contract_end_date', sa.Date(), nullable=True),
+    sa.Column('is_fixed_rest_day', sa.Boolean(), nullable=False),
+    sa.Column('weekly_work_hours', sa.Integer(), nullable=False),
+    sa.Column('weekly_work_start_time', sa.Time(), nullable=False),
+    sa.Column('weekly_is_rest', sa.Boolean(), nullable=False),
+    sa.Column('saturday_work_hours', sa.Integer(), nullable=True),
+    sa.Column('saturday_work_start_time', sa.Time(), nullable=True),
+    sa.Column('saturday_is_rest', sa.Boolean(), nullable=False),
+    sa.Column('sunday_work_hours', sa.Integer(), nullable=True),
+    sa.Column('sunday_work_start_time', sa.Time(), nullable=True),
+    sa.Column('sunday_is_rest', sa.Boolean(), nullable=False),
+    sa.Column('is_part_timer', sa.Boolean(), nullable=False),
+    sa.Column('break_start_time', sa.Time(), nullable=True),
+    sa.Column('break_end_time', sa.Time(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('fixed_rest_day',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('work_contract_id', sa.Integer(), nullable=False),
+    sa.Column('rest_day', sa.Enum('MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY', name='weekday'), nullable=False),
+    sa.Column('every_over_week', sa.Boolean(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['work_contract_id'], ['work_contract.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_table('fixed_rest_day')
+    op.drop_table('work_contract')
     op.drop_table('user_salaries')
     op.drop_table('user_parts')
     op.drop_table('user_menus')
+    op.drop_index('idx_user_leaves_days_user_id', table_name='user_leaves_days')
+    op.drop_table('user_leaves_days')
     op.drop_table('overtimes')
+    op.drop_table('overtime_history')
     op.drop_index('idx_leave_history_user_id', table_name='leave_histories')
     op.drop_index('idx_leave_history_application_date', table_name='leave_histories')
     op.drop_table('leave_histories')
+    op.drop_table('document')
+    op.drop_table('contract')
     op.drop_index(op.f('ix_commutes_id'), table_name='commutes')
     op.drop_table('commutes')
     op.drop_index(op.f('ix_closed_days_id'), table_name='closed_days')

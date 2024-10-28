@@ -599,7 +599,7 @@ async def get_branch_one_closed_days(branch_id : int, id : int):
 
 # 휴일 파트 상세 조회
 @router.get("/{branch_id}/parts/{part_id}/closed-days/{id}")
-async def get_part_one_closed_days(branch_id : int, part_id : int, id : int):                                               
+async def get_part_one_closed_days(branch_id: int, part_id: int, id: int):
     try:
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -637,7 +637,7 @@ async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: 
                 status_code=404, detail="휴일 정책의 정보가 존재하지 않습니다."
             )
         
-        result.closed_day_date == closed_day_update.closed_day_date if(closed_day_update.closed_day_date != None) else result.closed_day_date
+        result.closed_day_date = closed_day_update.closed_day_date if(closed_day_update.closed_day_date != None) else result.closed_day_date
         result.memo = closed_day_update.memo
 
         await db.commit()
@@ -677,7 +677,7 @@ async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed
                 status_code=404, detail="휴일 정책의 정보가 존재하지 않습니다."
             )
         
-        result.closed_day_date == closed_day_update.closed_day_date if(closed_day_update.closed_day_date != None) else result.closed_day_date
+        result.closed_day_date = closed_day_update.closed_day_date if(closed_day_update.closed_day_date != None) else result.closed_day_date
         result.memo = closed_day_update.memo
 
         await db.commit()
@@ -876,7 +876,7 @@ async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Us
         elif token.branch_id != branch_id:
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         # 휴무일 존재 여부 확인
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
+        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "Y")
         result = await db.execute(stmt)
         closed_day = result.scalar_one_or_none()
 
@@ -890,7 +890,7 @@ async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Us
         await db.commit()
 
         return {
-            "message": "휴무일이 성공적으로 삭제되었습니다.",
+            "message": "휴무일이 성공적으로 복구되었습니다.",
         }
     except HTTPException as http_err:
         await db.rollback()
@@ -916,7 +916,7 @@ async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token
         else:
             raise HTTPException(status_code=403, detail="조회 권한이 없습니다.")
         # 휴무일 존재 여부 확인
-        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
+        stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "Y")
         result = await db.execute(stmt)
         closed_day = result.scalar_one_or_none()
 
@@ -930,7 +930,7 @@ async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token
         await db.commit()
 
         return {
-            "message": "휴무일이 성공적으로 삭제되었습니다.",
+            "message": "휴무일이 성공적으로 복구되었습니다.",
         }
     except HTTPException as http_err:
         await db.rollback()
