@@ -11,7 +11,6 @@ from app.core.log_config import get_logger
 from app.middleware.permission_middleware import PermissionMiddleware
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await startup_event()
@@ -30,7 +29,7 @@ origins = [
 # 1. Permission 미들웨어 (마지막에 실행)
 # 2. CORS 미들웨어 (먼저 실행)
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
