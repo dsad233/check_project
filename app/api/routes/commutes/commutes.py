@@ -18,7 +18,7 @@ db = async_session()
 
 # 출근 기록 생성
 @router.post("/clock-in")
-async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_in = Body(default_factory=Commutes_clock_in), current_user: Users = Depends(get_current_user)):
+async def create_clock_in(request: Request, current_user: Users = Depends(get_current_user)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -38,19 +38,20 @@ async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_i
         existing_commute = existing_commute.scalar_one_or_none()
 
         if existing_commute:
-            return {
-                "message": "이미 오늘의 출근 기록이 존재합니다.",
-                "data": existing_commute,
-            }
+            raise HTTPException(
+                status_code=404,
+                detail="이미 오늘의 출근 기록이 존재합니다."
+            )
         
         stmt = select(CommutePolicies).where(CommutePolicies.branch_id == current_user.branch_id)
         result = await db.execute(stmt)
         commute_policy = result.scalar_one_or_none()
 
-        print("@@@@@@@@@@@")
-        print(commute_policy.allowed_ip_commute)
-        print(request.headers.get("x-real-ip"))
-        print("@@@@@@@@@@@")
+        if not commute_policy:
+            raise HTTPException(
+                status_code=404,
+                detail="출퇴근 정책이 존재하지 않습니다."
+            )
 
         allowed_ip = commute_policy.allowed_ip_commute.split(",")
         client_ip = request.headers.get("x-real-ip", request.client.host)
@@ -62,7 +63,7 @@ async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_i
 
         # 새 출근 기록 생성
         new_commute = Commutes(
-            user_id=current_user.id, clock_in=commutes_clock_in.clock_in  # 현재 시간으로 설정
+            user_id=current_user.id, clock_in=datetime.now()  # 현재 시간으로 설정
         )
 
         db.add(new_commute)
@@ -81,8 +82,8 @@ async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_i
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 # 퇴근 기록 생성 (기존의 출근 기록 수정)
-@router.patch("/clock-out/{id}")
-async def create_clock_out(id : int, commutes_clock_out : Commutes_clock_out = Body(default_factory=Commutes_clock_out), current_user_id: int = Depends(get_current_user_id)):
+@router.post("/clock-out")
+async def create_clock_out(request: Request, current_user: Users = Depends(get_current_user)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -91,11 +92,11 @@ async def create_clock_out(id : int, commutes_clock_out : Commutes_clock_out = B
 
         # 오늘의 출근 기록 조회
         stmt = select(Commutes).where(
-            (Commutes.user_id == current_user_id)
+            (Commutes.user_id == current_user.id)
             & (Commutes.clock_in >= today_start)
             & (Commutes.clock_in <= today_end)
             & (Commutes.deleted_yn == "N")
-        )
+        ).order_by(Commutes.clock_in.desc())
         result = await db.execute(stmt)
         commute = result.scalar_one_or_none()
 
@@ -109,19 +110,37 @@ async def create_clock_out(id : int, commutes_clock_out : Commutes_clock_out = B
                 "message": "이미 오늘의 퇴근 기록이 존재합니다.",
                 "data": commute,
             }
+        
+        stmt = select(CommutePolicies).where(CommutePolicies.branch_id == current_user.branch_id)
+        result = await db.execute(stmt)
+        commute_policy = result.scalar_one_or_none()
+
+        if not commute_policy:
+            raise HTTPException(
+                status_code=404,
+                detail="출퇴근 정책이 존재하지 않습니다."
+            )
+        
+        allowed_ip = commute_policy.allowed_ip_commute.split(",")
+        client_ip = request.headers.get("x-real-ip", request.client.host)
+        if client_ip not in allowed_ip:
+            raise HTTPException(
+                status_code=404,
+                detail="IP 주소가 허용되지 않습니다."
+            )
 
         # 현재 시간을 퇴근 시간으로 설정
-        clock_out = commutes_clock_out.clock_out
+        clock_out = datetime.now()
         work_hours = (clock_out - commute.clock_in).total_seconds() / 3600
 
         # 출퇴근 기록 업데이트
         update_data = {
             "clock_out": clock_out,
-            "work_hours": round(work_hours, 2),
-            "updated_at": commutes_clock_out.updated_at,
+            "work_hours": int(work_hours),
+            "updated_at": clock_out,
         }
         update_stmt = (
-            update(Commutes).where(Commutes.id == id).values(**update_data)
+            update(Commutes).where(Commutes.id == commute.id).values(**update_data)
         )
         await db.execute(update_stmt)
         await db.commit()
