@@ -7,6 +7,7 @@ from app.api.routes.leave_category import leave_category
 from app.api.routes.leave_histories import leave_histories
 from app.api.routes.closed_days import closed_days
 from app.api.routes.overtimes import overtimes
+from app.api.routes.overtime_manager import overtime_manager
 from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
 from app.api.routes.salary_bracket import salary_bracket
@@ -29,6 +30,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Auth"])
 app.include_router(users.router, prefix="/users", tags=["Users"])
 app.include_router(commutes.router, prefix="/commutes", tags=["Commutes"])
 app.include_router(overtimes.router, prefix="/overtimes", tags=["Overtimes"])
+app.include_router(overtime_manager.router, prefix="/branches", tags=["Overtimes_Manager"])
 app.include_router(closed_days.router, prefix="/branches", tags=["Closed Days"])
 
 app.include_router(branches.router, prefix="/branches", tags=["Branches"])

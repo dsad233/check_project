@@ -105,14 +105,14 @@ class OverTime_History(Base):
     deleted_at = Column(String(1), default="N")
 
 
-class OverTime_History_Create(BaseModel):
-    ot_30_total : Optional[int] = Field(None, description="O.T 30분 신청 횟수")
-    ot_60_total : Optional[int] = Field(None, description="O.T 60분 신청 횟수")
-    ot_90_total : Optional[int] = Field(None, description="O.T 90분 신청 횟수")
+# class OverTime_History_Create(BaseModel):
+#     ot_30_total : Optional[int] = Field(None, description="O.T 30분 신청 횟수")
+#     ot_60_total : Optional[int] = Field(None, description="O.T 60분 신청 횟수")
+#     ot_90_total : Optional[int] = Field(None, description="O.T 90분 신청 횟수")
 
-    ot_30_money : Optional[int] = Field(None, description="O.T 30분 신청 수당")
-    ot_60_money : Optional[int] = Field(None, description="O.T 60분 신청 수당")
-    ot_90_money : Optional[int] = Field(None, description="O.T 90분 신청 수당")
+#     ot_30_money : Optional[int] = Field(None, description="O.T 30분 신청 수당")
+#     ot_60_money : Optional[int] = Field(None, description="O.T 60분 신청 수당")
+#     ot_90_money : Optional[int] = Field(None, description="O.T 90분 신청 수당")
 
     
 
