@@ -82,7 +82,7 @@ async def patch_part_timer_work_time(
     repo: IPartTimerRepository = Depends(get_part_timer_repository),
     commute_id: int = Path(...),
     correction_data: PartTimerCommuteHistoryCorrectionRequestDTO = Body(...)) -> PartTimerCommuteHistoryCorrectionResponseDTO:
-    
+
     if not await repo.exist_part_timer_work_history(commute_id):
         raise NotFoundError("출퇴근 기록이 없습니다.")
     return await repo.update_part_timer_work_history(commute_id, correction_data)
