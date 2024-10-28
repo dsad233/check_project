@@ -70,7 +70,7 @@ class Users(Base):
     deleted_yn = Column(String(1), default="N")
     
     leaves = relationship("UserLeavesDays", back_populates="user", foreign_keys="UserLeavesDays.user_id")
-    
+    approved_leaves = relationship("UserLeavesDays", back_populates="approver", foreign_keys="UserLeavesDays.approver_id")
 
 # 유저 정보 추가를 위한 Pydantic 모델
 class UserCreate(BaseModel):
@@ -118,7 +118,7 @@ class AdminUsersDto(BaseModel):
     @classmethod
     async def build(cls, users: list[Users]):
         return cls(
-            super_users=[await AdminUserDto.build(user) for user in users]
+            admin_users=[await AdminUserDto.build(user=user) for user in users]
         )
 
 

@@ -2,6 +2,8 @@ from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload, selectinload
+
 from app.core.database import async_session, get_db
 from app.middleware.jwt.jwtService import JWTDecoder, JWTService
 from app.models.users.users_model import Users
@@ -44,7 +46,19 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
             raise HTTPException(status_code=401, detail="토큰이 만료되었습니다.")
         
         user_id = jwtVerify.get("id")
-        stmt = select(Users).where((Users.id == user_id) & (Users.deleted_yn == "N") & (Users.role != "퇴사자"))
+        # stmt = select(Users).where((Users.id == user_id) & (Users.deleted_yn == "N") & (Users.role != "퇴사자"))
+        stmt = (
+            select(Users)
+            .options(
+                joinedload(Users.branch),  # 1:1 관계는 joinedload
+                selectinload(Users.parts)  # 1:N 관계는 selectinload
+            )
+            .where(
+                (Users.id == user_id) &
+                (Users.deleted_yn == "N") &
+                (Users.role != "퇴사자")
+            )
+        )
         result = await users.execute(stmt)
         find_user = result.scalar_one_or_none()
 

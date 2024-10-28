@@ -56,18 +56,21 @@ async def update_menu_permissions(
         if not target_user:
             raise HTTPException(status_code=404, detail="해당 사용자를 찾을 수 없습니다.")
 
-        # target-user의 권한 관리 가능 여부 체크
-        if not await can_manage_user_permissions(current_user, target_user):
-            raise HTTPException(status_code=403, detail="해당 사용자의 권한을 관리할 수 없습니다.")
 
         # 권한 업데이트
         for perm in body.permissions:
+
+            # target-user의 권한 관리 가능 여부 체크
+            if not await can_manage_user_permissions(current_user, target_user,  db, perm.part_id):
+                raise HTTPException(status_code=403, detail="해당 사용자의 권한을 관리할 수 없습니다.")
+
+
             menu_enum = get_menu_enum(perm.menu_name)
 
             existing = await db.execute(
                 select(user_menus).where(
                     and_(
-                        user_menus.c.user_id == body.user_id,
+                        user_menus.c.request_user_id == body.user_id,
                         user_menus.c.part_id == perm.part_id,
                         user_menus.c.menu_name == menu_enum
                     )
@@ -80,7 +83,7 @@ async def update_menu_permissions(
                     await db.execute(
                         update(user_menus).where(
                             and_(
-                                user_menus.c.user_id == target_user.id,
+                                user_menus.c.request_user_id == target_user.id,
                                 user_menus.c.part_id == perm.part_id,
                                 user_menus.c.menu_name == menu_enum
                             )

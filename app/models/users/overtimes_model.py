@@ -79,3 +79,40 @@ class OvertimeUpdate(OvertimeBase):
     overtime_hours: Optional[str] = Field(None, description="초과 근무 시간")
     application_memo: Optional[str] = Field(None, max_length=500, description="신청 메모")
     manager_memo: Optional[str] = Field(None, max_length=500, description="승인자 메모")
+
+
+
+
+class OverTime_History(Base):
+    __tablename__ = "overtime_history"
+    
+    id = Column(Integer, autoincrement=True, primary_key=True)
+    user_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+
+    # 유저가 신청한 횟수
+    ot_30_total = Column(Integer, default=0)
+    ot_60_total = Column(Integer, default=0)
+    ot_90_total = Column(Integer, default=0)
+
+    # 유저가 신청한 오버타임의 각 금액
+    ot_30_money = Column(Integer, default=0)
+    ot_60_money = Column(Integer, default=0)
+    ot_90_money = Column(Integer, default=0)
+    
+    
+    created_at = Column(DateTime, default=datetime.now(UTC))
+    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    deleted_at = Column(String(1), default="N")
+
+
+# class OverTime_History_Create(BaseModel):
+#     ot_30_total : Optional[int] = Field(None, description="O.T 30분 신청 횟수")
+#     ot_60_total : Optional[int] = Field(None, description="O.T 60분 신청 횟수")
+#     ot_90_total : Optional[int] = Field(None, description="O.T 90분 신청 횟수")
+
+#     ot_30_money : Optional[int] = Field(None, description="O.T 30분 신청 수당")
+#     ot_60_money : Optional[int] = Field(None, description="O.T 60분 신청 수당")
+#     ot_90_money : Optional[int] = Field(None, description="O.T 90분 신청 수당")
+
+    
+

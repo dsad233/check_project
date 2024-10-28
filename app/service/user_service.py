@@ -9,6 +9,8 @@ async def get_branch_users_leave(
     *, session: AsyncSession, branch_id: int
 ) -> list[UserLeaveResponse]:
     users = await users_crud.find_all_by_branch_id(session=session, branch_id=branch_id)
+    if not users:
+        return []
     return [UserLeaveResponse(id=user.id, name=user.name, part_name=user.part.name, grant_type=user.part.auto_annual_leave_grant, remaining_annual_leave=user.remaining_annual_leave) for user in users]
 
 # 잔여 연차 수 증가
