@@ -6,8 +6,11 @@ from pydantic import ValidationError
 from sqlalchemy import func, select, update
 
 from app.core.database import async_session
-from app.middleware.tokenVerify import get_current_user_id, validate_token
+from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
+from app.models.branches.branches_model import Branches
+from app.models.branches.commute_policies_model import CommutePolicies
 from app.models.commutes.commutes_model import Commutes, CommuteUpdate, Commutes_clock_in, Commutes_clock_out
+from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -15,7 +18,7 @@ db = async_session()
 
 # 출근 기록 생성
 @router.post("/clock-in")
-async def create_clock_in(commutes_clock_in : Commutes_clock_in = Body(default_factory=Commutes_clock_in), current_user_id: int = Depends(get_current_user_id)):
+async def create_clock_in(request: Request, commutes_clock_in : Commutes_clock_in = Body(default_factory=Commutes_clock_in), current_user: Users = Depends(get_current_user)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -24,8 +27,10 @@ async def create_clock_in(commutes_clock_in : Commutes_clock_in = Body(default_f
 
         # 같은 날짜에 이미 출근 기록이 있는지 확인
         existing_commute = await db.execute(
-            select(Commutes).where(
-                Commutes.user_id == current_user_id,
+            select(Commutes)
+            .join(Branches, current_user.branch_id == Branches.id)
+            .where(
+                Commutes.user_id == current_user.id,
                 Commutes.clock_in >= today_start,
                 Commutes.clock_in <= today_end,
             )
@@ -37,10 +42,25 @@ async def create_clock_in(commutes_clock_in : Commutes_clock_in = Body(default_f
                 "message": "이미 오늘의 출근 기록이 존재합니다.",
                 "data": existing_commute,
             }
+        
+        stmt = select(CommutePolicies).where(CommutePolicies.branch_id == current_user.branch_id)
+        result = await db.execute(stmt)
+        commute_policy = result.scalar_one_or_none()
+
+        print("@@@@@@@@@@@")
+        print(commute_policy.allowed_ip_commute)
+        print(request.headers)
+        print("@@@@@@@@@@@")
+
+        allowed_ip = commute_policy.allowed_ip_commute.split(",")
+        if request.client.host not in allowed_ip:
+            return {
+                "message": "IP 주소가 허용되지 않습니다.",
+            }
 
         # 새 출근 기록 생성
         new_commute = Commutes(
-            user_id=current_user_id, clock_in=commutes_clock_in.clock_in  # 현재 시간으로 설정
+            user_id=current_user.id, clock_in=commutes_clock_in.clock_in  # 현재 시간으로 설정
         )
 
         db.add(new_commute)
@@ -119,11 +139,9 @@ async def create_clock_out(id : int, commutes_clock_out : Commutes_clock_out = B
 # 출퇴근 기록 목록 조회
 @router.get("")
 async def get_commute_records(
-    request: Request, current_user_id: int = Depends(get_current_user_id), skip: int = 0, limit: int = 100
+    current_user_id: int = Depends(get_current_user_id), skip: int = 0, limit: int = 100
 ):
     try:
-        print("@@@@@@@@@@@@@@")
-        print(request.headers)
         # 전체 출퇴근 기록 수 조회
         count_query = (
             select(func.count()).select_from(Commutes).where(Commutes.deleted_yn == "N")
