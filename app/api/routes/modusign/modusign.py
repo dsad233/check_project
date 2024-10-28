@@ -1,7 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List
-
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
 from app.schemas.modusign_schemas import (
@@ -11,56 +9,66 @@ from app.schemas.modusign_schemas import (
     CreateDocumentResponse,
     EmbeddedSignLinkResponse
 )
-from app.api.service import document_service
+from app.service.document_service import DocumentService
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+document_service = DocumentService()
 
-@router.get("/documents", summary="문서 목록 조회", response_model=DocumentListResponse)
+@router.get("/documents", response_model=DocumentListResponse)
 async def get_documents(
-    request: DocumentListRequest = Depends(),
+    query: DocumentListRequest = Depends(),
     db: Session = Depends(async_session),
 ):
-    offset = (request.page - 1) * request.per_page
-    limit = request.per_page
+    try:
+        documents, total_count = await document_service.get_documents(
+            request=query, 
+            offset=(query.page - 1) * query.per_page,
+            limit=query.per_page, 
+            db=db
+        )
+        return DocumentListResponse(data=documents, total_count=total_count)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-    documents, total_count = await document_service.get_documents(
-        request=request, offset=offset, limit=limit, db=db
-    )
-
-    return DocumentListResponse(
-        data=[DocumentListResponse.Document(**doc) for doc in documents],
-        total_count=total_count,
-    )
-
-@router.post("/documents", summary="템플릿으로 새 문서 생성 및 서명 요청", response_model=CreateDocumentResponse)
+@router.post("/documents", response_model=CreateDocumentResponse)
 async def create_document(
     request: CreateDocumentRequest,
     db: Session = Depends(async_session),
 ):
-    return await document_service.create_document_with_template(request=request, db=db)
+    try:
+        return await document_service.create_document_with_template(request=request, db=db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/documents/{document_id}/sign", summary="문서 서명 요청", response_model=EmbeddedSignLinkResponse)
+@router.post("/documents/{document_id}/sign", response_model=EmbeddedSignLinkResponse)
 async def request_document_signature(
     document_id: str,
     db: Session = Depends(async_session),
 ):
-    return await document_service.request_document_signature(document_id=document_id, db=db)
+    try:
+        return await document_service.request_document_signature(document_id=document_id, db=db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.delete("/documents/{document_id}", summary="문서 삭제")
+@router.delete("/documents/{document_id}")
 async def delete_document(
     document_id: str,
     db: Session = Depends(async_session),
 ):
-    success = await document_service.delete_document(document_id=document_id, db=db)
-    if success:
+    try:
+        success = await document_service.delete_document(document_id=document_id, db=db)
+        if not success:
+            raise HTTPException(status_code=404, detail="Document not found")
         return {"message": "Document deleted successfully"}
-    else:
-        raise HTTPException(status_code=404, detail="Document not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/documents/{document_id}", summary="문서 상세 조회")
+@router.get("/documents/{document_id}")
 async def get_document_details(
     document_id: str,
     db: Session = Depends(async_session),
 ):
-    return await document_service.get_document_details(document_id=document_id, db=db)
+    try:
+        return await document_service.get_document_details(document_id=document_id, db=db)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

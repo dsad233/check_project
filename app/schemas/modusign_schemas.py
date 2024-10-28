@@ -1,77 +1,58 @@
 from typing import List, Optional
+from pydantic import BaseModel, Field
 
-from pydantic import BaseModel
+class DocumentListRequest(BaseModel):
+    page: int = Field(1, ge=1)
+    per_page: int = Field(10, ge=1, le=100)
+
+class CreateDocumentRequest(BaseModel):
+    """문서 생성 요청 스키마"""
+    templateId: str
+    document: dict = Field(..., example={
+        "title": "근로계약서",
+        "participantMappings": [
+            {
+                "role": "직원",
+                "name": "홍길동",
+                "signingMethod": {
+                    "type": "EMAIL",
+                    "value": "employee@example.com"
+                }
+            }
+        ],
+        "requesterInputMappings": [
+            {
+                "key": "employee_name",
+                "value": "홍길동"
+            }
+        ],
+        "metadatas": [
+            {
+                "key": "department",
+                "value": "개발팀"
+            }
+        ]
+    })
+
+class Document(BaseModel):
+    """문서 정보 스키마"""
+    id: str
+    title: str
+    status: str
+    created_at: str
+    updated_at: str
+    participants: Optional[List[dict]] = None
+    metadatas: Optional[List[dict]] = None
+
+class DocumentListResponse(BaseModel):
+    """문서 목록 응답 스키마"""
+    data: List[Document]
+    total_count: int
 
 class CreateDocumentResponse(BaseModel):
     document_id: str | None = None
     participant_id: str | None = None
     embedded_url: str | None = None
 
-
-# -----------------------------
-class DeleteSignCancelPayload(BaseModel):
-    accessibleByParticipant: bool
-    message: str
-
-
-class SigningMethod(BaseModel):
-    type: str
-    value: str
-
-
-class ParticipantMapping(BaseModel):
-    excluded: bool
-    signingMethod: SigningMethod
-    signingDuration: int
-    role: str
-    name: str
-    locale: str
-
-
-class RequesterInputMapping(BaseModel):
-    key: str
-    value: str
-
-
-class PayloadMetadata(BaseModel):
-    key: str
-    value: str
-
-
-class CreateCustomerConsentFormPayload(BaseModel):
-    class CreateCustomerConsentForm(BaseModel):
-        participantMappings: List[ParticipantMapping]
-        requesterInputMappings: Optional[List[RequesterInputMapping]] = []
-        title: str
-        metadatas: List[PayloadMetadata]
-
-    document: CreateCustomerConsentForm
-    templateId: str
-
-
-class CreateCustomerConsentFormResponse(BaseModel):
-    document_id: str | None = None
-    participant_id: str | None = None
-    embedded_url: str | None = None
-
-
-class CreateConsentFormPayload(BaseModel):
-    class CreateConsentFormDocument(BaseModel):
-        participantMappings: List[ParticipantMapping]
-        requesterInputMappings: Optional[List[RequesterInputMapping]] = []
-        title: str
-        metadatas: List[PayloadMetadata]
-
-    document: CreateConsentFormDocument
-    templateId: str
-
-
 class EmbeddedSignLinkResponse(BaseModel):
-    document_id: str | None = None
-    participant_id: str | None = None
-    embedded_url: str | None = None
-
-
-class CreateTreatmentFormResponse(BaseModel):
-    document_id: str | None = None
-    participant_id: str | None = None
+    embeddedUrl: str
