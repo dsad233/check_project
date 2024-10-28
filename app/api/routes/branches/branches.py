@@ -12,7 +12,7 @@ from app.service import user_service
 from app.cruds.branches import branches_crud
 from app.cruds.users import users_crud
 from app.cruds.branches.policies import holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud, allowance_crud
-from app.cruds.leave_policies import auto_annual_leave_approval_crud, auto_annual_leave_grant_crud
+from app.cruds.leave_policies import auto_annual_leave_approval_crud, account_based_annual_leave_grant_crud, entry_date_based_annual_leave_grant_crud, condition_based_annual_leave_grant_crud
 from app.middleware.tokenVerify import validate_token, get_current_user_id
 from app.exceptions.exceptions import ForbiddenError, NotFoundError, BadRequestError
 from app.models.branches.branches_model import (
@@ -84,7 +84,9 @@ async def create_branch(
     await auto_overtime_crud.create(session=session, branch_id=branch_id)
     await allowance_crud.create(session=session, branch_id=branch_id)
     await auto_annual_leave_approval_crud.create(session=session, branch_id=branch_id)
-    await auto_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+    await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+    await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+    await condition_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
     return f"{branch_id}번 지점이 생성되었습니다."
 
 

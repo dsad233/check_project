@@ -28,8 +28,9 @@ from .branches.rest_days_model import RestDays
 from .users.leave_histories_model import LeaveHistories
 from .branches.leave_categories_model import LeaveCategory
 from .branches.leave_excluded_parts_model import LeaveExcludedPart
-
-from .branches.auto_annual_leave_grant_model import AutoAnnualLeaveGrant
+from .branches.condition_based_annual_leave_grant_model import ConditionBasedAnnualLeaveGrant
+from .branches.account_based_annual_leave_grant_model import AccountBasedAnnualLeaveGrant
+from .branches.entry_date_based_annual_leave_grant_model import EntryDateBasedAnnualLeaveGrant
 from .branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
 from .branches.salary_template_model import SalaryTemplate
 from .common.minimum_wage_policies_model import MinimumWagePolicy
@@ -54,8 +55,10 @@ Branches.leave_histories = relationship("LeaveHistories", back_populates="branch
 Branches.work_policies = relationship("WorkPolicies", back_populates="branch", uselist=False)
 Branches.allowance_policies = relationship("AllowancePolicies", back_populates="branch", uselist=False)
 Branches.hour_wage_templates = relationship("HourWageTemplate", back_populates="branch")
-Branches.auto_annual_leave_grant = relationship("AutoAnnualLeaveGrant", back_populates="branch", uselist=False)
 Branches.auto_annual_leave_approval = relationship("AutoAnnualLeaveApproval", back_populates="branch", uselist=False)
+Branches.account_based_annual_leave_grant = relationship("AccountBasedAnnualLeaveGrant", back_populates="branch", uselist=False)
+Branches.entry_date_based_annual_leave_grant = relationship("EntryDateBasedAnnualLeaveGrant", back_populates="branch", uselist=False)
+Branches.condition_based_annual_leave_grant = relationship("ConditionBasedAnnualLeaveGrant", back_populates="branch")
 
 LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 Branches.salary_templates = relationship("SalaryTemplate", back_populates="branch")
@@ -129,7 +132,9 @@ ClosedDays.part = relationship("Parts", back_populates="closed_days")
 
 LeaveExcludedPart.leave_category = relationship("LeaveCategory", back_populates="leave_excluded_parts")
 
-AutoAnnualLeaveGrant.branch = relationship("Branches", back_populates="auto_annual_leave_grant")
+AccountBasedAnnualLeaveGrant.branch = relationship("Branches", back_populates="account_based_annual_leave_grant")
+EntryDateBasedAnnualLeaveGrant.branch = relationship("Branches", back_populates="entry_date_based_annual_leave_grant")
+ConditionBasedAnnualLeaveGrant.branch = relationship("Branches", back_populates="condition_based_annual_leave_grant")
 AutoAnnualLeaveApproval.branch = relationship("Branches", back_populates="auto_annual_leave_approval")
 
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
