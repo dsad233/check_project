@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from typing import Callable, Any
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.core.database import startup_event
@@ -7,6 +8,9 @@ from app.api import main
 from app.api.routes.auth import auth
 from contextlib import asynccontextmanager
 from app.core.log_config import get_logger
+from app.middleware.permission_middleware import PermissionMiddleware
+from app.middleware.token_middleware import TokenMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,18 +23,25 @@ origins = [
     "https://workswave-frontend-one.vercel.app",
     "http://localhost:5173",
     "http://52.78.246.46"
-
 ]
 
+# 권한 체크 미들웨어
+app.add_middleware(PermissionMiddleware)  # type: ignore
+# 토큰 검증 미들웨어
+app.add_middleware(TokenMiddleware)  # type: ignore
+# CORS 미들웨어는 이렇게 등록
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
 
-app.include_router(auth.router, prefix="/api")
+
+
+
+# app.include_router(auth.router, prefix="/api")
 
 
 # def custom_openapi():
