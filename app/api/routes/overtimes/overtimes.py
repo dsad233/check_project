@@ -115,6 +115,63 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
         #     new_overtime_history.ot_90_total += 1
         #     new_overtime_history.ot_90_money += result_overtime_policies.doctor_ot_90 if result_part.is_doctor else result_overtime_policies.common_ot_90
 
+        # 테스트 중인 코드
+        new_overtime_history = OverTime_History(
+            user_id=overtime.applicant_id,
+            ot_30_total=0,
+            ot_60_total=0,
+            ot_90_total=0,
+            ot_30_money=0,
+            ot_60_money=0,
+            ot_90_money=0
+        )
+        
+        db.add(new_overtime_history)
+        await db.commit()
+        await db.refresh(new_overtime_history)
+
+        # 해당 파트에 대한 의사 여부 확인
+        find_part = await db.execute(
+            select(Parts)
+            .join(Users, Parts.id == Users.part_id)
+            .where(
+                Users.id == overtime.applicant_id,
+                Parts.deleted_yn == "N",
+                Users.deleted_yn == "N"
+            )
+        )
+        result_part = find_part.first()
+
+        if not result_part:
+            raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
+
+        # 오버타임 정책 조회
+        find_overtime_policies = await db.execute(
+            select(OverTimePolicies)
+            .join(Branches, OverTimePolicies.branch_id == Branches.id)
+            .join(Users, Users.branch_id == Branches.id)
+            .where(
+                Users.id == overtime.applicant_id,
+                Branches.deleted_yn == "N",
+                OverTimePolicies.deleted_yn == "N"
+            )
+        )
+        result_overtime_policies = find_overtime_policies.first()
+
+        if not result_overtime_policies:
+            raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
+
+        # 오버타임 시간에 따른 금액 계산
+        if overtime.overtime_hours == OverTimeHours.THIRTY_MINUTES:
+            new_overtime_history.ot_30_total = 1
+            new_overtime_history.ot_30_money = result_overtime_policies[0].doctor_ot_30 if result_part[0].is_doctor else result_overtime_policies[0].common_ot_30
+        elif overtime.overtime_hours == OverTimeHours.SIXTY_MINUTES:
+            new_overtime_history.ot_60_total = 1
+            new_overtime_history.ot_60_money = result_overtime_policies[0].doctor_ot_60 if result_part[0].is_doctor else result_overtime_policies[0].common_ot_60
+        elif overtime.overtime_hours == OverTimeHours.NINETY_MINUTES:
+            new_overtime_history.ot_90_total = 1
+            new_overtime_history.ot_90_money = result_overtime_policies[0].doctor_ot_90 if result_part[0].is_doctor else result_overtime_policies[0].common_ot_90
+
         await db.commit()
         
         return {
