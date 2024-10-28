@@ -275,7 +275,7 @@ class MockPartTimerRepository(IPartTimerRepository):
                 )
         return None
     
-    async def get_part_timer_by_user_info(self, year: int, month: int, user_name: str, phone_number: str, branch_id: int, part_id: int) -> List[PartTimerSummaryResponseDTO]:
+    async def get_part_timer_by_user_info(self, year: int, month: int, user_name: str | None, phone_number: str | None, branch_id: int, part_id: int) -> List[PartTimerSummaryResponseDTO]:
         # 실제로는 특정 날짜안에서의 아래 로직 진행
         if user_name and phone_number:
             return [

@@ -22,7 +22,7 @@ class IPartTimerRepository:
     async def get_part_timer_work_history_summary_by_user_id(self, user_id: int, year: int, month: int) -> PartTimerWorkHistorySummaryDTO:
         raise NotImplementedError
     
-    async def get_part_timer_by_user_info(self, year: int, month: int, user_name: str, phone_number: str, branch_id: int, part_id: int) -> PartTimerSummaryResponseDTO:
+    async def get_part_timer_by_user_info(self, year: int, month: int, user_name: str | None, phone_number: str | None, branch_id: int, part_id: int) -> List[PartTimerSummaryResponseDTO]:
         raise NotImplementedError
 
     async def update_part_timer_work_history(self, commute_id: int, correction_data: PartTimerCommuteHistoryCorrectionRequestDTO) -> PartTimerCommuteHistoryCorrectionResponseDTO:
