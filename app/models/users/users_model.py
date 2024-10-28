@@ -63,14 +63,15 @@ class Users(Base):
     last_career_start_date = Column(Date, nullable=True)
     last_career_end_date = Column(Date, nullable=True)
     role = Column(Enum(*[e.value for e in Role], name="user_role"), nullable=False, default=Role.EMPLOYEE)
-    employment_status = Column(
-        Enum(
-            *[e.value for e in EmploymentStatus],
-            name="employment_status"
-        ),
-        nullable=False,
-        default=EmploymentStatus.PERMANENT
-    )
+    # employment_status = Column(
+    #     Enum(
+    #         *[e.value for e in EmploymentStatus],
+    #         name="employment_status"
+    #     ),
+    #     nullable=False,
+    #     default=EmploymentStatus.PERMANENT
+    # )
+    is_part_timer = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
