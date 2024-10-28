@@ -71,7 +71,6 @@ class Users(Base):
         nullable=False,
         default=EmploymentStatus.PERMANENT
     )
-    # is_part_timer = Column(Boolean, nullable=False, default=False)
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

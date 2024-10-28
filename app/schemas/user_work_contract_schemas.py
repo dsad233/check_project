@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 from app.models.users.users_model import Users
@@ -6,8 +8,29 @@ from app.models.users.users_work_contract_model import WorkContract, FixedRestDa
 
 # ==================== Request ====================
 
+class RequestWorkContractFixedRestDay(BaseModel):
+    rest_day: str
+    every_over_week: bool
+
+
 class RequestCreateWorkContract(BaseModel):
-    pass
+    user_id: int
+    contract_start_date: str
+    contract_end_date: Optional[str]
+    is_fixed_rest_day: bool
+    fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]]
+    weekly_work_start_time: str
+    weekly_work_end_time: str
+    weekly_is_rest: bool
+    saturday_work_start_time: str
+    saturday_work_end_time: str
+    saturday_is_rest: bool
+    sunday_work_start_time: str
+    sunday_work_end_time: str
+    sunday_is_rest: bool
+    break_start_time: str
+    break_end_time: str
+
 
 class RequestPatchWorkContract(BaseModel):
     pass
