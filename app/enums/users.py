@@ -14,6 +14,14 @@ class Role(str, Enum):
     ON_LEAVE = "휴직자"
 
 
+class EmploymentStatus(str, Enum):
+    """
+    전체 근무 상태 구성용 Enum
+    """
+    PERMANENT = "정규직"
+    TEMPORARY = "계약직"
+
+
 class MenuPermissions(str, Enum):
     """
     전체 권한 구성용 Enum
