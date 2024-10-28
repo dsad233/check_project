@@ -4,8 +4,8 @@ from sqlalchemy.orm import relationship
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
-from app.models.users.users_contract_model import Contract
-from app.models.users.users_document_model import Document
+from app.models.users.users_contract_model import Contract, ContractSendMailHistory
+from app.models.users.users_document_model import Document, DocumentSendHistory
 from app.models.users.users_work_contract_model import WorkContract
 
 # models.py에서 정의된 모델들
@@ -150,3 +150,17 @@ Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_popu
 Contract.manager = relationship("Users", foreign_keys=[Contract.manager_id], back_populates="contracts_manager_id")
 Contract.document_policies = relationship("DocumentPolicies", back_populates="contracts")
 OverTime_History.user = relationship("Users", back_populates="overtime_history")
+
+ContractSendMailHistory.user = relationship("Users", foreign_keys=[ContractSendMailHistory.user_id], back_populates="contract_send_mail_histories")
+ContractSendMailHistory.contract = relationship("Contract", foreign_keys=[ContractSendMailHistory.contract_id])
+ContractSendMailHistory.request_user = relationship("Users", foreign_keys=[ContractSendMailHistory.request_user_id])
+
+Users.contract_send_mail_histories = relationship("ContractSendMailHistory", foreign_keys=[ContractSendMailHistory.user_id], back_populates="user")
+
+DocumentSendHistory.user = relationship("Users", foreign_keys=[DocumentSendHistory.user_id], back_populates="document_send_histories")
+DocumentSendHistory.document = relationship("Document", foreign_keys=[DocumentSendHistory.document_id], back_populates="document_send_histories")
+DocumentSendHistory.request_user = relationship("Users", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="document_send_histories")
+
+Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.user_id], back_populates="user")
+Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="request_user")
+Document.document_send_histories = relationship("DocumentSendHistory", back_populates="document")

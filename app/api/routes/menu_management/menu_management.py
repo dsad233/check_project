@@ -67,7 +67,7 @@ async def update_menu_permissions(
             existing = await db.execute(
                 select(user_menus).where(
                     and_(
-                        user_menus.c.user_id == body.user_id,
+                        user_menus.c.request_user_id == body.user_id,
                         user_menus.c.part_id == perm.part_id,
                         user_menus.c.menu_name == menu_enum
                     )
@@ -80,7 +80,7 @@ async def update_menu_permissions(
                     await db.execute(
                         update(user_menus).where(
                             and_(
-                                user_menus.c.user_id == target_user.id,
+                                user_menus.c.request_user_id == target_user.id,
                                 user_menus.c.part_id == perm.part_id,
                                 user_menus.c.menu_name == menu_enum
                             )
