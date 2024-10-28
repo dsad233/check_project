@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import async_session
 from app.cruds.user_management.users_work_contract_crud import find_work_contract_by_user_id, find_user_by_user_id, \
-    find_work_contract_part_timer_by_user_id, create_work_contract
+    find_work_contract_part_timer_by_user_id, create_work_contract_with_rest_days
 from app.exceptions.exceptions import BadRequestError
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.schemas.user_work_contract_schemas import RequestPatchWorkContract, RequestCreateWorkContract, \
@@ -48,9 +48,20 @@ class UserManagementWorkContract:
         current_user: dict = Depends(get_current_user)
     ):
         request_create_work_contract_dict = request_create_work_contract.model_dump()
-        word_contract_id = await create_work_contract(
+        request_fixed_rest_days = request_create_work_contract_dict.pop("fixed_rest_days")
+
+        word_contract_id = await create_work_contract_with_rest_days(
             session=db,
             work_contract_dict=request_create_work_contract_dict,
+            fixed_rest_days=request_fixed_rest_days,
+        )
+
+        data = ResponseUserWorkContractDto.build(work_contract_id=word_contract_id)
+
+        return ResponseDTO(
+            status="SUCCESS",
+            message="성공적으로 근로계약이 생성되었습니다.",
+            data=data,
         )
 
 

@@ -16,7 +16,7 @@ class RequestWorkContractFixedRestDay(BaseModel):
 class RequestCreateWorkContract(BaseModel):
     user_id: int
     contract_start_date: str
-    contract_end_date: Optional[str]
+    contract_end_date: Optional[str] = None
     is_fixed_rest_day: bool
     fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]]
     weekly_work_start_time: str
@@ -37,6 +37,15 @@ class RequestPatchWorkContract(BaseModel):
 
 
 # ==================== Response ====================
+
+class ResponseUserWorkContractDto(BaseModel):
+    work_contract_id: int
+
+    @classmethod
+    def build(cls, work_contract_id: int):
+        return cls(
+            work_contract_id=work_contract_id
+        )
 
 class UserDto(BaseModel):
     user_id: int

@@ -1,12 +1,12 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, Tuple
 from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from app.models.users.users_model import Users
-from app.models.users.users_work_contract_model import WorkContract
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
 
 
 async def find_work_contract_by_user_id(
@@ -47,14 +47,31 @@ async def find_user_by_user_id(
     result = await session.execute(stmt)
     return result.unique().scalar_one_or_none()
 
-async def create_work_contract(
-    *, session: AsyncSession, work_contract_dict: dict
+async def create_work_contract_with_rest_days(
+   *,
+   session: AsyncSession,
+   work_contract_dict: dict,
+   fixed_rest_days: list[dict]
 ) -> int:
-    stmt = (
-        insert(WorkContract)
-        .values(**work_contract_dict)
-    )
-    result = await session.execute(stmt)
-    await session.commit()
+   try:
+       # 1. 근로계약 생성
+       work_contract_stmt = insert(WorkContract).values(**work_contract_dict)
+       work_contract_result = await session.execute(work_contract_stmt)
+       work_contract_id = work_contract_result.lastrowid
 
-    return result.lastrowid
+       # 2. 고정 휴무일 생성
+       if fixed_rest_days:
+           rest_days_stmt = insert(FixedRestDay).values([
+               {"work_contract_id": work_contract_id, **rest_day}
+               for rest_day in fixed_rest_days
+           ])
+           await session.execute(rest_days_stmt)
+
+       # 3. 모든 작업이 성공하면 커밋
+       await session.commit()
+       return work_contract_id
+
+   except Exception as e:
+       # 4. 실패시 롤백
+       await session.rollback()
+       raise e
