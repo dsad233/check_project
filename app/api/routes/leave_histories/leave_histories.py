@@ -10,7 +10,7 @@ from app.models.users.leave_histories_model import LeaveHistories, LeaveHistorie
 from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
 from app.common.dto.pagination_dto import PaginationDto
-from app.enums.users import StatusKor
+from app.enums.users import StatusKor, Status
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
@@ -71,6 +71,8 @@ async def get_leave_histories(
     part: Optional[str] = None, # 파트
     search_name: Optional[str] = None, # 이름
     search_phone: Optional[str] = None, # 전화번호
+    skip: int = 0,
+    limit: int = 100,
     current_user_id: int = Depends(get_current_user_id)
 ) -> LeaveHistoriesListResponse:
     try:
@@ -117,10 +119,12 @@ async def get_leave_histories(
         total_count = count_result.scalar_one()
 
         # 페이지네이션 적용
-        query = query.offset(search.offset).limit(search.record_size)
-
+        stmt = query.order_by(LeaveHistories.application_date.desc())\
+            .offset(skip)\
+            .limit(limit)
+            
         # 결과 조회
-        result = await db.execute(query)
+        result = await db.execute(stmt)
         leave_histories = result.scalars().all()
 
         leave_history_dtos = []
@@ -157,6 +161,8 @@ async def get_approve_leave(
     part: Optional[str] = None, # 파트
     search_name: Optional[str] = None, # 이름
     search_phone: Optional[str] = None, # 전화번호
+    skip: int = 0,
+    limit: int = 100,
     current_user_id: int = Depends(get_current_user_id)
 ) -> LeaveHistoriesListResponse:
     try:
@@ -204,10 +210,12 @@ async def get_approve_leave(
         total_count = count_result.scalar_one()
 
         # 페이지네이션 적용
-        query = query.offset(search.offset).limit(search.record_size)
+        stmt = query.order_by(LeaveHistories.application_date.desc())\
+            .offset(skip)\
+            .limit(limit)
 
         # 결과 조회
-        result = await db.execute(query)
+        result = await db.execute(stmt)
         leave_histories = result.scalars().all()
 
         leave_history_dtos = []
@@ -240,6 +248,8 @@ async def create_leave_history(
     branch_id: int,
     leave_create: LeaveHistoriesCreate,
     decreased_days: float,
+    start_date: date,
+    end_date: date,
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
@@ -251,6 +261,15 @@ async def create_leave_history(
             pass
         elif current_user.branch_id != branch_id:
             raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
+        
+        existing_query = select(LeaveHistories).where(
+            LeaveHistories.user_id == current_user_id,
+            LeaveHistories.application_date == datetime.now(),
+            LeaveHistories.deleted_yn == 'N'
+        )
+        existing_result = await db.execute(existing_query)
+        if existing_result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="이미 오늘 연차를 신청하셨습니다. 다음날에 다시 신청해주세요.")
         
         # 현재 연도의 total_decreased_days 계산
         current_year = datetime.now().year
@@ -272,9 +291,11 @@ async def create_leave_history(
             user_id=current_user.id,
             leave_category_id=leave_create.leave_category_id,
             decreased_days=decreased_days,
-            application_date=leave_create.date,
+            start_date=start_date,
+            end_date=end_date,
+            application_date=datetime.now().date(),
             applicant_description=leave_create.applicant_description or None,
-            status = "확인중"
+            status = Status.PENDING
         )
 
         db.add(create)
