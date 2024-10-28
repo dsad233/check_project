@@ -2,12 +2,12 @@ import os
 from typing import Union
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import base64
 
 class BaseAppSettings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
-    # MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
-    # MODUSIGN_WEBHOOK_URL: str = Field(..., env="MODUSIGN_WEBHOOK_URL")
+    MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
 
     class Config:
         env_file = ".env"

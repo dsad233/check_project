@@ -4,13 +4,13 @@ from typing import List
 
 from app.core.database import async_session
 from app.middleware.tokenVerify import validate_token
-from app.schemas.modusign_schemas import EmbeddedSignLinkResponse, CreateDocumentResponse, CreateCustomerConsentFormPayload
-from app.schemas.sign_schemas import (
-    DocumentListRequest,
+from app.schemas.modusign_schemas import (
+    DocumentListRequest, 
     DocumentListResponse,
-    CreateSignWebhookRequest
+    CreateDocumentRequest,
+    CreateDocumentResponse,
+    EmbeddedSignLinkResponse
 )
-from app.api.service import webhook_service
 from app.api.service import document_service
 
 router = APIRouter(dependencies=[Depends(validate_token)])
@@ -35,7 +35,7 @@ async def get_documents(
 
 @router.post("/documents", summary="템플릿으로 새 문서 생성 및 서명 요청", response_model=CreateDocumentResponse)
 async def create_document(
-    request: CreateCustomerConsentFormPayload,
+    request: CreateDocumentRequest,
     db: Session = Depends(async_session),
 ):
     return await document_service.create_document_with_template(request=request, db=db)
@@ -64,11 +64,3 @@ async def get_document_details(
     db: Session = Depends(async_session),
 ):
     return await document_service.get_document_details(document_id=document_id, db=db)
-
-@router.post("/webhook", summary="모두싸인 웹훅 처리")
-async def sign_webhook(
-    request: CreateSignWebhookRequest,
-    db: Session = Depends(async_session),
-):
-    await webhook_service.process_webhook(request=request, db=db)
-    return {"message": "Webhook processed successfully"}
