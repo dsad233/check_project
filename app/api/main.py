@@ -63,6 +63,7 @@ app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-
 app.include_router(document.router, prefix='/modusign-document', tags=['Modusign_Document'])
 app.include_router(template.router, prefix='/modusign-template', tags=['Modusign_Template'])
 app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-policies', tags=['Salary_Policies'])
+# app.include_router(modusign.router, prefix='/modusign', tags=['Modusign'])
 
 @app.get("/health")
 def health_check():
