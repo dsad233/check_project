@@ -1,8 +1,8 @@
-"""10.27_rds
+"""10.28_rds
 
-Revision ID: 86f80abd758c
+Revision ID: 860279e01446
 Revises: 
-Create Date: 2024-10-27 15:25:11.638113
+Create Date: 2024-10-28 14:43:16.139253
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = '86f80abd758c'
+revision: str = '860279e01446'
 down_revision: Union[str, None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -73,6 +73,8 @@ def upgrade() -> None:
     sa.Column('holiday_work', sa.Boolean(), nullable=True),
     sa.Column('job_duty', sa.Boolean(), nullable=True),
     sa.Column('meal', sa.Boolean(), nullable=True),
+    sa.Column('job_allowance', sa.Integer(), server_default=sa.text('0'), nullable=True),
+    sa.Column('meal_allowance', sa.Integer(), server_default=sa.text('0'), nullable=True),
     sa.Column('doctor_holiday_work_pay', sa.Integer(), nullable=False),
     sa.Column('common_holiday_work_pay', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
@@ -96,13 +98,13 @@ def upgrade() -> None:
     op.create_table('auto_annual_leave_grant',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('branch_id', sa.Integer(), nullable=False),
-    sa.Column('account_based_january_1st', sa.Enum('초기화', '다음해로 이월', name='account_january_1st'), nullable=False, comment='매 년 1월 1일기준'),
-    sa.Column('account_based_less_than_year', sa.Enum('당해년도 일괄 부여', '매 월 1개씩 부여', name='account_less_than_year'), nullable=False, comment='근속년수 1년 미만'),
-    sa.Column('account_based_decimal_point', sa.Enum('0.5 기준 올림', '절삭', '올림', '반올림', name='account_decimal_point'), nullable=False, comment='소수점처리'),
-    sa.Column('entry_date_based_remaining_leave', sa.Enum('초기화', '다음해로 이월', name='entry_date_based'), nullable=False, comment='매 년 입사일 기준'),
+    sa.Column('account_based_january_1st', sa.Enum('초기화', '다음해로 이월'), nullable=False, comment='매 년 1월 1일기준'),
+    sa.Column('account_based_less_than_year', sa.Enum('당해년도 일괄 부여', '매 월 1개씩 부여'), nullable=False, comment='근속년수 1년 미만'),
+    sa.Column('account_based_decimal_point', sa.Enum('0.5 기준 올림', '절삭', '올림', '반올림'), nullable=False, comment='소수점처리'),
+    sa.Column('entry_date_based_remaining_leave', sa.Enum('초기화', '다음해로 이월'), nullable=False, comment='매 년 입사일 기준'),
     sa.Column('condition_based_month', sa.Integer(), nullable=False),
     sa.Column('condition_based_cnt', sa.Integer(), nullable=False),
-    sa.Column('condition_based_type', sa.Enum('월', '일', name='condition_based_type'), nullable=False),
+    sa.Column('condition_based_type', sa.Enum('월', '일'), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
     sa.Column('deleted_yn', sa.String(length=1), nullable=True),
@@ -302,7 +304,6 @@ def upgrade() -> None:
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('branch_id', sa.Integer(), nullable=False),
     sa.Column('part_id', sa.Integer(), nullable=False),
-    sa.Column('part_name', sa.String(length=255), nullable=False),
     sa.Column('name', sa.String(length=255), nullable=False),
     sa.Column('is_january_entry', sa.Boolean(), nullable=False),
     sa.Column('weekly_work_days', sa.Integer(), nullable=False),
@@ -319,10 +320,10 @@ def upgrade() -> None:
     sa.Column('annual_leave_allowance', sa.Integer(), nullable=False),
     sa.Column('annual_leave_allowance_hour', sa.Integer(), nullable=False),
     sa.Column('annual_leave_allowance_day', sa.Integer(), nullable=False),
-    sa.Column('holiday_allowance', sa.Integer(), nullable=False),
-    sa.Column('job_allowance', sa.Integer(), nullable=False),
-    sa.Column('meal_allowance', sa.Integer(), nullable=False),
     sa.Column('hire_year', sa.Integer(), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_yn', sa.String(length=1), nullable=True),
     sa.ForeignKeyConstraint(['branch_id'], ['branches.id'], ),
     sa.ForeignKeyConstraint(['part_id'], ['parts.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -396,6 +397,7 @@ def upgrade() -> None:
     sa.Column('contract_type_id', sa.Integer(), nullable=False),
     sa.Column('created_at', sa.DateTime(), nullable=True),
     sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('start_at', sa.Date(), nullable=False),
     sa.Column('expired_at', sa.Date(), nullable=True),
     sa.ForeignKeyConstraint(['contract_type_id'], ['document_policies.id'], ),
     sa.ForeignKeyConstraint(['manager_id'], ['users.id'], ),
@@ -416,6 +418,7 @@ def upgrade() -> None:
     sa.Column('branch_id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('leave_category_id', sa.Integer(), nullable=False),
+    sa.Column('decreased_days', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('application_date', sa.Date(), nullable=False),
     sa.Column('approve_date', sa.Date(), nullable=True),
     sa.Column('applicant_description', sa.String(length=255), nullable=True),
@@ -466,28 +469,6 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['manager_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
-    op.create_table('user_leaves_days',
-    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=False),
-    sa.Column('branch_id', sa.Integer(), nullable=False),
-    sa.Column('leave_category_id', sa.Integer(), nullable=False),
-    sa.Column('increased_days', sa.Numeric(precision=10, scale=2), nullable=True),
-    sa.Column('decreased_days', sa.Numeric(precision=10, scale=2), nullable=True),
-    sa.Column('description', sa.String(length=255), nullable=True),
-    sa.Column('is_paid', sa.Boolean(), nullable=True),
-    sa.Column('is_approved', sa.Boolean(), nullable=True),
-    sa.Column('approver_id', sa.Integer(), nullable=True),
-    sa.Column('total_leave_days', sa.Numeric(precision=10, scale=2), nullable=True),
-    sa.Column('created_at', sa.DateTime(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), nullable=True),
-    sa.Column('deleted_yn', sa.String(length=1), nullable=True),
-    sa.ForeignKeyConstraint(['approver_id'], ['users.id'], ),
-    sa.ForeignKeyConstraint(['branch_id'], ['branches.id'], ),
-    sa.ForeignKeyConstraint(['leave_category_id'], ['leave_categories.id'], ),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_user_leaves_days_user_id', 'user_leaves_days', ['user_id'], unique=False)
     op.create_table('user_menus',
     sa.Column('user_id', sa.Integer(), nullable=False),
     sa.Column('part_id', sa.Integer(), nullable=False),
@@ -541,6 +522,34 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('contract_send_mail_history',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('contract_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('request_user_id', sa.Integer(), nullable=False),
+    sa.Column('contract_send_mail_history_status', sa.Enum('SUCCESS', 'FAIL', name='status'), nullable=False),
+    sa.Column('contract_start_at', sa.Date(), nullable=False),
+    sa.Column('contract_expired_at', sa.Date(), nullable=True),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['contract_id'], ['contract.id'], ),
+    sa.ForeignKeyConstraint(['request_user_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_table('document_send_history',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('document_id', sa.Integer(), nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('request_user_id', sa.Integer(), nullable=False),
+    sa.Column('document_send_history_status', sa.Enum('PENDING', 'APPROVE', 'REJECT', name='documentsendstatus'), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.ForeignKeyConstraint(['document_id'], ['document.id'], ),
+    sa.ForeignKeyConstraint(['request_user_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
     op.create_table('fixed_rest_day',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
     sa.Column('work_contract_id', sa.Integer(), nullable=False),
@@ -551,18 +560,46 @@ def upgrade() -> None:
     sa.ForeignKeyConstraint(['work_contract_id'], ['work_contract.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
+    op.create_table('user_leaves_days',
+    sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
+    sa.Column('user_id', sa.Integer(), nullable=False),
+    sa.Column('branch_id', sa.Integer(), nullable=False),
+    sa.Column('approver_id', sa.Integer(), nullable=True),
+    sa.Column('leave_category_id', sa.Integer(), nullable=False),
+    sa.Column('leave_history_id', sa.Integer(), nullable=False),
+    sa.Column('increased_days', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('total_increased_days', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('decreased_days', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('total_decreased_days', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('description', sa.String(length=255), nullable=True),
+    sa.Column('is_paid', sa.Boolean(), nullable=True),
+    sa.Column('is_approved', sa.Boolean(), nullable=True),
+    sa.Column('total_leave_days', sa.Numeric(precision=10, scale=2), nullable=False),
+    sa.Column('created_at', sa.DateTime(), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), nullable=True),
+    sa.Column('deleted_yn', sa.String(length=1), nullable=True),
+    sa.ForeignKeyConstraint(['approver_id'], ['users.id'], ),
+    sa.ForeignKeyConstraint(['branch_id'], ['branches.id'], ),
+    sa.ForeignKeyConstraint(['leave_category_id'], ['leave_categories.id'], ),
+    sa.ForeignKeyConstraint(['leave_history_id'], ['leave_histories.id'], ),
+    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
+    sa.PrimaryKeyConstraint('id')
+    )
+    op.create_index('idx_user_leaves_days_user_id', 'user_leaves_days', ['user_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
+    op.drop_index('idx_user_leaves_days_user_id', table_name='user_leaves_days')
+    op.drop_table('user_leaves_days')
     op.drop_table('fixed_rest_day')
+    op.drop_table('document_send_history')
+    op.drop_table('contract_send_mail_history')
     op.drop_table('work_contract')
     op.drop_table('user_salaries')
     op.drop_table('user_parts')
     op.drop_table('user_menus')
-    op.drop_index('idx_user_leaves_days_user_id', table_name='user_leaves_days')
-    op.drop_table('user_leaves_days')
     op.drop_table('overtimes')
     op.drop_table('overtime_history')
     op.drop_index('idx_leave_history_user_id', table_name='leave_histories')
