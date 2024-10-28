@@ -26,7 +26,7 @@ class MinimumWagePolicy(Base):
 
 class MinimumWagePolicyDto(BaseModel):
     minimum_wage: int = Field(description="최저시급")
-    # 업데이트일 추가하기
+    updated_at: datetime = Field(description="마지막 저장일")
     person_in_charge: str = Field(description="담당자")
 
     class Config:
