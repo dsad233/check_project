@@ -9,7 +9,7 @@ from app.api.routes.auth import auth
 from contextlib import asynccontextmanager
 from app.core.log_config import get_logger
 from app.middleware.permission_middleware import PermissionMiddleware
-
+from app.middleware.token_middleware import TokenMiddleware
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -24,12 +24,13 @@ origins = [
     "http://52.78.246.46"
 ]
 
-
-# 미들웨어 순서 중요!
-# 1. Permission 미들웨어 (마지막에 실행)
-# 2. CORS 미들웨어 (먼저 실행)
+# 권한 체크 미들웨어
+app.add_middleware(PermissionMiddleware)  # type: ignore
+# 토큰 검증 미들웨어
+app.add_middleware(TokenMiddleware)  # type: ignore
+# CORS 미들웨어는 이렇게 등록
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
@@ -38,7 +39,8 @@ app.add_middleware(
 # Register exception handlers
 add_exception_handlers(app)
 
-app.add_middleware(PermissionMiddleware)  # type: ignore
+
+
 
 # app.include_router(auth.router, prefix="/api")
 
