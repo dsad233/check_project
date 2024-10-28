@@ -24,7 +24,14 @@ class MinimumWagePolicy(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
-class MinimumWagePolicyDto(BaseModel):
+class MinimumWageRequestDto(BaseModel):
+    minimum_wage: int = Field(description="최저시급")
+    person_in_charge: str = Field(description="담당자")
+
+    class Config:
+        from_attributes = True
+
+class MinimumWageResponseDto(BaseModel):
     minimum_wage: int = Field(description="최저시급")
     updated_at: datetime = Field(description="마지막 저장일")
     person_in_charge: str = Field(description="담당자")
