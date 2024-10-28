@@ -105,6 +105,7 @@ class UserManagement:
 
             # 결과 처리
             user_data = []
+
             for user, last_activity, monthly_salary, annual_salary in users_data:
                 user_dict = {
                     "id": user.id,
@@ -113,11 +114,33 @@ class UserManagement:
                     "email": user.email,
                     "hire_date": user.hire_date,
                     "parts": [
-                        {"id": part.id, "name": part.name} for part in user.parts
+                        {
+                            "branch_id": part.branch_id,
+                            "created_at": part.created_at,
+                            "deleted_yn": part.deleted_yn,
+                            "id": part.id,
+                            "is_doctor": part.is_doctor,
+                            "leave_granting_authority": part.leave_granting_authority,
+                            "name": part.name,
+                            "required_certification": part.required_certification,
+                            "task": part.task,
+                            "updated_at": part.updated_at,
+                        } for part in user.parts
                     ] if user.parts else None,
                     "branch": {
+                        "address": user.branch.address,
+                        "call_number": user.branch.call_number,
+                        "code": user.branch.code,
+                        "corporate_seal": user.branch.corporate_seal,
+                        "created_at": user.branch.created_at,
+                        "deleted_yn": user.branch.deleted_yn,
                         "id": user.branch.id,
-                        "name": user.branch.name
+                        "mail_address": user.branch.mail_address,
+                        "name": user.branch.name,
+                        "nameplate": user.branch.nameplate,
+                        "registration_number": user.branch.registration_number,
+                        "representative_name": user.branch.representative_name,
+                        "updated_at": user.branch.updated_at,
                     } if user.branch else None,
                     "role": user.role,
                     "last_activity": last_activity
@@ -219,11 +242,33 @@ class UserManagement:
                 "email": current_user.email,
                 "role": current_user.role,
                 "parts": [
-                    {"id": part.id, "name": part.name} for part in current_user.parts
+                    {
+                        "branch_id": part.branch_id,
+                        "created_at": part.created_at,
+                        "deleted_yn": part.deleted_yn,
+                        "id": part.id,
+                        "is_doctor": part.is_doctor,
+                        "leave_granting_authority": part.leave_granting_authority,
+                        "name": part.name,
+                        "required_certification": part.required_certification,
+                        "task": part.task,
+                        "updated_at": part.updated_at,
+                    } for part in current_user.parts
                 ] if current_user.parts else None,
                 "branch": {
+                    "address": current_user.branch.address,
+                    "call_number": current_user.branch.call_number,
+                    "code": current_user.branch.code,
+                    "corporate_seal": current_user.branch.corporate_seal,
+                    "created_at": current_user.branch.created_at,
+                    "deleted_yn": current_user.branch.deleted_yn,
                     "id": current_user.branch.id,
-                    "name": current_user.branch.name
+                    "mail_address": current_user.branch.mail_address,
+                    "name": current_user.branch.name,
+                    "nameplate": current_user.branch.nameplate,
+                    "registration_number": current_user.branch.registration_number,
+                    "representative_name": current_user.branch.representative_name,
+                    "updated_at": current_user.branch.updated_at,
                 } if current_user.branch else None,
             }
 
@@ -300,11 +345,33 @@ class UserManagement:
                 "email": user.email,
                 "hire_date": user.hire_date,
                 "parts": [
-                    {"id": part.id, "name": part.name} for part in user.parts
+                    {
+                        "branch_id": part.branch_id,
+                        "created_at": part.created_at,
+                        "deleted_yn": part.deleted_yn,
+                        "id": part.id,
+                        "is_doctor": part.is_doctor,
+                        "leave_granting_authority": part.leave_granting_authority,
+                        "name": part.name,
+                        "required_certification": part.required_certification,
+                        "task": part.task,
+                        "updated_at": part.updated_at,
+                    } for part in user.parts
                 ] if user.parts else None,
                 "branch": {
+                    "address": user.branch.address,
+                    "call_number": user.branch.call_number,
+                    "code": user.branch.code,
+                    "corporate_seal": user.branch.corporate_seal,
+                    "created_at": user.branch.created_at,
+                    "deleted_yn": user.branch.deleted_yn,
                     "id": user.branch.id,
-                    "name": user.branch.name
+                    "mail_address": user.branch.mail_address,
+                    "name": user.branch.name,
+                    "nameplate": user.branch.nameplate,
+                    "registration_number": user.branch.registration_number,
+                    "representative_name": user.branch.representative_name,
+                    "updated_at": user.branch.updated_at,
                 } if user.branch else None,
                 "role": user.role,
                 "last_activity": last_activity

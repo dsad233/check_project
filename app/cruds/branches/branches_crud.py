@@ -83,12 +83,13 @@ async def find_by_id(
 async def find_by_id_with_policies(
     *, session: AsyncSession, branch_id: int
 ) -> Optional[Branches]:
-    print("=============find 전=======================")
     stmt = select(Branches).options(
         selectinload(Branches.overtime_policies),
         selectinload(Branches.holiday_work_policies),
         selectinload(Branches.auto_overtime_policies),
-        selectinload(Branches.auto_annual_leave_grant),
+        selectinload(Branches.account_based_annual_leave_grant),
+        selectinload(Branches.entry_date_based_annual_leave_grant),
+        selectinload(Branches.condition_based_annual_leave_grant),
         selectinload(Branches.auto_annual_leave_approval),
         selectinload(Branches.work_policies),
         selectinload(Branches.allowance_policies)
