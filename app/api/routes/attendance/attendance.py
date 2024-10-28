@@ -3,8 +3,9 @@ from datetime import date, datetime, timedelta
 import re
 from typing import Annotated, Any, Dict, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import Date, and_, case, cast, distinct, func, text
+from sqlalchemy import Date, Row, and_, case, cast, distinct, func, text
 from sqlalchemy.future import select
+from app.common.dto.pagination_dto import PaginationDto
 from app.core.database import async_session
 from app.enums.users import Role
 from app.models.branches.allowance_policies_model import AllowancePolicies
@@ -22,6 +23,27 @@ from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.orm import joinedload
 
+
+def calculate_total_ot(is_doctor: bool, record: Row) -> int:
+    """
+    OT 총액을 계산하는 함수
+    """
+    if is_doctor:
+        total = (
+            ((record.ot_30_count or 0) * (record.doctor_ot_30 or 0)) +
+            ((record.ot_60_count or 0) * (record.doctor_ot_60 or 0)) +
+            ((record.ot_90_count or 0) * (record.doctor_ot_90 or 0)) +
+            ((record.ot_120_count or 0) * (record.doctor_ot_120 or 0))
+        )
+    else:
+        total = (
+            ((record.ot_30_count or 0) * (record.common_ot_30 or 0)) +
+            ((record.ot_60_count or 0) * (record.common_ot_60 or 0)) +
+            ((record.ot_90_count or 0) * (record.common_ot_90 or 0)) +
+            ((record.ot_120_count or 0) * (record.common_ot_120 or 0))
+        )
+    
+    return int(total)
 
 def count_sundays(start_date: date, end_date: date) -> int:
     current_date = start_date
@@ -219,7 +241,43 @@ async def find_attendance(
                 .group_by(Commutes.user_id)
             ).subquery()
 
-            # 최종 쿼리
+            # overtime_counts 서브쿼리
+            overtime_counts = (
+                select(
+                    Overtimes.applicant_id.label('user_id'),
+                    func.count(case((Overtimes.overtime_hours == '30', 1), else_=0)).label("ot_30_count"),
+                    func.count(case((Overtimes.overtime_hours == '60', 1), else_=0)).label("ot_60_count"),
+                    func.count(case((Overtimes.overtime_hours == '90', 1), else_=0)).label("ot_90_count"),
+                    func.count(case((Overtimes.overtime_hours == '120', 1), else_=0)).label("ot_120_count")
+                )
+                .where(
+                    and_(
+                        Overtimes.application_date.between(start_date, end_date),
+                        Overtimes.is_approved == "Y",
+                        Overtimes.deleted_yn == "N"
+                    )
+                )
+                .group_by(Overtimes.applicant_id)
+            ).subquery()
+            
+            overtime_policy = (
+                select(
+                    OverTimePolicies.branch_id,
+                    # 의사 OT 금액들
+                    OverTimePolicies.doctor_ot_30,
+                    OverTimePolicies.doctor_ot_60,
+                    OverTimePolicies.doctor_ot_90,
+                    OverTimePolicies.doctor_ot_120,
+                    # 일반 직원 OT 금액들
+                    OverTimePolicies.common_ot_30,
+                    OverTimePolicies.common_ot_60,
+                    OverTimePolicies.common_ot_90,
+                    OverTimePolicies.common_ot_120
+                )
+                .where(OverTimePolicies.deleted_yn == "N")
+            ).subquery()
+
+            # 최종 쿼리 (기존 + 새로운 필드들)
             final_query = (
                 select(
                     base_query,
@@ -228,7 +286,20 @@ async def find_attendance(
                     annual_leave_days.c.annual_leave_days,
                     unpaid_leave_days.c.unpaid_leave_days,
                     holiday_work_days.c.holiday_work_days,
-                    weekend_work_hours.c.weekend_work_hours
+                    weekend_work_hours.c.weekend_work_hours,
+                    overtime_counts.c.ot_30_count,
+                    overtime_counts.c.ot_60_count,
+                    overtime_counts.c.ot_90_count,
+                    overtime_counts.c.ot_120_count,
+                    overtime_policy.c.doctor_ot_30,
+                    overtime_policy.c.doctor_ot_60,
+                    overtime_policy.c.doctor_ot_90,
+                    overtime_policy.c.doctor_ot_120,
+                    overtime_policy.c.common_ot_30,
+                    overtime_policy.c.common_ot_60,
+                    overtime_policy.c.common_ot_90,
+                    overtime_policy.c.common_ot_120,
+                    Parts.is_doctor
                 )
                 .outerjoin(work_days_subq, base_query.c.id == work_days_subq.c.user_id)
                 .outerjoin(regular_leave_days, base_query.c.id == regular_leave_days.c.user_id)
@@ -236,19 +307,29 @@ async def find_attendance(
                 .outerjoin(unpaid_leave_days, base_query.c.id == unpaid_leave_days.c.user_id)
                 .outerjoin(holiday_work_days, base_query.c.id == holiday_work_days.c.user_id)
                 .outerjoin(weekend_work_hours, base_query.c.id == weekend_work_hours.c.user_id)
+                .outerjoin(overtime_counts, base_query.c.id == overtime_counts.c.user_id)
+                .outerjoin(overtime_policy, base_query.c.branch_id == overtime_policy.c.branch_id)
+                .join(Parts, base_query.c.part_id == Parts.id)
             )
-            
-            # 전체 레코드 수 계산
+
+            # 페이지네이션
             total_count = await session.scalar(
                 select(func.count()).select_from(final_query.subquery())
             )
 
-            # 페이지네이션 적용
-            final_query = final_query.offset((page - 1) * size).limit(size)
+            # 페이지네이션 처리
+            pagination = PaginationDto(
+                total_record=total_count,
+                record_size=size
+            )
+
+            # offset, limit 계산에도 pagination 값 사용
+            final_query = final_query.offset((page - 1) * pagination.record_size).limit(pagination.record_size)
 
             result = await session.execute(final_query)
             records = result.fetchall()
 
+            # 응답 데이터 포맷팅 (기존 + 새로운 필드들)
             formatted_data = [
                 {
                     "id": record.id,
@@ -259,12 +340,20 @@ async def find_attendance(
                     "user_phone_number": record.user_phone_number,
                     "part_id": record.part_id,
                     "part_name": record.part_name,
-                    "work_days": record.work_days or 0, # 근무일수
-                    "regular_leave_days": record.regular_leave_days or 0, # 정규 휴무
-                    "annual_leave_days": record.annual_leave_days or 0, # 연차 사용
-                    "unpaid_leave_days": record.unpaid_leave_days or 0, # 무급 사용
-                    "holiday_work_days": record.holiday_work_days or 0, # 휴일 근무
-                    "weekend_work_hours": float(record.weekend_work_hours or 0) # 주말 근무 시간
+                    "work_days": record.work_days or 0, # 근무 일자
+                    "regular_leave_days": record.regular_leave_days or 0, # 정규 휴무일수   
+                    "annual_leave_days": record.annual_leave_days or 0, # 연차 사용일수
+                    "unpaid_leave_days": record.unpaid_leave_days or 0, # 무급 휴가 사용일수
+                    "holiday_work_days": record.holiday_work_days or 0, # 휴일 근무일수
+                    "weekend_work_hours": float(record.weekend_work_hours or 0), # 주말 근무 시간
+                    "ot_30_count": record.ot_30_count or 0, # 30분 근무 횟수
+                    "ot_60_count": record.ot_60_count or 0, # 60분 근무 횟수    
+                    "ot_90_count": record.ot_90_count or 0, # 90분 근무 횟수
+                    "ot_120_count": record.ot_120_count or 0, # 120분 근무 횟수
+                    "total_OT": calculate_total_ot(
+                        record.is_doctor,
+                        record
+                    )
                 }
                 for record in records
             ]
@@ -273,16 +362,15 @@ async def find_attendance(
                 "message": "근태 기록 조회 성공",
                 "data": formatted_data,
                 "pagination": {
-                    "total": total_count,
+                    "total": pagination.total_record,
                     "page": page,
-                    "size": size,
-                    "total_pages": (total_count + size - 1) // size,
+                    "size": pagination.record_size,
+                    "total_pages": (pagination.total_record + pagination.record_size - 1) // pagination.record_size,
                 },
             }
-    
+
     except HTTPException as http_err:
         raise http_err
-
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"근태 기록 조회 실패: {str(e)}")
