@@ -1,6 +1,9 @@
 from typing import List
+
+from app.api.routes.labor_management.dto.part_timer_commute_history_correction_request import PartTimerCommuteHistoryCorrectionRequestDTO
+from app.api.routes.labor_management.dto.part_timer_commute_history_correction_response import PartTimerCommuteHistoryCorrectionResponseDTO
 from app.cruds.labor_management.repositories.part_timer_repository_interface import IPartTimerRepository
-from app.cruds.labor_management.dto.part_timer_work_history_response_dto import PartTimerWorkHistoryResponseDTO
+from app.cruds.labor_management.dto.part_timer_work_history_response_dto import PartTimerWorkHistoryDTO
 from app.cruds.labor_management.dto.part_timers_response_dto import PartTimerSummaryResponseDTO
 
 from typing import List
@@ -19,7 +22,7 @@ from app.models.parts.hour_wage_template_model import HourWageTemplate
 from app.models.users.users_work_contract_model import WorkContract
 from app.models.branches.rest_days_model import RestDays
 
-
+# TODO: 실제 DB 레포지토리 구현
 class PartTimerRepository(IPartTimerRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
@@ -29,15 +32,26 @@ class PartTimerRepository(IPartTimerRepository):
         part_timer_work_hour_and_total_wage = await self.get_part_timer_work_hours_and_total_wage(self.session, year, month)
         return PartTimerSummaryResponseDTO.get_part_timer_list_response(part_timer_summary, part_timer_work_hour_and_total_wage)
 
-    async def get_part_timer_work_history(self, user_id: int, year: int, month: int) -> List[PartTimerWorkHistoryResponseDTO]:
-        return []
+    async def get_part_timer_work_histories(self, user_id: int, year: int, month: int) -> List[PartTimerWorkHistoryDTO]:
+        raise NotImplementedError
     
     async def get_all_part_timers_by_branch_id(self, branch_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
-        return []
+        raise NotImplementedError
+    
+    async def get_all_part_timers_by_branch_id_and_part_id(self, branch_id: int, part_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
+        raise NotImplementedError
+    
+    async def get_part_timer_work_history_summary_by_user_id(self, user_id: int, year: int, month: int) -> PartTimerSummaryResponseDTO:
+        raise NotImplementedError
+    
+    async def get_part_timer_by_user_info(self, year: int, month: int, user_name: str, phone_number: str, branch_id: int, part_id: int) -> PartTimerSummaryResponseDTO | None:
+        raise NotImplementedError
 
-    async def get_all_part_timers_by_part_id(self, part_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
-        return []
-
+    async def update_part_timer_work_history(self, commute_id: int, correction_data: PartTimerCommuteHistoryCorrectionRequestDTO) -> PartTimerCommuteHistoryCorrectionResponseDTO:
+        raise NotImplementedError
+    
+    async def exist_part_timer_work_history(self, commute_id: int) -> bool:
+        raise NotImplementedError    
 
     '''
     파트타이머 요약 정보 목록 조회

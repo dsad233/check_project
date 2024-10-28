@@ -12,7 +12,10 @@ class PartTimerSummaryResponseDTO(BaseModel):
     holiday_work_hours: int
     total_work_hours: float
     total_wage: float
-    
+    phone_number: str
+    branch_id: int
+    part_id: int
+
     @classmethod
     def get_part_timer_summaries_response(cls, part_timer_summary, part_timer_work_hour_and_total_wage) -> List["PartTimerSummaryResponseDTO"]:
         hour_wage_dict = { item.user_id: item for item in part_timer_work_hour_and_total_wage }
@@ -24,6 +27,9 @@ class PartTimerSummaryResponseDTO(BaseModel):
                 user_name=summary.user_name,
                 part_name=summary.part_name,
                 work_days=summary.work_count,
+                phone_number=summary.phone_number,
+                branch_id=summary.branch_id,
+                part_id=summary.part_id,
                 total_work_hours=hour_wage_dict[summary.user_id].total_work_hours,
                 hospital_work_hours=hour_wage_dict[summary.user_id].regular_work_hours,
                 holiday_work_hours=hour_wage_dict[summary.user_id].holiday_work_hours,
