@@ -105,7 +105,6 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
         #         raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
 
         # # 기존 데이터의 테이블이 쌓이는 문제가 발생
-       
         # if(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.THIRTY_MINUTES):
         #     new_overtime_history.ot_30_total += 1
         #     new_overtime_history.ot_30_money += result_overtime_policies.doctor_ot_30 if result_part.is_doctor else result_overtime_policies.common_ot_30
@@ -209,7 +208,7 @@ async def get_overtimes(current_user: Users = Depends(get_current_user), skip: i
         result = await db.execute(stmt)
         overtimes = result.scalars().all()
 
-        count_query = select(func.count()).select_from(Overtimes).where(Overtimes.deleted_yn == "N")
+        count_query = base_query.with_only_columns(func.count())
         total_count = await db.execute(count_query)
         total_count = total_count.scalar_one()
 
