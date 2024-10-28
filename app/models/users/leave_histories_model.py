@@ -19,7 +19,7 @@ from app.core.database import Base
 from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
-from app.enums.users import StatusKor
+from app.enums.users import StatusKor, Status
 
  
 
@@ -41,14 +41,16 @@ class LeaveHistories(Base):
     decreased_days = Column(Numeric(10, 2), default=0.00)
     
     application_date = Column(Date, nullable=False)
+    start_date = Column(Date, nullable=True)
+    end_date = Column(Date, nullable=True)
     approve_date = Column(Date, nullable=True)
     applicant_description = Column(String(255), nullable=True)
     admin_description = Column(String(255), nullable=True)
     
     status = Column(
-        Enum(*[e.value for e in StatusKor], name="leave_history_status"),
+        Enum(*[e.value for e in Status], name="leave_history_status"),
         nullable=False,
-        default=StatusKor.PENDING,
+        default=Status.PENDING,
     )
     
     created_at = Column(DateTime, default=datetime.now)
