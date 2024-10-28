@@ -35,31 +35,37 @@ class DocumentService:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.request(method, url, headers=self.headers, **kwargs) as response:
-                    data = await response.json()
+                    response_text = await response.text()
+                    logger.info(f"Response status: {response.status}")
+                    logger.info(f"Response headers: {response.headers}")
+                    logger.info(f"Response body: {response_text}")
                     
-                    # 200, 201은 성공 응답으로 처리
-                    if response.status in [200, 201]:
-                        return data
-                        
-                    detail = f"API Error: UNKNOWN - {json.dumps(data)}"
-                    if data.get('type'):
-                        detail = f"API Error: {data['type']} - {data.get('title', 'Unknown error')}"
-                    raise HTTPException(status_code=response.status, detail=detail)
+                    if response.status not in [200, 201, 204]:
+                        try:
+                            error_data = await response.json()
+                            detail = f"API Error: {error_data.get('type', 'UNKNOWN')} - {error_data.get('title', error_data)}"
+                        except:
+                            detail = f"API Error: {response_text}"
+                        raise HTTPException(status_code=response.status, detail=detail)
+                    
+                    return await response.json()
                     
         except aiohttp.ClientError as e:
-            logger.error(f"HTTP request failed: {str(e)}")
             raise HTTPException(status_code=500, detail=f"HTTP request failed: {str(e)}")
 
-    async def get_documents(
-        self, request: DocumentListRequest, offset: int, limit: int
-    ) -> Tuple[List[Document], int]:
+    async def get_documents(self) -> Dict:
+        """문서 목록을 조회합니다"""
         try:
-            data = await self._make_request('GET', f"{MODUSIGN_BASE_URL}/documents")
-            documents = [Document(**doc) for doc in data.get('documents', [])]
-            total_count = data.get('total_count', 0)
-            return documents, total_count
+            data = await self._make_request(
+                'GET',
+                f"{MODUSIGN_BASE_URL}/documents"
+            )
+            return {
+                'data': data.get('documents', []),
+                'total_count': data.get('count', 0)
+            }
         except Exception as e:
-            logger.error(f"Error in get_documents: {str(e)}")
+            logger.error(f"Error getting documents: {str(e)}")
             raise
 
     async def create_document_with_template(
@@ -117,3 +123,12 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error in get_template_details: {str(e)}")
             raise
+
+    async def create_document(self, document_data: Dict[str, Any]) -> Dict:
+        """문서를 생성합니다"""
+        data = await self._make_request(
+            'POST',
+            f"{MODUSIGN_BASE_URL}/documents",
+            json=document_data
+        )
+        return data

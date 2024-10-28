@@ -19,136 +19,100 @@ class TemplateService:
         
         self.headers = {
             "accept": "application/json",
-            "content-type": "application/json",
             "authorization": f"Basic {encoded_auth}"
         }
 
     async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
         try:
             async with aiohttp.ClientSession() as session:
-                logger.info(f"Making {method} request to {url}")
-                if kwargs.get('json'):
-                    logger.info(f"Request payload: {kwargs['json']}")
+                headers = self.headers.copy()
                 
-                async with session.request(method, url, headers=self.headers, **kwargs) as response:
+                if isinstance(kwargs.get('data'), aiohttp.FormData):
+                    headers.pop('content-type', None)
+                else:
+                    headers['content-type'] = 'application/json'
+                    
+                logger.info(f"Making request to {url}")
+                logger.info(f"Request headers: {headers}")
+                logger.info(f"Request data: {kwargs.get('json') or kwargs.get('data')}")
+                
+                async with session.request(method, url, headers=headers, **kwargs) as response:
                     response_text = await response.text()
                     logger.info(f"Response status: {response.status}")
+                    logger.info(f"Response headers: {response.headers}")
                     logger.info(f"Response body: {response_text}")
                     
-                    if response.status not in [200, 201, 204]:
+                    if response.status >= 400:
                         try:
                             error_data = await response.json()
-                            detail = error_data.get('message', 'API request failed')
+                            detail = f"API Error: {error_data.get('error', {}).get('name', 'Unknown')} - {error_data.get('error', {}).get('message', error_data)}"
                         except:
-                            detail = response_text
+                            detail = f"API Error: {response_text}"
+                        logger.error(f"API request failed: {detail}")
                         raise HTTPException(status_code=response.status, detail=detail)
                     
                     if response.status == 204:
                         return {"success": True}
+                        
                     return await response.json()
+                
+        except aiohttp.ClientError as e:
+            logger.error(f"HTTP request failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"HTTP request failed: {str(e)}")
+
+    async def upload_file(self, file_content: bytes, filename: str) -> Dict:
+        """파일을 먼저 업로드합니다"""
+        try:
+            form = aiohttp.FormData()
+            form.add_field('file',
+                        file_content,
+                        filename=filename,
+                        content_type='application/pdf')
+
+            data = await self._make_request(
+                'POST',
+                f"{MODUSIGN_BASE_URL}/files",
+                data=form
+            )
+            return data
         except Exception as e:
-            logger.error(f"API request failed: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
+            logger.error(f"Error uploading file: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"File upload failed: {str(e)}")
 
     async def create_template(self, template_data: Dict[str, Any]) -> TemplateResponse:
-        """템플릿 생성"""
+        """템플릿을 생성합니다"""
+        try:
+            data = await self._make_request(
+                'POST',
+                f"{MODUSIGN_BASE_URL}/templates",
+                json=template_data
+            )
+            return TemplateResponse(**data)
+        except Exception as e:
+            logger.error(f"Error creating template: {str(e)}")
+            logger.error(f"Template data: {template_data}")
+            raise
+
+    async def get_templates(self) -> TemplateListResponse:
+        """템플릿 목록을 조회합니다"""
         data = await self._make_request(
-            'POST',
-            f"{MODUSIGN_BASE_URL}/templates",
-            json=template_data
+            'GET',
+            f"{MODUSIGN_BASE_URL}/templates"
+        )
+        return TemplateListResponse(**data)
+
+    async def get_template(self, template_id: str) -> TemplateResponse:
+        """템플릿 상세 정보를 조회합니다"""
+        data = await self._make_request(
+            'GET',
+            f"{MODUSIGN_BASE_URL}/templates/{template_id}"
         )
         return TemplateResponse(**data)
 
-    async def get_templates(self) -> TemplateListResponse:
-        """템플릿 목록 조회"""
-        try:
-            data = await self._make_request(
-                'GET',
-                f"{MODUSIGN_BASE_URL}/templates"
-            )
-            logger.info(f"Templates response data: {data}")  # 응답 데이터 로깅
-            
-            # API 응답 형식에 맞게 변환
-            return TemplateListResponse(
-                count=data.get('count', 0),
-                templates=data.get('templates', [])
-            )
-        except Exception as e:
-            logger.error(f"Error in get_templates: {str(e)}")
-            raise
-
-    async def get_template(self, template_id: str) -> TemplateResponse:
-        """템플릿 상세 정보 조회"""
-        try:
-            data = await self._make_request(
-                'GET',
-                f"{MODUSIGN_BASE_URL}/templates/{template_id}"
-            )
-            logger.info(f"Template response data: {data}")  # 응답 데이터 로깅
-            
-            return TemplateResponse(**data)
-        except Exception as e:
-            logger.error(f"Error in get_template: {str(e)}")
-            raise
-
     async def delete_template(self, template_id: str) -> bool:
-        """템플릿 삭제"""
+        """템플릿을 삭제합니다"""
         result = await self._make_request(
             'DELETE',
             f"{MODUSIGN_BASE_URL}/templates/{template_id}"
         )
         return result.get('success', False)
-    
-    async def create_template_with_file(
-        self, 
-        title: str, 
-        file_data: Dict[str, str], 
-        participants: List[Dict[str, Any]], 
-        requester_inputs: List[Dict[str, Any]] = None, 
-        metadatas: List[Dict[str, str]] = None
-    ) -> TemplateResponse:
-        """파일과 함께 템플릿을 생성합니다."""
-        payload = {
-            "title": title,
-            "file": file_data,
-            "participants": participants
-        }
-        if requester_inputs:
-            payload["requesterInputs"] = requester_inputs
-        if metadatas:
-            payload["metadatas"] = metadatas
-
-        data = await self._make_request(
-            'POST',
-            f"{MODUSIGN_BASE_URL}/templates",
-            json=payload
-        )
-        return TemplateResponse(**data)
-
-    async def update_template(
-        self, 
-        template_id: str, 
-        title: str = None, 
-        participants: List[Dict[str, Any]] = None
-    ) -> TemplateResponse:
-        """템플릿을 업데이트합니다."""
-        payload = {}
-        if title:
-            payload["title"] = title
-        if participants:
-            payload["participants"] = participants
-            
-        data = await self._make_request(
-            'PATCH',
-            f"{MODUSIGN_BASE_URL}/templates/{template_id}",
-            json=payload
-        )
-        return TemplateResponse(**data)
-
-    async def list_templates(self, page: int = 1, limit: int = 10) -> TemplateListResponse:
-        """템플릿 목록을 페이지네이션과 함께 조회합니다."""
-        data = await self._make_request(
-            'GET',
-            f"{MODUSIGN_BASE_URL}/templates?page={page}&limit={limit}"
-        )
-        return TemplateListResponse(**data)
