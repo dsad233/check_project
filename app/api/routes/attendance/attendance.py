@@ -1,9 +1,17 @@
-from typing import Annotated
-from fastapi import APIRouter, Depends, HTTPException
+from calendar import monthrange
+from datetime import date, datetime, timedelta
+import re
+from typing import Annotated, Any, Dict, Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy import Date, and_, case, cast, distinct, func, text
 from sqlalchemy.future import select
 from app.core.database import async_session
+from app.enums.users import Role
 from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.models.branches.branches_model import Branches
+from app.models.branches.leave_categories_model import LeaveCategory
+from app.models.branches.rest_days_model import RestDays
+from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.parts.parts_model import Parts
 from app.models.users.users_model import Users
 from app.models.branches.work_policies_model import WorkPolicies
@@ -15,141 +23,400 @@ from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.orm import joinedload
 
 
+def count_sundays(start_date: date, end_date: date) -> int:
+    current_date = start_date
+    sunday_count = 0
+    
+    while current_date <= end_date:
+        if current_date.weekday() == 6:  # 0=월요일, 6=일요일
+            sunday_count += 1
+        current_date += timedelta(days=1)
+    
+    return sunday_count
+
 router = APIRouter(dependencies=[Depends(validate_token)])
 attendance = async_session()
 
-# 근로 관리 생성
-@router.get('/{branch_id}/parts/{part_id}/attendance/users/{user_id}')
-async def find_attendance(branch_id : int, part_id : int, user_id : int, token:Annotated[Users, Depends(get_current_user)]):
-    try:
 
-        find_data = await attendance.execute(select(Parts).join(Branches, Parts, Overtimes, WorkPolicies))
-
-
-        find_branch = await attendance.execute(select(Branches).where(Branches.id == branch_id, Branches.deleted_yn == "N"))
-        result_branch = find_branch.scalar_one_or_none()
-
-        if(result_branch == None):
-            raise HTTPException(status_code=404, detail="지점 데이터가 존재하지 않습니다.")
-
-        find_part = await attendance.execute(select(Parts).where(Parts.id == part_id, Parts.deleted_yn == "N"))
-        result_part = find_part.scalar_one_or_none()
-
-        if(result_part == None):
-            raise HTTPException(status_code=404, detail="파트 데이터가 존재하지 않습니다.")
-        
-        find_overtimes = await attendance.execute(select(Overtimes).where(Overtimes.applicant_id == user_id))
-        
-        result_overtime = find_overtimes.scalar_one_or_none()
-
-        if(result_overtime == None):
-            raise HTTPException(status_code=404, detail="오버타임 데이터가 존재하지 않습니다.")
-        
-        find_user  = await attendance.execute(select(Users).where(Users.id == user_id))
-        resutl_user = find_user.scalar_one_or_none()
-
-        if(resutl_user == None):
-            raise HTTPException(status_code=404, detail="유저 데이터가 존재하지 않습니다.")
-        
-
-        
-        find_attendance = await attendance.execute(select(Users).where(Branches.id == branch_id, Branches.name))
-
-        # new_attendance = Attendance(
-        #     branch_id = result_branch.id,
-        #     part_id = result_part.id,
-        #     branch_name = result_branch.name,
-        #     name = resutl_user.name,
-        #     gender = resutl_user.gender,
-        #     part_name = result_part.name,
-        #     workdays = 
-        # )
-
-        # find_working = await attendance.execute(select(WorkPolicies).where(WorkPolicies.))
-    except Exception as err:
-        print(err)
-        raise HTTPException(status_code=500, detail= "근태 관리 생성에 실패하였습니다.")
+@router.get("/attendance", response_model=Dict[str, Any])
+async def find_attendance(
+    token: Annotated[Users, Depends(get_current_user)],
+    branch: Optional[int] = Query(None, description="지점 ID"),
+    part: Optional[int] = Query(None, description="파트 ID"),
+    name: Optional[str] = Query(None, description="사용자 이름"),
+    phone_number: Optional[str] = Query(None, description="전화번호"),
+    year_month: Optional[str] = Query(None, description="조회 년월 (YYYY-MM 형식)"),
+    page: int = Query(1, gt=0),
+    size: int = Query(10, gt=0),
+):
     
-
-
+    if part and not branch:
+        raise HTTPException(status_code=400, detail="지점 정보가 필요합니다.")
     
-
-@router.get('/attendance')
-async def find_attendance(token: Annotated[Users, Depends(get_current_user)]):
     try:
-        find_attendance = await attendance.execute(
-            select(Users, Branches, Parts, Commutes, LeaveHistories, Overtimes)
-            .join(Branches, Users.branch_id == Branches.id)
-            .join(Parts, Users.part_id == Parts.id)
-            .join(Commutes, Users.id == Commutes.user_id)
-            .outerjoin(LeaveHistories, Users.id == LeaveHistories.user_id)
-            .join(Overtimes, Users.id == Overtimes.applicant_id)
-        )
-        result = find_attendance.fetchall()
-        
-        
-        attendance_data = []
-        for user, branch, part, commute, leave, overtime in result:
-            find_user_work = await attendance.execute(select(Commutes).where(Commutes.user_id == user.id))
-            result_user_work = find_user_work.scalars().all()
-            # print("dsdadasdasdas : ",branch.__dict__)
-            print("dsdadasdasdas : ",commute.__dict__)
-            print("dsdadasdasdas : ",overtime.__dict__)
-            attendance_info = {
-                "번호": user.id,
-                "지점": branch.name,
-                "이름": user.name,
-                "근무파트": part.name,
-                "근무일수": len(result_user_work) if commute else 0,
-                # "휴일근무": commute.holiday_work_days if commute else 0,
-                "정규 휴무": leave.regular_leave_days if leave else 0,
-                "연차 사용": leave.annual_leave_days if leave else 0,
-                "무급 사용": leave.unpaid_leave_days if leave else 0,
-                "재택 근무": "0일",
-                "휴일 근무": "0일",
-                "주말 근무 시간" : 0,
-                "주말 근무 수당" : 0,  
-                "추가 근무 시간": "0시간", 
-                "추가 근무 수당": 0,
-                # "O.T 30분 할증": overtime.ot_30min if overtime else 0,
-                # "O.T 60분 할증": overtime.ot_60min if overtime else 0,
-                # "O.T 90분 할증": overtime.ot_90min if overtime else 0,
-                # "O.T 총 금액": overtime.total_amount if overtime else 0
+        async with attendance as session:
+            if year_month:
+                if not re.match(r"^\d{4}-(0[1-9]|1[0-2])$", year_month):
+                    raise HTTPException(
+                        status_code=400, detail="올바른 년월 형식이 아닙니다. (YYYY-MM)"
+                    )
+                date_obj = datetime.strptime(year_month, "%Y-%m")
+            else:
+                date_obj = datetime.now()
+
+            start_date = date(date_obj.year, date_obj.month, 1)
+            _, last_day = monthrange(date_obj.year, date_obj.month)
+            end_date = date(date_obj.year, date_obj.month, last_day)
+
+            # 기본 사용자 정보 쿼리
+            base_query = (
+                select(
+                    Users.id,
+                    Users.name.label("user_name"),
+                    Users.gender.label("user_gender"),
+                    Users.phone_number.label("user_phone_number"),
+                    Branches.id.label("branch_id"),
+                    Branches.name.label("branch_name"),
+                    Parts.id.label("part_id"),
+                    Parts.name.label("part_name"),
+                )
+                .select_from(Users)
+                .join(Branches, Users.branch_id == Branches.id)
+                .join(Parts, Users.part_id == Parts.id)
+                .where(Users.deleted_yn == "N")
+            )
+
+            # 필터 조건 추가
+            if branch:
+                base_query = base_query.where(Users.branch_id == branch)
+            if part:
+                base_query = base_query.where(Users.part_id == part)
+            if name:
+                base_query = base_query.where(Users.name.like(f"%{name}%"))
+            if phone_number:
+                base_query = base_query.where(Users.phone_number.like(f"%{phone_number}%"))
+
+            base_query = base_query.subquery()
+            
+
+            # 근무일수 서브쿼리
+            work_days_subq = (
+                select(
+                    Commutes.user_id,
+                    func.count(distinct(Commutes.clock_in)).label("work_days"),
+                )
+                .where(
+                    Commutes.clock_in.between(start_date, end_date),
+                    Commutes.deleted_yn == "N",
+                )
+                .group_by(Commutes.user_id)
+            ).subquery()
+
+            # 정규 휴무일수 계산 (closed_days + 일요일)
+            regular_leave_days = (
+                select(
+                    Users.id.label("user_id"),
+                    (
+                        # 해당 월의 일요일 수를 계산
+                        func.coalesce(count_sundays(start_date, end_date), 0) +
+                        # closed_days 수 계산
+                        func.count(distinct(
+                            case(
+                                (ClosedDays.closed_day_date.isnot(None), ClosedDays.closed_day_date),
+                                else_=None
+                            )
+                        ))
+                    ).label("regular_leave_days")
+                )
+                .select_from(Users)
+                .outerjoin(ClosedDays, and_(
+                    Users.branch_id == ClosedDays.branch_id,
+                    ClosedDays.closed_day_date.between(start_date, end_date),
+                    ClosedDays.deleted_yn == "N"
+                ))
+                .group_by(Users.id)
+            ).subquery()
+
+            # 연차 사용일수
+            annual_leave_days = (
+                select(
+                    LeaveHistories.user_id,
+                    func.count(distinct(LeaveHistories.application_date)).label("annual_leave_days")
+                )
+                .join(LeaveCategory)
+                .where(
+                    LeaveHistories.application_date.between(start_date, end_date),
+                    LeaveHistories.status == "승인",
+                    LeaveCategory.is_paid == True
+                )
+                .group_by(LeaveHistories.user_id)
+            ).subquery()
+
+            # 무급 휴가 사용일수
+            unpaid_leave_days = (
+                select(
+                    LeaveHistories.user_id,
+                    func.count(distinct(LeaveHistories.application_date)).label("unpaid_leave_days")
+                )
+                .join(LeaveCategory)
+                .where(
+                    LeaveHistories.application_date.between(start_date, end_date),
+                    LeaveHistories.status == "승인",
+                    LeaveCategory.is_paid == False
+                )
+                .group_by(LeaveHistories.user_id)
+            ).subquery()
+
+            # 휴일 근무일수
+            holiday_work_days = (
+                select(
+                    Commutes.user_id,
+                    func.count(distinct(Commutes.clock_in)).label("holiday_work_days")
+                )
+                .select_from(Commutes)
+                .join(Users, Users.id == Commutes.user_id)
+                .join(
+                    RestDays,
+                    and_(
+                        cast(Commutes.clock_in, Date) == RestDays.date,
+                        Users.branch_id == RestDays.branch_id
+                    )
+                )
+                .where(
+                    and_(
+                        Commutes.clock_in.between(start_date, end_date),
+                        RestDays.rest_type == "공휴일",
+                        Commutes.deleted_yn == "N",
+                        RestDays.deleted_yn == "N"
+                    )
+                )
+                .group_by(Commutes.user_id)
+            ).subquery()
+
+            # 주말 근무 시간
+            weekend_work_hours = (
+                select(
+                    Commutes.user_id,
+                    func.sum(Commutes.work_hours).label("weekend_work_hours")
+                )
+                .select_from(Commutes)
+                .join(Users, Users.id == Commutes.user_id)
+                .join(
+                    RestDays,
+                    and_(
+                        cast(Commutes.clock_in, Date) == RestDays.date,
+                        Users.branch_id == RestDays.branch_id
+                    )
+                )
+                .where(
+                    and_(
+                        Commutes.clock_in.between(start_date, end_date),
+                        RestDays.rest_type == "주말",
+                        Commutes.deleted_yn == "N",
+                        RestDays.deleted_yn == "N"
+                    )
+                )
+                .group_by(Commutes.user_id)
+            ).subquery()
+
+            # 최종 쿼리
+            final_query = (
+                select(
+                    base_query,
+                    work_days_subq.c.work_days,
+                    regular_leave_days.c.regular_leave_days,
+                    annual_leave_days.c.annual_leave_days,
+                    unpaid_leave_days.c.unpaid_leave_days,
+                    holiday_work_days.c.holiday_work_days,
+                    weekend_work_hours.c.weekend_work_hours
+                )
+                .outerjoin(work_days_subq, base_query.c.id == work_days_subq.c.user_id)
+                .outerjoin(regular_leave_days, base_query.c.id == regular_leave_days.c.user_id)
+                .outerjoin(annual_leave_days, base_query.c.id == annual_leave_days.c.user_id)
+                .outerjoin(unpaid_leave_days, base_query.c.id == unpaid_leave_days.c.user_id)
+                .outerjoin(holiday_work_days, base_query.c.id == holiday_work_days.c.user_id)
+                .outerjoin(weekend_work_hours, base_query.c.id == weekend_work_hours.c.user_id)
+            )
+            
+            # 전체 레코드 수 계산
+            total_count = await session.scalar(
+                select(func.count()).select_from(final_query.subquery())
+            )
+
+            # 페이지네이션 적용
+            final_query = final_query.offset((page - 1) * size).limit(size)
+
+            result = await session.execute(final_query)
+            records = result.fetchall()
+
+            formatted_data = [
+                {
+                    "id": record.id,
+                    "branch_id": record.branch_id,
+                    "branch_name": record.branch_name,
+                    "user_name": record.user_name,
+                    "user_gender": record.user_gender,
+                    "user_phone_number": record.user_phone_number,
+                    "part_id": record.part_id,
+                    "part_name": record.part_name,
+                    "work_days": record.work_days or 0, # 근무일수
+                    "regular_leave_days": record.regular_leave_days or 0, # 정규 휴무
+                    "annual_leave_days": record.annual_leave_days or 0, # 연차 사용
+                    "unpaid_leave_days": record.unpaid_leave_days or 0, # 무급 사용
+                    "holiday_work_days": record.holiday_work_days or 0, # 휴일 근무
+                    "weekend_work_hours": float(record.weekend_work_hours or 0) # 주말 근무 시간
+                }
+                for record in records
+            ]
+
+            return {
+                "message": "근태 기록 조회 성공",
+                "data": formatted_data,
+                "pagination": {
+                    "total": total_count,
+                    "page": page,
+                    "size": size,
+                    "total_pages": (total_count + size - 1) // size,
+                },
             }
-            attendance_data.append(attendance_info)
-        
-        return {"message": "성공적으로 근로 관리 전체 조회를 완료하였습니다.", "data": attendance_data}
-    except Exception as err:
-        print(err)
-        raise HTTPException(status_code=500, detail="근태 관리 전체 조회에 실패하였습니다.")
+    
+    except HTTPException as http_err:
+        raise http_err
+
+    except Exception as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"근태 기록 조회 실패: {str(e)}")
+
+
+# @router.get('/attendance')
+# async def find_attendance(token: Annotated[Users, Depends(get_current_user)]):
+#     try:
+#         find_attendance = await attendance.execute(
+#             select(Users, Branches, Parts, Commutes, LeaveHistories, Overtimes)
+#             .join(Branches, Users.branch_id == Branches.id)
+#             .join(Parts, Users.part_id == Parts.id)
+#             .join(Commutes, Users.id == Commutes.user_id)
+#             .outerjoin(LeaveHistories, Users.id == LeaveHistories.user_id)
+#             .join(Overtimes, Users.id == Overtimes.applicant_id)
+#         )
+#         result = find_attendance.fetchall()
+
+
+#         attendance_data = []
+#         for user, branch, part, commute, leave, overtime in result:
+#             find_user_work = await attendance.execute(select(Commutes).where(Commutes.user_id == user.id))
+#             result_user_work = find_user_work.scalars().all()
+#             # print("dsdadasdasdas : ",branch.__dict__)
+#             print("dsdadasdasdas : ",commute.__dict__)
+#             print("dsdadasdasdas : ",overtime.__dict__)
+#             attendance_info = {
+#                 "번호": user.id,
+#                 "지점": branch.name,
+#                 "이름": user.name,
+#                 "근무파트": part.name,
+#                 "근무일수": len(result_user_work) if commute else 0,
+#                 # "휴일근무": commute.holiday_work_days if commute else 0,
+#                 "정규 휴무": leave.regular_leave_days if leave else 0,
+#                 "연차 사용": leave.annual_leave_days if leave else 0,
+#                 "무급 사용": leave.unpaid_leave_days if leave else 0,
+#                 "재택 근무": "0일",
+#                 "휴일 근무": "0일",
+#                 "주말 근무 시간" : 0,
+#                 "주말 근무 수당" : 0,
+#                 "추가 근무 시간": "0시간",
+#                 "추가 근무 수당": 0,
+#                 # "O.T 30분 할증": overtime.ot_30min if overtime else 0,
+#                 # "O.T 60분 할증": overtime.ot_60min if overtime else 0,
+#                 # "O.T 90분 할증": overtime.ot_90min if overtime else 0,
+#                 # "O.T 총 금액": overtime.total_amount if overtime else 0
+#             }
+#             attendance_data.append(attendance_info)
+
+#         return {"message": "성공적으로 근로 관리 전체 조회를 완료하였습니다.", "data": attendance_data}
+#     except Exception as err:
+#         print(err)
+#         raise HTTPException(status_code=500, detail="근태 관리 전체 조회에 실패하였습니다.")
+
+
+# 근로 관리 생성
+# @router.get('/{branch_id}/parts/{part_id}/attendance/users/{user_id}')
+# async def find_attendance(branch_id : int, part_id : int, user_id : int, token:Annotated[Users, Depends(get_current_user)]):
+#     try:
+
+#         find_data = await attendance.execute(select(Parts).join(Branches, Parts, Overtimes, WorkPolicies))
+
+
+#         find_branch = await attendance.execute(select(Branches).where(Branches.id == branch_id, Branches.deleted_yn == "N"))
+#         result_branch = find_branch.scalar_one_or_none()
+
+#         if(result_branch == None):
+#             raise HTTPException(status_code=404, detail="지점 데이터가 존재하지 않습니다.")
+
+#         find_part = await attendance.execute(select(Parts).where(Parts.id == part_id, Parts.deleted_yn == "N"))
+#         result_part = find_part.scalar_one_or_none()
+
+#         if(result_part == None):
+#             raise HTTPException(status_code=404, detail="파트 데이터가 존재하지 않습니다.")
+
+#         find_overtimes = await attendance.execute(select(Overtimes).where(Overtimes.applicant_id == user_id))
+
+#         result_overtime = find_overtimes.scalar_one_or_none()
+
+#         if(result_overtime == None):
+#             raise HTTPException(status_code=404, detail="오버타임 데이터가 존재하지 않습니다.")
+
+#         find_user  = await attendance.execute(select(Users).where(Users.id == user_id))
+#         resutl_user = find_user.scalar_one_or_none()
+
+#         if(resutl_user == None):
+#             raise HTTPException(status_code=404, detail="유저 데이터가 존재하지 않습니다.")
+
+
+#         find_attendance = await attendance.execute(select(Users).where(Branches.id == branch_id, Branches.name))
+
+#         # new_attendance = Attendance(
+#         #     branch_id = result_branch.id,
+#         #     part_id = result_part.id,
+#         #     branch_name = result_branch.name,
+#         #     name = resutl_user.name,
+#         #     gender = resutl_user.gender,
+#         #     part_name = result_part.name,
+#         #     workdays =
+#         # )
+
+#         # find_working = await attendance.execute(select(WorkPolicies).where(WorkPolicies.))
+#     except Exception as err:
+#         print(err)
+#         raise HTTPException(status_code=500, detail= "근태 관리 생성에 실패하였습니다.")
+
 
 # @router.post('/attendance')
 # async def create_attendance(token: Annotated[Users, Depends(get_current_user)]):
 #     try:
-        # new_attendance = Attendance(
-        #     user_id=attendance_data.user_id,
-        #     branch_id=attendance_data.branch_id,
-        #     part_id=attendance_data.part_id,
-        #     work_days=attendance_data.work_days,
-        #     holiday_work_days=attendance_data.holiday_work_days,
-        #     regular_leave_days=attendance_data.regular_leave_days,
-        #     annual_leave_days=attendance_data.annual_leave_days,
-        #     unpaid_leave_days=attendance_data.unpaid_leave_days,
-        #     planned_work_days=attendance_data.planned_work_days,
-        #     additional_work_hours=attendance_data.additional_work_hours,
-        #     additional_work_pay=attendance_data.additional_work_pay,
-        #     ot_30min=attendance_data.ot_30min,
-        #     ot_60min=attendance_data.ot_60min,
-        #     ot_90min=attendance_data.ot_90min,
-        #     ot_total_amount=attendance_data.ot_total_amount
-        # )
+# new_attendance = Attendance(
+#     user_id=attendance_data.user_id,
+#     branch_id=attendance_data.branch_id,
+#     part_id=attendance_data.part_id,
+#     work_days=attendance_data.work_days,
+#     holiday_work_days=attendance_data.holiday_work_days,
+#     regular_leave_days=attendance_data.regular_leave_days,
+#     annual_leave_days=attendance_data.annual_leave_days,
+#     unpaid_leave_days=attendance_data.unpaid_leave_days,
+#     planned_work_days=attendance_data.planned_work_days,
+#     additional_work_hours=attendance_data.additional_work_hours,
+#     additional_work_pay=attendance_data.additional_work_pay,
+#     ot_30min=attendance_data.ot_30min,
+#     ot_60min=attendance_data.ot_60min,
+#     ot_90min=attendance_data.ot_90min,
+#     ot_total_amount=attendance_data.ot_total_amount
+# )
 
-        # attendance.add(new_attendance)
-        # await attendance.commit()
-        # await attendance.refresh(new_attendance)
+# attendance.add(new_attendance)
+# await attendance.commit()
+# await attendance.refresh(new_attendance)
 
-        # return {"message": "근태 정보가 성공적으로 생성되었습니다.", "data": new_attendance}
-    # except Exception as err:
-    #     await attendance.rollback()
-    #     print(err)
-    #     raise HTTPException(status_code=500, detail="근태 정보 생성에 실패하였습니다.")
+# return {"message": "근태 정보가 성공적으로 생성되었습니다.", "data": new_attendance}
+# except Exception as err:
+#     await attendance.rollback()
+#     print(err)
+#     raise HTTPException(status_code=500, detail="근태 정보 생성에 실패하였습니다.")
