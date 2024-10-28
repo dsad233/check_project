@@ -1,6 +1,7 @@
 from datetime import datetime, UTC
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, String
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Enum
 from app.core.database import Base
+from app.enums.user_management import DocumentSendStatus
 
 
 class Document(Base):
@@ -13,3 +14,20 @@ class Document(Base):
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+
+class DocumentSendHistory(Base):
+    __tablename__ = "document_send_history"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    document_id = Column(Integer, ForeignKey("document.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    request_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(
+        "document_send_history_status",
+        Enum(DocumentSendStatus, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=DocumentSendStatus.PENDING
+    )
+
+    created_at = Column(DateTime, default=datetime.now(UTC))
+    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))

@@ -39,8 +39,8 @@ app.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour
 app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-policies", tags=["Parts_policies"])
 
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
-app.include_router(user_management_document.router, prefix='/user-management/document', tags=['User_Management_Document_and_Contract'])
-app.include_router(user_management_contract.router, prefix='/user-management/contract', tags=['User_Management_Document_and_Contract'])
+app.include_router(user_management_document.router, prefix='/user-management/document', tags=['User_Management_Document'])
+app.include_router(user_management_contract.router, prefix='/user-management/contract', tags=['User_Management_Contract'])
 app.include_router(user_management.router, prefix='/user-management', tags=['User_Management'])
 
 app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])

@@ -86,7 +86,7 @@ def check_menu_permission(required_menu: MenuPermissions):
                 #2. 해당 파트에 속한 메뉴 권한 조히
                 query = select(user_menus).where(
                     and_(
-                        user_menus.c.user_id == current_user.id,
+                        user_menus.c.request_user_id == current_user.id,
                         user_menus.c.menu_name == required_menu,
                         user_menus.c.is_permitted == True,
                         user_menus.c.part_id == current_user.part_id

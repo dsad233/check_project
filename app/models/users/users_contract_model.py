@@ -1,6 +1,7 @@
 from datetime import datetime, UTC
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Date, String
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Date, String, Enum
 from app.core.database import Base
+from app.enums.user_management import Status as SendMailStatus
 
 
 class Contract(Base):
@@ -27,6 +28,12 @@ class ContractSendMailHistory(Base):
     contract_id = Column(Integer, ForeignKey("contract.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     request_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    status = Column(
+        "contract_send_mail_history_status",
+        Enum(SendMailStatus, values_callable=lambda obj: [e.value for e in obj]),
+        nullable=False,
+        default=SendMailStatus.SUCCESS
+    )
 
     contract_start_at = Column(Date, nullable=False)
     contract_expired_at = Column(Date, nullable=True)

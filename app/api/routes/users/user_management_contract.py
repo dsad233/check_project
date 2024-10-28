@@ -5,6 +5,7 @@ from app.core.database import async_session
 from app.cruds.user_management.user_management_contract_crud import find_user_by_id_with_contracts, add_contracts, \
     hard_delete_contract, find_contract_by_contract_id, add_contract_send_mail_history, \
     find_contract_send_mail_histories_by_user_id
+from app.enums.user_management import Status as SendMailStatus
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
 from app.schemas.user_management_contract_schemas import ResponseUserContracts, RequestAddContracts, \
@@ -121,7 +122,8 @@ class UserManagementContract:
             "user_id": request_send_mail_contract.user_id,
             "request_user_id": request_send_mail_contract.request_user_id,
             "contract_start_at": contract.start_at,
-            "contract_expired_at": contract.expired_at
+            "contract_expired_at": contract.expired_at,
+            "status": SendMailStatus.SUCCESS
         }
 
         await add_contract_send_mail_history(
