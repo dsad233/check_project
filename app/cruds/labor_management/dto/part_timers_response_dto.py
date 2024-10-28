@@ -24,7 +24,7 @@ class PartTimerSummaryResponseDTO(BaseModel):
                 user_id=summary.user_id,
                 gender=summary.gender,
                 branch_name=summary.branch_name,
-                user_name=summary.user_name,
+                user_name=summary.request_user_name,
                 part_name=summary.part_name,
                 work_days=summary.work_count,
                 phone_number=summary.phone_number,
