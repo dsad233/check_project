@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import async_session
 from app.cruds.user_management.users_work_contract_crud import find_work_contract_by_user_id, find_user_by_user_id, \
-    find_work_contract_part_timer_by_user_id
+    find_work_contract_part_timer_by_user_id, create_work_contract
 from app.exceptions.exceptions import BadRequestError
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.schemas.user_work_contract_schemas import RequestPatchWorkContract, RequestCreateWorkContract, \
@@ -47,7 +47,13 @@ class UserManagementWorkContract:
         request_create_work_contract: RequestCreateWorkContract,
         current_user: dict = Depends(get_current_user)
     ):
-        return {"message": "Create User Management Work Contract"}
+        request_create_work_contract_dict = request_create_work_contract.model_dump()
+        word_contract_id = await create_work_contract(
+            session=db,
+            work_contract_dict=request_create_work_contract_dict,
+        )
+
+
 
 
     @router.patch("")

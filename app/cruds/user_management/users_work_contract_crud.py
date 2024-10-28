@@ -1,6 +1,7 @@
 from typing import Optional
 
 from sqlalchemy import select
+from sqlalchemy.dialects.mysql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
@@ -45,3 +46,15 @@ async def find_user_by_user_id(
     )
     result = await session.execute(stmt)
     return result.unique().scalar_one_or_none()
+
+async def create_work_contract(
+    *, session: AsyncSession, work_contract_dict: dict
+) -> int:
+    stmt = (
+        insert(WorkContract)
+        .values(**work_contract_dict)
+    )
+    result = await session.execute(stmt)
+    await session.commit()
+
+    return result.lastrowid
