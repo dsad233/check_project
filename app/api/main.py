@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from app.api.routes.auth import auth
 from app.api.routes.branches import branches
 from app.api.routes.commutes import commutes
+from app.api.routes.labor_management import part_timer
 from app.api.routes.leave_category import leave_category
 from app.api.routes.leave_histories import leave_histories
 from app.api.routes.closed_days import closed_days
@@ -14,9 +15,10 @@ from app.api.routes.salary_bracket import salary_bracket
 from app.api.routes.users import users, user_management
 from app.api.routes.users.user_management_contract import user_management_contract
 from app.api.routes.users.user_management_document import user_management_document
+from app.api.routes.users.user_management_work_contract import user_management_work_contract
 from app.api.routes.work_policies import work_policies
 from app.api.routes.hour_wage_template import hour_wage_template
-from app.api.routes.attendance import attendance, part_timer
+from app.api.routes.attendance import attendance
 from app.api.routes.commutes_manager import commutes_manager
 from app.api.routes.leave_policies import leave_policies
 from app.api.routes.menu_management import menu_management
@@ -44,11 +46,12 @@ app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-poli
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
 app.include_router(user_management_document.router, prefix='/user-management/document', tags=['User_Management_Document'])
 app.include_router(user_management_contract.router, prefix='/user-management/contract', tags=['User_Management_Contract'])
+app.include_router(user_management_work_contract.router, prefix='/user-management/work-contract', tags=['User_Management_Work_Contract'])
 app.include_router(user_management.router, prefix='/user-management', tags=['User_Management'])
 
 app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
 app.include_router(commutes_manager.router, prefix="/branches", tags=["commutes_manager"])
-app.include_router(part_timer.router, prefix="/branches", tags=["Part_timer"])
+app.include_router(part_timer.router, prefix="/labor-management", tags=["Part_timer"])
 
 app.include_router(leave_policies.router, prefix='/branches/{branch_id}/leave-policies', tags=['Leave_Policies'])
 app.include_router(menu_management.router, prefix='/menu-management', tags=['Menu_Management'])
