@@ -22,6 +22,7 @@ from app.api.routes.leave_policies import leave_policies
 from app.api.routes.menu_management import menu_management
 from app.api.routes.minimum_wage_policies import minimum_wage_policies
 from app.api.routes.salary_template import salary_template
+from app.api.routes.salary_policies import salary_policies
 # from app.api.routes.modusign import modusign
 
 app = APIRouter()
@@ -54,6 +55,7 @@ app.include_router(leave_policies.router, prefix='/branches/{branch_id}/leave-po
 app.include_router(menu_management.router, prefix='/menu-management', tags=['Menu_Management'])
 app.include_router(minimum_wage_policies.router, prefix='/minimum-wage-policies', tags=['Minimum_Wage_Policies'])
 app.include_router(salary_template.router, prefix='/branches/{branch_id}/salary-templates', tags=['Salary_Templates'])
+app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-policies', tags=['Salary_Policies'])
 # app.include_router(modusign.router, prefix='/modusign', tags=['Modusign'])
 
 @app.get("/health")
