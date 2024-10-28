@@ -37,8 +37,7 @@ class Branches(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
-    user_leaves = relationship("UserLeavesDays", back_populates="branch")
-
+    user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys="[UserLeavesDays.branch_id]")
 
 class BranchCreate(BaseModel):
     code: str = Field(description="지점 코드")

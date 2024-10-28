@@ -11,6 +11,7 @@ from sqlalchemy import (
     Integer,
     String,
     UniqueConstraint,
+    Numeric,
 )
 from sqlalchemy.orm import relationship
 
@@ -20,6 +21,7 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.enums.users import StatusKor
 
+ 
 
 class LeaveHistories(Base):
     
@@ -36,6 +38,7 @@ class LeaveHistories(Base):
     leave_category_id = Column(
         Integer, ForeignKey("leave_categories.id"), nullable=False
     )
+    decreased_days = Column(Numeric(10, 2), default=0.00)
     
     application_date = Column(Date, nullable=False)
     approve_date = Column(Date, nullable=True)
@@ -51,7 +54,7 @@ class LeaveHistories(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
+    
 class LeaveHistoriesResponse(BaseModel):
     id: int
     branch_name: str
@@ -60,6 +63,7 @@ class LeaveHistoriesResponse(BaseModel):
     
     application_date: datetime
     leave_category_name: str
+    decreased_days: float
     
     status: str
     applicant_description: Optional[str]

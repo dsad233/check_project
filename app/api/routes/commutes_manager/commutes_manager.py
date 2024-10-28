@@ -271,7 +271,7 @@ async def get_all_commutes_manager_excel(token: Annotated[Users, Depends(get_cur
 
         df_commutes = pd.DataFrame([
             {
-                "사용자 ID": commute.user_id,
+                "사용자 ID": commute.request_user_id,
                 "출근 시간": commute.clock_in,
                 "퇴근 시간": commute.clock_out,
                 "근무 시간": commute.work_hours,
@@ -281,7 +281,7 @@ async def get_all_commutes_manager_excel(token: Annotated[Users, Depends(get_cur
 
         df_closed_days = pd.DataFrame([
             {
-                "사용자 ID": closed_day.user_id,
+                "사용자 ID": closed_day.request_user_id,
                 "휴가 날짜": closed_day.closed_day_date,
             }
             for closed_day in result_closed_day
@@ -342,7 +342,7 @@ async def get_all_date_commutes_manager_excel(date: str, token: Annotated[Users,
 
         df_commutes = pd.DataFrame([
             {
-                "사용자 ID": commute.user_id,
+                "사용자 ID": commute.request_user_id,
                 "출근 시간": commute.clock_in,
                 "퇴근 시간": commute.clock_out,
                 "근무 시간": commute.work_hours,
@@ -352,7 +352,7 @@ async def get_all_date_commutes_manager_excel(date: str, token: Annotated[Users,
 
         df_closed_days = pd.DataFrame([
             {
-                "사용자 ID": closed_day.user_id,
+                "사용자 ID": closed_day.request_user_id,
                 "휴가 날짜": closed_day.closed_day_date,
             }
             for closed_day in result_closed_day
@@ -413,7 +413,7 @@ async def get_branch_all_commutes_manager_excel(branch_id: int, date: str, token
 
         df_commutes = pd.DataFrame([
             {
-                "사용자 ID": commute.user_id,
+                "사용자 ID": commute.request_user_id,
                 "출근 시간": commute.clock_in,
                 "퇴근 시간": commute.clock_out,
                 "근무 시간": commute.work_hours,
@@ -423,7 +423,7 @@ async def get_branch_all_commutes_manager_excel(branch_id: int, date: str, token
 
         df_closed_days = pd.DataFrame([
             {
-                "사용자 ID": closed_day.user_id,
+                "사용자 ID": closed_day.request_user_id,
                 "휴가 날짜": closed_day.closed_day_date,
             }
             for closed_day in result_closed_day
@@ -484,7 +484,7 @@ async def get_branch_all_date_commutes_manager_excel(branch_id: int, date: str, 
 
         df_commutes = pd.DataFrame([
             {
-                "사용자 ID": commute.user_id,
+                "사용자 ID": commute.request_user_id,
                 "출근 시간": commute.clock_in,
                 "퇴근 시간": commute.clock_out,
                 "근무 시간": commute.work_hours,
@@ -494,7 +494,7 @@ async def get_branch_all_date_commutes_manager_excel(branch_id: int, date: str, 
 
         df_closed_days = pd.DataFrame([
             {
-                "사용자 ID": closed_day.user_id,
+                "사용자 ID": closed_day.request_user_id,
                 "휴가 날짜": closed_day.closed_day_date,
             }
             for closed_day in result_closed_day
@@ -550,7 +550,7 @@ async def get_part_all_commutes_manager_excel(branch_id: int, part_id: int, toke
 
         df_commutes = pd.DataFrame([
             {
-                "사용자 ID": commute.user_id,
+                "사용자 ID": commute.request_user_id,
                 "출근 시간": commute.clock_in,
                 "퇴근 시간": commute.clock_out,
                 "근무 시간": commute.work_hours,
@@ -560,7 +560,7 @@ async def get_part_all_commutes_manager_excel(branch_id: int, part_id: int, toke
 
         df_closed_days = pd.DataFrame([
             {
-                "사용자 ID": closed_day.user_id,
+                "사용자 ID": closed_day.request_user_id,
                 "휴가 날짜": closed_day.closed_day_date,
             }
             for closed_day in result_closed_day
@@ -621,7 +621,7 @@ async def get_branch_part_all_date_commutes_manager_excel(branch_id: int, part_i
 
         df_commutes = pd.DataFrame([
             {
-                "사용자 ID": commute.user_id,
+                "사용자 ID": commute.request_user_id,
                 "출근 시간": commute.clock_in,
                 "퇴근 시간": commute.clock_out,
                 "근무 시간": commute.work_hours,
@@ -631,7 +631,7 @@ async def get_branch_part_all_date_commutes_manager_excel(branch_id: int, part_i
 
         df_closed_days = pd.DataFrame([
             {
-                "사용자 ID": closed_day.user_id,
+                "사용자 ID": closed_day.request_user_id,
                 "휴가 날짜": closed_day.closed_day_date,
             }
             for closed_day in result_closed_day
