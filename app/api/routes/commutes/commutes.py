@@ -1,7 +1,7 @@
 from datetime import date, datetime, time
 from typing import List
 
-from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import ValidationError
 from sqlalchemy import func, select, update
 
@@ -119,9 +119,11 @@ async def create_clock_out(id : int, commutes_clock_out : Commutes_clock_out = B
 # 출퇴근 기록 목록 조회
 @router.get("")
 async def get_commute_records(
-    current_user_id: int = Depends(get_current_user_id), skip: int = 0, limit: int = 100
+    request: Request, current_user_id: int = Depends(get_current_user_id), skip: int = 0, limit: int = 100
 ):
     try:
+        print("@@@@@@@@@@@@@@")
+        print(request.headers)
         # 전체 출퇴근 기록 수 조회
         count_query = (
             select(func.count()).select_from(Commutes).where(Commutes.deleted_yn == "N")
