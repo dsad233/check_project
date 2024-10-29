@@ -136,7 +136,11 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
 
 # 오버타임 초과 근무 거절
 @router.patch("/reject/{overtime_id}", summary="오버타임 반려")
-async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
+async def reject_overtime(
+    overtime_id: int,
+    overtime_select: OvertimeSelect, 
+    current_user: Users = Depends(get_current_user)
+    ):
     try:
         stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N"))
         result = await db.execute(stmt)
@@ -172,7 +176,7 @@ async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, cur
 @router.get("")
 async def get_overtimes(
     current_user: Users = Depends(get_current_user), 
-    date: date = None,
+    date: Optional[date] = None,
     name: Optional[str] = None, 
     phone_number: Optional[str] = None, 
     branch_id: Optional[int] = None, 
@@ -201,8 +205,6 @@ async def get_overtimes(
             Overtimes.application_date >= date_start_day,
             Overtimes.application_date <= date_end_day
         )
-        
-        print(f"date_start_day: {date_start_day}, date_end_day: {date_end_day}")
         
         stmt = None
 
@@ -233,7 +235,7 @@ async def get_overtimes(
             base_query = base_query.where(Overtimes.status.like(f"%{status}%"))
 
         # 정렬, 페이징 적용
-        skip = (page - 1) * page
+        skip = (page - 1) * size
         stmt = base_query.order_by(Overtimes.application_date.desc())\
             .offset(skip)\
             .limit(size)
