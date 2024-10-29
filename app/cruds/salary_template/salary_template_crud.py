@@ -16,6 +16,20 @@ async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> lis
     result = await session.execute(stmt)
     return result.scalars().all()
 
+async def find_salary_templates(*, session: AsyncSession, branch_id: int, request: BaseSearchDto) -> list[SalaryTemplate]:
+    stmt = (
+        select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(
+            SalaryTemplate.branch_id == branch_id
+        ).where(
+            SalaryTemplate.deleted_yn == "N"
+        ).order_by(
+            SalaryTemplate.created_at.desc()
+        ).offset(request.offset).limit(request.record_size)
+    )
+    result = await session.execute(stmt)
+    return result.scalars().all()
+
+
 async def find_by_id(*, session: AsyncSession, id: int) -> Optional[SalaryTemplate]:
     stmt = (
         select(SalaryTemplate).options(selectinload(SalaryTemplate.part)).where(SalaryTemplate.id == id).where(SalaryTemplate.deleted_yn == "N")
@@ -74,3 +88,8 @@ async def delete(*, session: AsyncSession, branch_id: int, id: int) -> None:
     salary_template.updated_at = datetime.now()
     await session.commit()
     return
+
+async def count_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> int:
+    stmt = select(func.count(SalaryTemplate.id)).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.deleted_yn == "N")
+    result = await session.execute(stmt)
+    return result.scalar_one()

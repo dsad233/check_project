@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlalchemy import select
+from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import update as sa_update
 from datetime import datetime
@@ -66,3 +66,19 @@ async def update(*, session: AsyncSession, branch_id: int, condition_based_annua
         pass
 
     return condition_based_annual_leave_grant
+
+
+async def delete_all_id(
+    *, session: AsyncSession, branch_id: int, ids: list[int]
+) -> None:
+
+    if not ids:
+        return
+
+    # 벌크 삭제 사용
+    delete_stmt = delete(ConditionBasedAnnualLeaveGrant).where(
+        (ConditionBasedAnnualLeaveGrant.branch_id == branch_id) & 
+        (ConditionBasedAnnualLeaveGrant.id.in_(ids))
+    )
+    await session.execute(delete_stmt)
+    await session.commit()
