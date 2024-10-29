@@ -6,10 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from sqlalchemy.orm import selectinload
 from app.exceptions.exceptions import BadRequestError, NotFoundError
-from app.models.branches.branches_model import (
-    Branches,
-    BranchUpdate
-)
+from app.models.branches.branches_model import Branches
+from sqlalchemy import update as sa_update
+from app.common.dto.search_dto import BaseSearchDto
+
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +28,7 @@ async def create(
 
     session.add(branch_create)
     await session.commit()
+    await session.flush()
     await session.refresh(branch_create)
     return branch_create
 
@@ -54,11 +55,11 @@ async def find_all(
 
 
 async def find_deleted_all(
-    *, session: AsyncSession, offset: int = 0, limit: int = 10
+    *, session: AsyncSession, search: BaseSearchDto
 ) -> list[Branches]:
 
     statement = (
-        select(Branches).filter(Branches.deleted_yn == "Y").offset(offset).limit(limit)
+        select(Branches).filter(Branches.deleted_yn == "Y").offset(search.offset).limit(search.record_size)
     )
     result = await session.execute(statement)
     return result.scalars().all()
@@ -128,18 +129,27 @@ async def count_deleted_all(*, session: AsyncSession) -> int:
     result = await session.execute(statement)
     return result.scalar_one()
 
-async def update(*, session: AsyncSession, branch_id: int, branch_update: BranchUpdate) -> Branches:
+async def update(*, session: AsyncSession, branch_id: int, branch_update: Branches) -> Branches:
     branch = await find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
     
-    update_data = branch_update.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(branch, key, value)
-    
-    branch.updated_at = datetime.now()
-    
-    await session.commit()
-    await session.refresh(branch)
+    # 변경된 필드만 업데이트
+    changed_fields = {}
+    for column in Branches.__table__.columns:
+        if column.name not in ['id', 'created_at', 'updated_at', 'deleted_yn']:
+            new_value = getattr(branch_update, column.name)
+            if new_value is not None and getattr(branch, column.name) != new_value:
+                changed_fields[column.name] = new_value
+
+    if changed_fields:
+        # 변경된 필드가 있을 경우에만 업데이트 수행
+        stmt = sa_update(Branches).where(Branches.id == branch_id).values(**changed_fields)
+        await session.execute(stmt)
+        branch.updated_at = datetime.now()
+        await session.commit()
+        await session.refresh(branch)
+    else:
+        pass
     
     return branch

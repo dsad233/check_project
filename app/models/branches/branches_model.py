@@ -90,4 +90,3 @@ class BranchUpdate(BaseModel):
 class BranchListResponse(BaseModel):
     list: List[BranchResponse] = Field(description="지점 목록")
     pagination: PaginationDto = Field(description="페이지네이션")
-

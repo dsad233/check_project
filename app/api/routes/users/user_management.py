@@ -1,7 +1,8 @@
 from datetime import UTC, datetime
 from pyexpat.errors import messages
 from typing import Optional, List, Union
-from fastapi import APIRouter, Depends, HTTPException, Query, Body
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
 from sqlalchemy import func, select, update, case, func, distinct, literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only, aliased
@@ -10,6 +11,7 @@ from starlette import status
 
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import async_session, get_db
+from app.core.permissions.auth_utils import check_menu_permission, available_higher_than
 from app.cruds.users.users_crud import find_by_email, add_user, find_all_by_branch_id, find_all_by_branch_id_and_role
 from app.enums.users import Role
 from app.middleware.tokenVerify import validate_token, get_current_user
@@ -19,16 +21,19 @@ from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts, PartUpdate
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
-from app.middleware.permission import UserPermission  
+from app.middleware.permission import UserPermission
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
+@available_higher_than(Role.ADMIN)
 class UserManagement:
     router = router
 
     @router.get("")
     async def get_users(
+        request: Request,
+        db: AsyncSession = Depends(get_db),
         current_user: Users = Depends(get_current_user),
         page: int = Query(1, ge=1),
         record_size: int = Query(10, ge=1),
@@ -214,7 +219,10 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.post("", response_model=ResponseDTO[CreatedUserDto])
-    async def create_user(user: UserCreate, current_user: Users = Depends(get_current_user)):
+    async def create_user(
+            user: UserCreate,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)):
         if await find_by_email(session=db, email=user.email):
             raise HTTPException(status_code=400, detail="이미 등록된 이메일 주소입니다.")
 
@@ -231,7 +239,10 @@ class UserManagement:
         )
 
     @router.get("/me", response_model=ResponseDTO[dict])
-    async def get_user(current_user: Users = Depends(get_current_user)):
+    async def get_user(
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         try:
             if not current_user:
                 raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
@@ -283,7 +294,10 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.get("/admin", response_model=ResponseDTO[AdminUsersDto])
-    async def get_admin_user(current_user: Users = Depends(get_current_user)):
+    async def get_admin_user(
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         users = await find_all_by_branch_id_and_role(session=db, branch_id=current_user.branch_id, role=Role.ADMIN)
         if not users:
             return ResponseDTO(
@@ -300,7 +314,11 @@ class UserManagement:
         )
 
     @router.get("/{id}", response_model=ResponseDTO[dict])
-    async def get_user_detail(id: int, current_user: Users = Depends(get_current_user)):
+    async def get_user_detail(
+            id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         """
         ID를 입력 시 세부정보가 조회되며, 권한에 따른 정보 접근이 가능합니다. 세부정보는 관리자만 볼 수 있습니다.
         """
@@ -412,7 +430,12 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}")
-    async def update_user(id: int, user_update: UserUpdate, current_user: Users = Depends(get_current_user)):
+    async def update_user(
+            id: int,
+            user_update: UserUpdate,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         """
         유저의 세부 정보를 수정합니다.
         """
@@ -448,7 +471,12 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}/role")
-    async def update_user_role(id: int, role_update: RoleUpdate, current_user: Users = Depends(get_current_user)):
+    async def update_user_role(
+            id: int,
+            role_update: RoleUpdate,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         """
         유저의 권한을 수정합니다. "role" : "최고관리자" 이렇게 수정합니다.
         가능한 역할: "MSO 최고권한", "최고관리자", "통합관리자", "관리자", "사원", "퇴사자", "휴직자"
@@ -482,7 +510,12 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}/parts")
-    async def update_user_parts(id: int, part_update: PartUpdate, current_user: Users = Depends(get_current_user)):
+    async def update_user_parts(
+            id: int,
+            part_update: PartUpdate,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         """
         유저의 파트를 수정합니다. 
         "part_ids": [1, 2, 3] 형식으로 파트 ID 리스트를 전달합니다.
@@ -522,7 +555,11 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.delete("/{id}")
-    async def delete_user(id: int, current_user: Users = Depends(get_current_user)):
+    async def delete_user(
+            id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
@@ -560,7 +597,11 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
         
     @router.delete("/{id}/hard-delete")
-    async def hard_delete_user(id: int, current_user: Users = Depends(get_current_user)):
+    async def hard_delete_user(
+            id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
@@ -598,7 +639,11 @@ class UserManagement:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
         
     @router.patch("/{id}/restore")
-    async def restore_user(id: int, current_user: Users = Depends(get_current_user)):
+    async def restore_user(
+            id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user)
+    ):
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
