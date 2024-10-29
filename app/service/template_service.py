@@ -5,6 +5,7 @@ from app.core.config import settings
 import base64
 import aiohttp
 from app.schemas.modusign_schemas import TemplateListResponse, TemplateResponse
+import json
 
 logger = logging.getLogger(__name__)
 MODUSIGN_BASE_URL = "https://api.modusign.co.kr"
@@ -82,15 +83,26 @@ class TemplateService:
     async def create_template(self, template_data: Dict[str, Any]) -> TemplateResponse:
         """템플릿을 생성합니다"""
         try:
+            # 요청 데이터 상세 로깅
+            logger.info("=== Template Creation Request ===")
+            logger.info(f"Request URL: {MODUSIGN_BASE_URL}/templates")
+            logger.info(f"Request Headers: {self.headers}")
+            logger.info(f"Request Body: {json.dumps(template_data, indent=2, ensure_ascii=False)}")
+            
             data = await self._make_request(
                 'POST',
                 f"{MODUSIGN_BASE_URL}/templates",
                 json=template_data
             )
+            
+            # 응답 데이터 로깅
+            logger.info("=== Template Creation Response ===")
+            logger.info(f"Response Data: {json.dumps(data, indent=2, ensure_ascii=False)}")
+            
             return TemplateResponse(**data)
         except Exception as e:
             logger.error(f"Error creating template: {str(e)}")
-            logger.error(f"Template data: {template_data}")
+            logger.error(f"Template data: {json.dumps(template_data, indent=2, ensure_ascii=False)}")
             raise
 
     async def get_templates(self) -> TemplateListResponse:

@@ -65,59 +65,57 @@ async def create_test_template():
 
 @router.post("/create", response_model=TemplateResponse)
 async def create_template(
-    title: str = Form(..., description="템플릿 제목"),
-    file: UploadFile = File(..., description="PDF 파일"),
-    participants: str = Form(..., description="""참여자 정보 목록 (JSON string)
-    예시:
-    [
-        {
-            "role": "근로자",
-            "signingOrder": 1,
-            "signingMethod": {
-                "type": "EMAIL",
-                "value": "employee@example.com"
-            }
-        }
-    ]""")
+    title: str = Form(...),
+    file: UploadFile = File(...),
+    participants: str = Form(...),
+    elements: Optional[str] = Form(None)
 ):
-    """템플릿 생성 API"""
     try:
-        # JSON string을 파싱
-        participants_data = json.loads(participants)
-        
-        # 파일 내용 읽기
-        file_content = await file.read()
-        base64_content = base64.b64encode(file_content).decode('utf-8')
-        
-        # API 요청 데이터 구성
+        # 기본 데이터 구성
         template_data = {
             "title": title,
             "file": {
                 "name": file.filename,
-                "base64": base64_content,
+                "base64": base64.b64encode(await file.read()).decode('utf-8'),
                 "extension": "pdf"
             },
-            "participants": [
-                {
-                    "role": participant["role"],
-                    "signingOrder": participant.get("signingOrder", 1),
-                    "signingMethod": {
-                        "type": "EMAIL",
-                        "value": participant["signingMethod"]["value"]
-                    }
-                } for participant in participants_data
-            ]
+            "participants": json.loads(participants)
         }
         
-        logger.info(f"Creating template with data: {json.dumps(template_data, indent=2)}")
-        return await template_service.create_template(template_data)
+        # elements 처리
+        if elements:
+            try:
+                elements_data = json.loads(elements)
+                template_data["fieldPositions"] = [
+                    {
+                        "type": "SIGN",
+                        "role": element["role"],
+                        "x": int(element["x"]),
+                        "y": int(element["y"]),
+                        "width": int(element["width"]),
+                        "height": int(element["height"]),
+                        "pageNumber": int(element.get("pageNumber", 1)),
+                        "required": bool(element.get("required", True))
+                    }
+                    for element in elements_data
+                ]
+                logger.info(f"Added fieldPositions: {template_data['fieldPositions']}")
+            except Exception as e:
+                logger.error(f"Error processing elements data: {str(e)}")
+                raise HTTPException(status_code=400, detail=f"Invalid elements format: {str(e)}")
         
+        # API 요청 전송
+        try:
+            response = await template_service.create_template(template_data)
+            logger.info(f"Template created successfully: {response}")
+            return response
+        except Exception as e:
+            logger.error(f"Error from API: {str(e)}")
+            raise
+            
     except json.JSONDecodeError as e:
         logger.error(f"JSON parsing error: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Invalid participants format: {str(e)}")
-    except KeyError as e:
-        logger.error(f"Missing required field: {str(e)}")
-        raise HTTPException(status_code=400, detail=f"Missing required field: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid JSON format: {str(e)}")
     except Exception as e:
         logger.error(f"Error in create_template: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))

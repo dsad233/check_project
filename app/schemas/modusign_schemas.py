@@ -10,6 +10,17 @@ class Metadata(BaseModel):
     key: str = Field(..., description="메타데이터 키")
     value: str = Field(..., description="메타데이터 값")
 
+class TemplateElement(BaseModel):
+    type: str = Field(..., description="필드 타입 (SIGNATURE, TEXTFIELD, DATEFIELD 등)")
+    role: str = Field(..., description="참가자 역할")
+    x: int = Field(..., description="X 좌표")
+    y: int = Field(..., description="Y 좌표")
+    width: int = Field(..., description="너비")
+    height: int = Field(..., description="높이")
+    page: int = Field(..., description="페이지 번호") 
+    required: bool = Field(True, description="필수 여부")
+    placeholder: Optional[str] = Field(None, description="입력 필드 안내 텍스트")
+
 # 문서 관련 스키마
 class DocumentListRequest(BaseModel):
     page: int = Field(1, ge=1)
@@ -80,6 +91,7 @@ class Template(BaseModel):
     file: FileInfo
     participants: List[Participant] = []
     requesterInputs: Optional[List[dict]] = None
+    fieldPositions: Optional[List[TemplateElement]] = None 
     createdAt: str
     updatedAt: str
 
