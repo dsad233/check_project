@@ -7,7 +7,7 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.cruds.branches.policies.salary_polices_crud import create_parttimer_policies
-from app.schemas.users_schemas import UserLeaveResponse
+from app.schemas.users_schemas import UserLeaveResponse, UsersLeaveResponse
 from app.service import user_service
 from app.cruds.branches import branches_crud
 from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
