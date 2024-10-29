@@ -32,6 +32,7 @@ async_session = async_sessionmaker(
 
 Base = declarative_base()
 
+
 async def get_db():
     db = async_session()
     try:

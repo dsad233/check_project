@@ -46,6 +46,7 @@ async def create(
 
     session.add(work_policies_create)
     await session.commit()
+    await session.flush()
     await session.refresh(work_policies_create)
 
     # 월요일부터 일요일까지의 WorkSchedule 생성

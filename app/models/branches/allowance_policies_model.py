@@ -35,7 +35,7 @@ class AllowancePolicies(Base):
     holiday_work = Column(Boolean, default=False)  # 휴일수당 허용
     job_duty = Column(Boolean, default=False)  # 직무수당 허용
     meal = Column(Boolean, default=False)  # 식대 허용
-    base_salary = Column(Boolean, default=False)  # 기본급 사용여부
+    base_salary = Column(Boolean, default=False, server_default=text('0'))  # 기본급 사용여부
 
     job_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 직무(직책)수당
     meal_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 식대
