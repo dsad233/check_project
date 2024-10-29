@@ -150,3 +150,11 @@ async def get_participant_fields(document_id: str):
         return await document_service.get_participant_fields(document_id=document_id)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get("/{document_id}/requester-inputs")
+async def get_requester_inputs(document_id: str):
+    """요청자 입력 필드 조회"""
+    try:
+        return await document_service.get_requester_inputs(document_id=document_id)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

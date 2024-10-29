@@ -175,3 +175,14 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error in get_participant_fields: {str(e)}")
             raise
+
+    async def get_requester_inputs(self, document_id: str) -> Dict[str, Any]:
+        """요청자 입력 필드 조회"""
+        try:
+            return await self._make_request(
+                'GET',
+                f"{MODUSIGN_BASE_URL}/documents/{document_id}/requester-inputs"
+            )
+        except Exception as e:
+            logger.error(f"Error in get_requester_inputs: {str(e)}")
+            raise
