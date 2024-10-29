@@ -3,7 +3,7 @@ version: '3.8'
 services:
   fastapi:
     build:
-      context: .
+      context: ../
       dockerfile: Dockerfile
     container_name: fastapi_app
     restart: always
@@ -11,7 +11,7 @@ services:
       - "8000"
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000
     environment:
-      - MODE=dev
+      - MODE=prod
 
   nginx:
     build:
