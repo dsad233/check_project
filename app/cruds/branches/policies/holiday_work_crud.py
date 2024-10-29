@@ -21,6 +21,7 @@ async def create(
         holiday_work_policies_create.branch_id = branch_id
     session.add(holiday_work_policies_create)
     await session.commit()
+    await session.flush()
     await session.refresh(holiday_work_policies_create)
 
 async def update(
