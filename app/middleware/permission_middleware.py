@@ -24,7 +24,7 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         try:
-            # URL에서 branch_id 추출
+            # URL에서 branch_id 추출 (branches 다음에 오는 숫자만 추출)
             path_parts = request.url.path.split('/')
             branch_id = None
 
@@ -38,14 +38,12 @@ class PermissionMiddleware(BaseHTTPMiddleware):
 
             # 지점 접근 권한 체크만 수행
             if branch_id is not None:
-                # 라우터의 디펜던시에서 이미 current_user를 받아올 것이므로
-                # 여기서는 지점 접근 권한만 체크
                 response = await call_next(request)
-                if response.status_code == 200:  # 성공적인 응답인 경우에만 체크
+                if response.status_code == 200:
                     user = getattr(request.state, 'user', None)
                     if user and user.role != Role.MSO and user.branch_id != branch_id:
                         return JSONResponse(
-                            status_code=403,
+                            status_code=401,
                             content={"detail": "해당 지점에 접근할 권한이 없습니다."}
                         )
                 return response
@@ -55,6 +53,6 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         except Exception as e:
             print(f"Permission Middleware Error: {str(e)}")
             return JSONResponse(
-                status_code=403,
+                status_code=401,
                 content={"detail": "권한이 없습니다."}
             )
