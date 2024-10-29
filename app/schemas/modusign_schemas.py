@@ -3,8 +3,8 @@ from pydantic import BaseModel, Field
 
 # 공통 컴포넌트
 class SigningMethod(BaseModel):
-    type: str = Field(..., description="서명 방법 타입 (EMAIL)")
-    value: str = Field(..., description="이메일 주소")
+    type: Optional[str] = Field(None, description="서명 방법 타입 (EMAIL)")
+    value: Optional[str] = Field(None, description="이메일 주소")
 
 class Metadata(BaseModel):
     key: str = Field(..., description="메타데이터 키")
@@ -73,10 +73,6 @@ class FileInfo(BaseModel):
     name: Optional[str] = None
     size: Optional[int] = None
     contentType: Optional[str] = None
-
-class SigningMethod(BaseModel):
-    type: str
-    value: str
 
 class Participant(BaseModel):
     role: str

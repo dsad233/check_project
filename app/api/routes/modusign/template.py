@@ -29,11 +29,8 @@ async def get_template(template_id: str):
 @router.delete("/{template_id}")
 async def delete_template(template_id: str):
     """템플릿 삭제"""
-    try:
-        success = await template_service.delete_template(template_id)
-        if not success:
-            raise HTTPException(status_code=404, detail="Template not found")
-        return {"message": "Template deleted successfully"}
-    except Exception as e:
-        logger.error(f"Error in delete_template: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+    logger.info(f"Received template_id: {template_id}")
+    logger.info(f"Template ID type: {type(template_id)}")
+    
+    success = await template_service.delete_template(template_id)
+    return {"message": "Template deleted successfully"}

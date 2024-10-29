@@ -25,22 +25,30 @@ class TemplateService:
     async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
         try:
             async with aiohttp.ClientSession() as session:
-                headers = self.headers.copy()
-                headers['content-type'] = 'application/json'
+                # 기본 헤더 설정
+                headers = {
+                    **self.headers,
+                    'Content-Type': 'application/json'
+                }
                 
-                logger.info(f"Making request to {url}")
-                logger.info(f"Request headers: {headers}")
+                # 추가 헤더가 있으면 업데이트
+                if 'headers' in kwargs:
+                    headers.update(kwargs.pop('headers'))
+                
+                # 요청 정보 로깅
+                logger.info(f"Making {method} request to: {url}")
+                logger.info(f"Headers: {headers}")
+                logger.info(f"Request data: {kwargs.get('json')}")
                 
                 async with session.request(method, url, headers=headers, **kwargs) as response:
                     response_text = await response.text()
                     logger.info(f"Response status: {response.status}")
-                    logger.info(f"Response headers: {response.headers}")
                     logger.info(f"Response body: {response_text}")
                     
                     if response.status >= 400:
                         try:
                             error_data = await response.json()
-                            detail = f"API Error: {error_data.get('error', {}).get('name', 'Unknown')} - {error_data.get('error', {}).get('message', error_data)}"
+                            detail = f"API Error: {error_data.get('error', {}).get('name', 'Unknown')} - {error_data}"
                         except:
                             detail = f"API Error: {response_text}"
                         logger.error(f"API request failed: {detail}")
@@ -73,8 +81,22 @@ class TemplateService:
 
     async def delete_template(self, template_id: str) -> bool:
         """템플릿을 삭제합니다"""
-        result = await self._make_request(
-            'DELETE',
-            f"{MODUSIGN_BASE_URL}/templates/{template_id}"
-        )
-        return result.get('success', False)
+        try:
+            # 요청 데이터 준비 - 배열 형태로 직접 전송
+            request_data = [str(template_id)]  # 객체가 아닌 배열로 직접 전송
+            
+            logger.info(f"Template ID: {template_id}")
+            logger.info(f"Request data: {request_data}")
+            
+            # API 요청
+            result = await self._make_request(
+                method='DELETE',
+                url=f"{MODUSIGN_BASE_URL}/templates",
+                json=request_data  # 배열을 직접 전송
+            )
+            logger.info(f"Delete template result: {result}")
+            return result.get('success', False)
+            
+        except Exception as e:
+            logger.error(f"Error in delete_template: {str(e)}")
+            raise
