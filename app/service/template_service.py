@@ -5,6 +5,7 @@ from app.core.config import settings
 import base64
 import aiohttp
 from app.schemas.modusign_schemas import TemplateListResponse, TemplateResponse
+import requests
 
 logger = logging.getLogger(__name__)
 MODUSIGN_BASE_URL = "https://api.modusign.co.kr"
@@ -82,19 +83,18 @@ class TemplateService:
     async def delete_template(self, template_id: str) -> bool:
         """템플릿을 삭제합니다"""
         try:
-            # 요청 데이터 준비 - 배열 형태로 직접 전송
-            request_data = [str(template_id)]  # 객체가 아닌 배열로 직접 전송
+            if not template_id:
+                raise ValueError("Template ID is required")
+                
+            logger.info(f"Deleting template with ID: {template_id}")
             
-            logger.info(f"Template ID: {template_id}")
-            logger.info(f"Request data: {request_data}")
-            
-            # API 요청
+            # URL에 쿼리 파라미터로 template_id 추가
             result = await self._make_request(
                 method='DELETE',
-                url=f"{MODUSIGN_BASE_URL}/templates",
-                json=request_data  # 배열을 직접 전송
+                url=f"{MODUSIGN_BASE_URL}/templates?id={template_id}"
             )
-            logger.info(f"Delete template result: {result}")
+            
+            logger.info(f"Delete template response: {result}")
             return result.get('success', False)
             
         except Exception as e:
