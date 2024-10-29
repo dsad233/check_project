@@ -7,8 +7,8 @@ import base64
 class BaseAppSettings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
-    # MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
-    # MODUSIGN_USER_EMAIL: str
+    MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
+    MODUSIGN_USER_EMAIL: str
     
     @property
     def MODUSIGN_HEADERS(self) -> dict:
@@ -33,7 +33,6 @@ class DevSettings(BaseAppSettings):
     MYSQL_HOST: str
     MYSQL_PORT: int
     MYSQL_DATABASE: str
-    MYSQL_ROOT_PASSWORD: str
 
     @property
     def DATABASE_URL(self) -> str:
