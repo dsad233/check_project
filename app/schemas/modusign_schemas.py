@@ -124,58 +124,6 @@ class TemplateListResponse(BaseModel):
     class Config:
         from_attributes = True
 
-class CreateTemplateFile(BaseModel):
-    name: str
-    base64: str  
-    extension: str = "pdf" 
-
-class CreateTemplateSigningMethod(BaseModel):
-    type: str = "EMAIL" 
-    value: str  
-
-class CreateTemplateParticipant(BaseModel):
-    role: str
-    signingOrder: int = 1
-    signingMethod: CreateTemplateSigningMethod
-
-class CreateTemplateMetadata(BaseModel):
-    key: str
-    value: str
-
-class CreateTemplateRequest(BaseModel):
-    title: str
-    file: CreateTemplateFile
-    participants: List[CreateTemplateParticipant]
-    metadatas: List[CreateTemplateMetadata] = []
-
-    class Config:
-        json_schema_extra = {
-            "example": {
-                "title": "[샘플] 표준 근로계약서",
-                "file": {
-                    "name": "standard_employment_contract",  
-                    "base64": "base64_encoded_content",
-                    "extension": "pdf"
-                },
-                "participants": [
-                    {
-                        "role": "근로자",
-                        "signingOrder": 1,
-                        "signingMethod": {
-                            "type": "EMAIL",
-                            "value": "employee@workswave.com"
-                        }
-                    }
-                ],
-                "metadatas": [
-                    {
-                        "key": "company_name",
-                        "value": "워크스웨이브"
-                    }
-                ]
-            }
-        }
-
 class RequesterInputField(BaseModel):
     type: str
     key: str
