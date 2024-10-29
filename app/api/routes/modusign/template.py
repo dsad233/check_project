@@ -40,7 +40,11 @@ async def create_test_template():
             "participants": [
                 {
                     "role": "근로자",
-                    "signingOrder": 1
+                    "signingOrder": 1,
+                    "signingMethod": {
+                        "type": "EMAIL",
+                        "value": "employee@workswave.com"
+                    }
                 }
             ],
             "fieldPositions": [
@@ -57,10 +61,21 @@ async def create_test_template():
             ]
         }
         
-        logger.info(f"Creating template with data: {template_data}")
-        return await template_service.create_template(template_data)
+        # 요청 데이터 로깅
+        logger.info("=== Template Creation Request ===")
+        logger.info(f"Request Data: {json.dumps(template_data, indent=2, ensure_ascii=False)}")
+        
+        response = await template_service.create_template(template_data)
+        
+        # 응답 데이터 로깅
+        logger.info("=== Template Creation Response ===")
+        logger.info(f"Response Data: {json.dumps(response.dict(), indent=2, ensure_ascii=False)}")
+        
+        return response
+        
     except Exception as e:
         logger.error(f"Error in create_test_template: {str(e)}")
+        logger.error(f"Template data: {json.dumps(template_data, indent=2, ensure_ascii=False)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/create", response_model=TemplateResponse)

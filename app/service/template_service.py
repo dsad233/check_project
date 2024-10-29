@@ -83,26 +83,28 @@ class TemplateService:
     async def create_template(self, template_data: Dict[str, Any]) -> TemplateResponse:
         """템플릿을 생성합니다"""
         try:
-            # 요청 데이터 상세 로깅
-            logger.info("=== Template Creation Request ===")
-            logger.info(f"Request URL: {MODUSIGN_BASE_URL}/templates")
-            logger.info(f"Request Headers: {self.headers}")
+            logger.info("=== Making API Request ===")
+            logger.info(f"URL: {MODUSIGN_BASE_URL}/templates")
+            logger.info(f"Headers: {self.headers}")
             logger.info(f"Request Body: {json.dumps(template_data, indent=2, ensure_ascii=False)}")
             
-            data = await self._make_request(
-                'POST',
-                f"{MODUSIGN_BASE_URL}/templates",
-                json=template_data
-            )
-            
-            # 응답 데이터 로깅
-            logger.info("=== Template Creation Response ===")
-            logger.info(f"Response Data: {json.dumps(data, indent=2, ensure_ascii=False)}")
-            
-            return TemplateResponse(**data)
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{MODUSIGN_BASE_URL}/templates",
+                    headers=self.headers,
+                    json=template_data
+                ) as response:
+                    response_data = await response.json()
+                    logger.info(f"Response Status: {response.status}")
+                    logger.info(f"Response Data: {json.dumps(response_data, indent=2, ensure_ascii=False)}")
+                    
+                    if response.status >= 400:
+                        raise HTTPException(status_code=response.status, detail=str(response_data))
+                        
+                    return TemplateResponse(**response_data)
+                    
         except Exception as e:
             logger.error(f"Error creating template: {str(e)}")
-            logger.error(f"Template data: {json.dumps(template_data, indent=2, ensure_ascii=False)}")
             raise
 
     async def get_templates(self) -> TemplateListResponse:

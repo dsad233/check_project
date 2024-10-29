@@ -69,34 +69,53 @@ class EmbeddedSignLinkResponse(BaseModel):
 
 # 템플릿 관련 스키마
 class FileInfo(BaseModel):
-    downloadUrl: str
+    downloadUrl: Optional[str] = None
     name: Optional[str] = None
     size: Optional[int] = None
     contentType: Optional[str] = None
 
 class SigningMethod(BaseModel):
-    type: Optional[str] = None
-    value: Optional[str] = None
+    type: str
+    value: str
 
 class Participant(BaseModel):
     role: str
-    signingOrder: Optional[int] = None
+    signingOrder: int
     name: Optional[str] = None
     signingMethod: Optional[SigningMethod] = None
+
+class FieldPosition(BaseModel):
+    type: str
+    role: str
+    x: int
+    y: int
+    width: int
+    height: int
+    pageNumber: int
+    required: bool = True
+    placeholder: Optional[str] = None
 
 class Template(BaseModel):
     id: str
     title: str
-    metadatas: List[Metadata] = []
+    metadatas: List[dict] = []
     file: FileInfo
     participants: List[Participant] = []
-    requesterInputs: Optional[List[dict]] = None
-    fieldPositions: Optional[List[TemplateElement]] = None 
+    requesterInputs: List[dict] = []
+    fieldPositions: Optional[List[FieldPosition]] = None
     createdAt: str
     updatedAt: str
 
-class TemplateResponse(Template):
-    pass
+class TemplateResponse(BaseModel):
+    id: str
+    title: str
+    metadatas: List[dict] = []
+    file: FileInfo
+    participants: List[Participant] = []
+    requesterInputs: List[dict] = []
+    fieldPositions: Optional[List[FieldPosition]] = None
+    createdAt: str
+    updatedAt: str
 
 class TemplateListResponse(BaseModel):
     count: int
@@ -156,17 +175,6 @@ class CreateTemplateRequest(BaseModel):
                 ]
             }
         }
-
-class TemplateElement(BaseModel):
-    type: str = Field(..., description="필드 타입 (SIGNATURE, TEXTFIELD, DATEFIELD 등)")
-    role: str = Field(..., description="참가자 역할")
-    x: int = Field(..., description="X 좌표")
-    y: int = Field(..., description="Y 좌표")
-    width: int = Field(..., description="너비")
-    height: int = Field(..., description="높이")
-    pageNumber: int = Field(..., description="페이지 번호")
-    required: bool = Field(True, description="필수 여부")
-    placeholder: Optional[str] = Field(None, description="입력 필드 안내 텍스트")
 
 class RequesterInputField(BaseModel):
     type: str
