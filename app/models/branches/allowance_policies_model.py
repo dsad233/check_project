@@ -27,12 +27,15 @@ class AllowancePolicies(Base):
     # )
     id = Column(Integer, primary_key=True, autoincrement=True)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
+    
+    payment_day = Column(Integer, nullable=False, default=10)  # 급여 지급일 (1-30)
 
     comprehensive_overtime = Column(Boolean, default=False)  # 포괄산정 연장근무수당 허용
     annual_leave = Column(Boolean, default=False)  # 연차수당 허용
     holiday_work = Column(Boolean, default=False)  # 휴일수당 허용
     job_duty = Column(Boolean, default=False)  # 직무수당 허용
     meal = Column(Boolean, default=False)  # 식대 허용
+    base_salary = Column(Boolean, default=False)  # 기본급 사용여부
 
     job_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 직무(직책)수당
     meal_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 식대
@@ -50,6 +53,7 @@ class DefaultAllowancePoliciesDto(BaseModel):
     holiday_work: bool = Field(description="휴일수당", default=False)
     job_duty: bool = Field(description="직무수당", default=False)
     meal: bool = Field(description="식대", default=False)
+    base_salary: bool = Field(description="기본급 사용여부", default=False)
 
     class Config:
         from_attributes = True
@@ -63,6 +67,16 @@ class HolidayAllowancePoliciesDto(BaseModel):
 
 class AllowancePoliciesDto(DefaultAllowancePoliciesDto, HolidayAllowancePoliciesDto):
     pass
+
+class AllowancePoliciesResponse(BaseModel):
+    branch_id: Optional[int] = None
+    payment_day: Optional[int] = None
+    job_duty: bool = Field(description="직무수당", default=False)
+    meal: bool = Field(description="식대", default=False)
+    base_salary: bool = Field(description="기본급 사용여부", default=False)
+
+    class Config:
+        from_attributes = True
 
 class AllowancePoliciesCreate(BaseSettings):
     comprehensive_overtime : bool

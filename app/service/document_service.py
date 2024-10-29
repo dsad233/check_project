@@ -1,104 +1,104 @@
-import requests
-from sqlalchemy.orm import Session
+import aiohttp
+import logging
+import base64
+from fastapi import HTTPException
 from typing import List, Tuple, Dict, Any
-from app.core.modusign_config import MODUSIGN_BASE_URL, MODUSIGN_HEADERS
-from app.schemas.modusign_schemas import EmbeddedSignLinkResponse, CreateDocumentResponse, CreateCustomerConsentFormPayload
-from app.schemas.sign_schemas import DocumentListRequest
+from app.core.config import settings
+from app.schemas.modusign_schemas import (
+    DocumentListRequest,
+    CreateDocumentRequest,
+    CreateDocumentResponse,
+    EmbeddedSignLinkResponse,
+    Document
+)
 
-async def get_documents(request: DocumentListRequest, offset: int, limit: int, db: Session) -> Tuple[List[dict], int]:
-    url = f"{MODUSIGN_BASE_URL}/documents?page={request.page}&limit={limit}"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    data = response.json()
-    return data['data'], data['total']
+logger = logging.getLogger(__name__)
+MODUSIGN_BASE_URL = "https://api.modusign.co.kr"
 
-async def create_document_with_template(request: CreateCustomerConsentFormPayload, db: Session) -> CreateDocumentResponse:
-    url = f"{MODUSIGN_BASE_URL}/documents/request-with-template"
-    payload = request.dict()
-    response = requests.post(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return CreateDocumentResponse(**response.json())
+class DocumentService:
+    def __init__(self):
+        if not settings.MODUSIGN_API_KEY or not settings.MODUSIGN_USER_EMAIL:
+            raise ValueError("MODUSIGN_API_KEY and MODUSIGN_USER_EMAIL must be set")
+            
+        auth_string = f"{settings.MODUSIGN_USER_EMAIL}:{settings.MODUSIGN_API_KEY}"
+        encoded_auth = base64.b64encode(auth_string.encode()).decode()
+        
+        self.headers = {
+            "accept": "application/json",
+            "content-type": "application/json",
+            "authorization": f"Basic {encoded_auth}"
+        }
 
-async def request_document_signature(document_id: str, db: Session) -> EmbeddedSignLinkResponse:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/embedded-view"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    data = response.json()
-    return EmbeddedSignLinkResponse(embedded_url=data['embeddedUrl'])
+    async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.request(method, url, headers=self.headers, **kwargs) as response:
+                    if response.status == 204:  # DELETE 요청 성공
+                        return {"success": True}
+                        
+                    response_text = await response.text()
+                    logger.info(f"API Response: {response_text}")  # 응답 로깅 추가
+                    
+                    if response.status != 200:
+                        try:
+                            error_data = await response.json()
+                            detail = error_data.get('message', 'API request failed')
+                        except:
+                            detail = response_text
+                        raise HTTPException(status_code=response.status, detail=detail)
+                    
+                    return await response.json()
+        except Exception as e:
+            logger.error(f"API request failed: {str(e)}")
+            raise HTTPException(status_code=500, detail=str(e))
 
-async def delete_document(document_id: str, db: Session) -> bool:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}"
-    response = requests.delete(url, headers=MODUSIGN_HEADERS)
-    return response.status_code == 204
+    async def get_documents(
+        self, request: DocumentListRequest, offset: int, limit: int
+    ) -> Tuple[List[Document], int]:
+        data = await self._make_request('GET', f"{MODUSIGN_BASE_URL}/documents")
+        documents = [Document(**doc) for doc in data.get('documents', [])]
+        total_count = data.get('total_count', 0)
+        return documents, total_count
 
-async def get_document_details(document_id: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
+    async def create_document_with_template(
+        self, request: CreateDocumentRequest
+    ) -> CreateDocumentResponse:
+        payload = {
+            "templateId": request.templateId,
+            "document": request.document.model_dump()  # Pydantic v2 사용
+        }
+        logger.info(f"Create document payload: {payload}")  # 요청 페이로드 로깅
+        
+        data = await self._make_request(
+            'POST',
+            f"{MODUSIGN_BASE_URL}/documents/request-with-template",
+            json=payload
+        )
+        
+        return CreateDocumentResponse(
+            document_id=data.get('id'),
+            participant_id=data.get('participants', [{}])[0].get('id') if data.get('participants') else None,
+            embedded_url=None
+        )
 
-async def cancel_document_request(document_id: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/cancel"
-    response = requests.post(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
+    async def request_document_signature(
+        self, document_id: str
+    ) -> EmbeddedSignLinkResponse:
+        data = await self._make_request(
+            'GET',
+            f"{MODUSIGN_BASE_URL}/documents/{document_id}/embedded-view"
+        )
+        return EmbeddedSignLinkResponse(embeddedUrl=data['embeddedUrl'])
 
-async def request_document_correction(document_id: str, participant_id: str, message: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/request-correction"
-    payload = {"participantId": participant_id, "message": message}
-    response = requests.post(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
+    async def delete_document(self, document_id: str) -> bool:
+        result = await self._make_request(
+            'DELETE',
+            f"{MODUSIGN_BASE_URL}/documents/{document_id}"
+        )
+        return result.get('success', False)
 
-async def resend_notification(document_id: str, participant_id: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/resend-notification"
-    payload = {"participantId": participant_id}
-    response = requests.post(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def update_signing_deadline(document_id: str, signing_due: Dict[str, Any], db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/signing-due"
-    response = requests.put(url, json=signing_due, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def update_document_metadata(document_id: str, metadatas: List[Dict[str, str]], db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/metadatas"
-    payload = {"metadatas": metadatas}
-    response = requests.put(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def get_document_history(document_id: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/history"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def update_document_status(document_id: str, status: str, db: Session) -> Dict[str, Any]:
-    # 실제로는 DB 업데이트 로직이 필요합니다. 여기서는 모두싸인 API를 호출하여 상태를 업데이트합니다.
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}"
-    payload = {"status": status}
-    response = requests.put(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def get_participant_fields(document_id: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/participant-fields"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def get_requester_inputs(document_id: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/requester-inputs"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
-
-async def forward_document_bundle(document_id: str, email: str, db: Session) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/forward"
-    payload = {"email": email}
-    response = requests.post(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
+    async def get_document_details(self, document_id: str) -> Dict[str, Any]:
+        return await self._make_request(
+            'GET',
+            f"{MODUSIGN_BASE_URL}/documents/{document_id}"
+        )

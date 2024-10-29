@@ -9,7 +9,9 @@ from app.core.database import get_db
 from app.cruds.users import users_crud
 from app.service import branch_service
 from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.schemas.branches_schemas import AutoLeavePoliciesAndPartsDto
+from app.schemas.branches_schemas import AutoLeavePoliciesAndPartsDto, BranchHistoriesResponse
+from app.common.dto.search_dto import BaseSearchDto
+from app.enums.branches import BranchHistoryType
 
 logger = logging.getLogger(__name__)
 
@@ -47,4 +49,17 @@ async def update_auto_leave_policies(
     
     await check_role(session=session, current_user_id=current_user_id, branch_id=branch_id)
     
-    return await branch_service.update_auto_leave_policies_and_parts(session=session, branch_id=branch_id, data=data)
+    return await branch_service.update_auto_leave_policies_and_parts(session=session, branch_id=branch_id, data=data, current_user_id=current_user_id)
+
+
+@router.get("/histories", response_model=BranchHistoriesResponse)
+async def get_branch_histories(
+    branch_id: int,
+    request: BaseSearchDto = Depends(BaseSearchDto),
+    session: AsyncSession = Depends(get_db),
+    current_user_id: int = Depends(get_current_user_id)
+) -> BranchHistoriesResponse:
+    
+    await check_role(session=session, current_user_id=current_user_id, branch_id=branch_id)
+    
+    return await branch_service.get_branch_histories(session=session, branch_id=branch_id, request=request, history_type=BranchHistoryType.AUTO_ANNUAL_LEAVE_GRANT)
