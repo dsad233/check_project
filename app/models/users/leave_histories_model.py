@@ -59,8 +59,11 @@ class LeaveHistories(Base):
     
 class LeaveHistoriesResponse(BaseModel):
     id: int
+    branch_id: int
     branch_name: str
+    user_id: int
     user_name: str
+    part_id: int
     part_name: str
     
     application_date: datetime

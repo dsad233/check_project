@@ -4,14 +4,17 @@ from sqlalchemy.orm import joinedload
 from datetime import datetime, date, timedelta
 from typing import Optional
 
-from app.core.database import async_session
-from app.middleware.tokenVerify import validate_token, get_current_user_id
+from app.core.database import async_session, get_db
+from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
 from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
 from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
 from app.common.dto.pagination_dto import PaginationDto
 from app.enums.users import StatusKor, Status
 from calendar import monthrange
+from app.models.parts.parts_model import Parts
+from app.models.branches.branches_model import Branches
+from app.models.branches.leave_categories_model import LeaveCategory
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
@@ -21,7 +24,7 @@ async def get_current_user_leaves(
     *,
     branch_id: int,
     year: Optional[int] = None,
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
 ):
     try:
         if year is None:
@@ -62,94 +65,122 @@ async def get_current_user_leaves(
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
 
-@router.get("/list", response_model=LeaveHistoriesListResponse, summary="연차 신청 목록 조회", description="연차 신청 목록을 조회합니다.")
+@router.get("/list", summary="연차 신청 목록 조회", description="연차 신청 목록을 조회합니다.")
 async def get_leave_histories(
     search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
-    start: Optional[date] = None, # 시작일
-    end: Optional[date] = None, # 종료일
-    branch: Optional[int] = None, # 지점
-    part: Optional[str] = None, # 파트
+    date: Optional[date] = None, # 시작일 계산을 위한 날짜 입력
+    branch_id: Optional[int] = None, # 지점
+    part_id: Optional[str] = None, # 파트
     search_name: Optional[str] = None, # 이름
     search_phone: Optional[str] = None, # 전화번호
-    skip: int = 0,
-    limit: int = 100,
-    current_user_id: int = Depends(get_current_user_id)
-) -> LeaveHistoriesListResponse:
+    page: int = 1,
+    size: int = 10,
+    current_user: Users = Depends(get_current_user)
+):
     try:
-        # 사용자 권한 확인
-        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
-        user_result = await db.execute(user_query)
-        current_user = user_result.scalar_one_or_none()
-
-        if current_user.role.strip() == "MSO 최고권한":
-            pass
-
-        # 쿼리 구성
-        query = select(LeaveHistories).options(
-            joinedload(LeaveHistories.user).joinedload(Users.part),
-            joinedload(LeaveHistories.user),
-            joinedload(LeaveHistories.leave_category),
-            joinedload(LeaveHistories.branch)
-        ).where(
-            LeaveHistories.deleted_yn == 'N'
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자", "사원"]:
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        
+        if date is None:
+            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
+            date_obj = datetime.now().date()    
+            current_weekday = date_obj.weekday()
+            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            date_start_day = date_obj - timedelta(days=current_weekday)
+            # 일요일부터 6일을 더해서 토요일을 구함
+            date_end_day = date_start_day + timedelta(days=6)
+        else:
+            date_obj = date
+            current_weekday = date_obj.weekday()
+            date_start_day = date_obj - timedelta(days=current_weekday)
+            date_end_day = date_start_day + timedelta(days=6)
+        
+        base_query = select(LeaveHistories).where(
+            LeaveHistories.deleted_yn == 'N',
+            LeaveHistories.application_date >= date_start_day,
+            LeaveHistories.application_date <= date_end_day
         )
         
-        if branch:
-            query = query.filter(LeaveHistories.branch_id.like(f"%{branch}%"))
+        if base_query is None:
+            raise HTTPException(status_code=404, detail="연차 신청 목록을 찾을 수 없습니다.")
         
-        # 기존 필터 적용
-        if search.kind:
-            query = query.join(LeaveHistories.leave_category).filter(LeaveHistories.leave_category.has(name=search.kind))
-        if search.status:
-            query = query.filter(LeaveHistories.status == search.status)
+        stmt = None
 
-        # 새로운 필터 적용
-        if start and end:
-            query = query.filter(LeaveHistories.application_date.between(start, end))
-        if part:
-            query = query.join(LeaveHistories.user).join(Users.part).filter(Users.part.has(name=part))
+        # 필터 적용 부분 수정
+        if branch_id:
+            base_query = base_query.join(Branches, LeaveHistories.branch_id == Branches.id)\
+                .where(Branches.id == branch_id)
+        if part_id:
+            base_query = base_query.join(Parts, LeaveHistories.part_id == Parts.id)\
+                .where(Parts.id == part_id)
         if search_name:
-            query = query.join(LeaveHistories.user).filter(Users.name.ilike(f"%{search_name}%"))
+            base_query = base_query.join(Users)\
+                .where(Users.name.ilike(f"%{search_name}%"))
         if search_phone:
-            query = query.join(LeaveHistories.user).filter(Users.phone_number.ilike(f"%{search_phone}%"))
-
-        # 전체 레코드 수 계산
-        count_query = query.with_only_columns(func.count())
-        count_result = await db.execute(count_query)
-        total_count = count_result.scalar_one()
-
-        # 페이지네이션 적용
-        stmt = query.order_by(LeaveHistories.application_date.desc())\
+            base_query = base_query.join(Users)\
+                .where(Users.phone_number.ilike(f"%{search_phone}%"))
+        if search.kind:
+            base_query = base_query.join(LeaveHistories.leave_category)\
+                .where(LeaveCategory.name.ilike(f"%{search.kind}%"))
+        if search.status:
+            base_query = base_query.where(LeaveHistories.status.ilike(f"%{search.status}%"))
+        
+        skip = (page - 1) * size
+        stmt = base_query.order_by(LeaveHistories.application_date.desc())\
             .offset(skip)\
-            .limit(limit)
+            .limit(size)
             
-        # 결과 조회
         result = await db.execute(stmt)
         leave_histories = result.scalars().all()
-
-        leave_history_dtos = []
-        for history in leave_histories:
-            dto = LeaveHistoriesResponse(
-                id=history.id,
-                branch_name=history.branch.name,
-                user_name=history.user.name,
-                part_name=history.user.part.name,
-                application_date=history.application_date,
-                leave_category_name=history.leave_category.name,
-                decreased_days=float(history.decreased_days) if history.decreased_days is not None else 0.0,
-                status=history.status,
-                applicant_description=history.applicant_description,
-                admin_description=history.admin_description,
-                approve_date=history.approve_date
-            )
-            leave_history_dtos.append(dto)
-
-        pagination = PaginationDto(total_record=total_count)
-        leave_list_response = LeaveHistoriesListResponse(list=leave_history_dtos, pagination=pagination)
-        return leave_list_response
-
+        
+        formatted_data = []
+        for leave_history in leave_histories:
+            
+            user_query = select(Users, Branches, Parts).join(
+                Branches, Users.branch_id == Branches.id
+            ).join(
+                Parts, Users.part_id == Parts.id
+            ).where(Users.id == leave_history.user_id)
+            
+            user_result = await db.execute(user_query)
+            user, branch, part = user_result.first()
+            
+            leave_history_data = {
+                "id": leave_history.id,
+                "branch_id": branch.id,
+                "branch_name": branch.name,
+                "user_id": user.id,
+                "user_name": user.name,
+                "part_id": part.id,
+                "part_name": part.name,
+                "application_date": leave_history.application_date,
+                "leave_category_id": leave_history.leave_category_id,
+                "decreased_days": float(leave_history.decreased_days) if leave_history.decreased_days is not None else 0.0,
+                "status": leave_history.status,
+                "applicant_description": leave_history.applicant_description,
+                "admin_description": leave_history.admin_description,
+                "approve_date": leave_history.approve_date
+            }
+            formatted_data.append(leave_history_data)
+            
+        # 전체 레코드 수 계산
+        count_query = base_query.with_only_columns(func.count())
+        count_result = await db.execute(count_query)
+        total_count = count_result.scalar_one()
+            
+        return {
+            "list": formatted_data,
+            "pagination": {
+                "total": total_count,
+                "page": page,
+                "size": size,
+                "total_pages": (total_count + size - 1) // size
+            },
+            "message": "연차 신청 목록을 정상적으로 조회하였습니다."
+        }
+        
     except Exception as err:
-        print(err)
+        print(f"에러가 발생하였습니다: {err}")
         raise HTTPException(status_code=500, detail=str(err))
 
 @router.get("/approve-list", response_model=LeaveHistoriesListResponse, summary="연차 전체 승인 목록 조회", description="연차 전체 승인 목록을 조회합니다.")
