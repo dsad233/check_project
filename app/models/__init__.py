@@ -38,6 +38,10 @@ from .common.minimum_wage_policies_model import MinimumWagePolicy
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
 
+# salary_policies
+from .branches.salary_polices_model import SalaryTemplatesPolicies
+from .branches.parttimer_policies_model import ParttimerPolicies
+
 # Users.salary = relationship("UserSalary", back_populates="user")
 
 # 일 대 다 관계
@@ -87,6 +91,11 @@ LeaveCategory.leave_excluded_parts = relationship("LeaveExcludedPart", back_popu
 
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Parts.closed_days = relationship("ClosedDays", back_populates="part")
+Branches.parttimer_policies = relationship("ParttimerPolicies", back_populates="branch", uselist=False)
+Branches.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="branch")
+
+ParttimerPolicies.branch = relationship("Branches", back_populates="parttimer_policies")
+SalaryTemplatesPolicies.branch = relationship("Branches", back_populates="salary_templates_policies")
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
 LeaveHistories.leave_category = relationship("LeaveCategory", back_populates="leave_histories")
@@ -169,3 +178,6 @@ DocumentSendHistory.request_user = relationship("Users", foreign_keys=[DocumentS
 Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.user_id], back_populates="user")
 Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="request_user")
 Document.document_send_histories = relationship("DocumentSendHistory", back_populates="document")
+
+Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)
+SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_templates_policies")
