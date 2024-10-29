@@ -1,6 +1,7 @@
 import aiohttp
 import logging
 import base64
+import json
 from fastapi import HTTPException
 from typing import List, Tuple, Dict, Any
 from app.core.config import settings
@@ -28,77 +29,106 @@ class DocumentService:
             "content-type": "application/json",
             "authorization": f"Basic {encoded_auth}"
         }
+        logger.info("ModuSign service initialized")
 
     async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.request(method, url, headers=self.headers, **kwargs) as response:
-                    if response.status == 204:  # DELETE 요청 성공
-                        return {"success": True}
-                        
                     response_text = await response.text()
-                    logger.info(f"API Response: {response_text}")  # 응답 로깅 추가
+                    logger.info(f"Response status: {response.status}")
+                    logger.info(f"Response headers: {response.headers}")
+                    logger.info(f"Response body: {response_text}")
                     
-                    if response.status != 200:
+                    if response.status not in [200, 201, 204]:
                         try:
                             error_data = await response.json()
-                            detail = error_data.get('message', 'API request failed')
+                            detail = f"API Error: {error_data.get('type', 'UNKNOWN')} - {error_data.get('title', error_data)}"
                         except:
-                            detail = response_text
+                            detail = f"API Error: {response_text}"
                         raise HTTPException(status_code=response.status, detail=detail)
                     
                     return await response.json()
-        except Exception as e:
-            logger.error(f"API request failed: {str(e)}")
-            raise HTTPException(status_code=500, detail=str(e))
+                    
+        except aiohttp.ClientError as e:
+            raise HTTPException(status_code=500, detail=f"HTTP request failed: {str(e)}")
 
-    async def get_documents(
-        self, request: DocumentListRequest, offset: int, limit: int
-    ) -> Tuple[List[Document], int]:
-        data = await self._make_request('GET', f"{MODUSIGN_BASE_URL}/documents")
-        documents = [Document(**doc) for doc in data.get('documents', [])]
-        total_count = data.get('total_count', 0)
-        return documents, total_count
+    async def get_documents(self) -> Dict:
+        """문서 목록을 조회합니다"""
+        try:
+            data = await self._make_request(
+                'GET',
+                f"{MODUSIGN_BASE_URL}/documents"
+            )
+            return {
+                'data': data.get('documents', []),
+                'total_count': data.get('count', 0)
+            }
+        except Exception as e:
+            logger.error(f"Error getting documents: {str(e)}")
+            raise
 
     async def create_document_with_template(
-        self, request: CreateDocumentRequest
+        self, template_id: str, document: Dict[str, Any]
     ) -> CreateDocumentResponse:
-        payload = {
-            "templateId": request.templateId,
-            "document": request.document.model_dump()  # Pydantic v2 사용
-        }
-        logger.info(f"Create document payload: {payload}")  # 요청 페이로드 로깅
-        
-        data = await self._make_request(
-            'POST',
-            f"{MODUSIGN_BASE_URL}/documents/request-with-template",
-            json=payload
-        )
-        
-        return CreateDocumentResponse(
-            document_id=data.get('id'),
-            participant_id=data.get('participants', [{}])[0].get('id') if data.get('participants') else None,
-            embedded_url=None
-        )
+        try:
+            data = await self._make_request(
+                'POST',
+                f"{MODUSIGN_BASE_URL}/documents/request-with-template",
+                json={
+                    "templateId": template_id,
+                    "document": document
+                }
+            )
+            return CreateDocumentResponse(
+                document_id=data['id'],
+                participant_id=data['participants'][0]['id'] if data.get('participants') else None,
+                embedded_url=None  # 서명 URL은 별도 API 호출로 받아야 함
+            )
+        except Exception as e:
+            logger.error(f"Error in create_document_with_template: {str(e)}")
+            raise
 
     async def request_document_signature(
         self, document_id: str
     ) -> EmbeddedSignLinkResponse:
-        data = await self._make_request(
-            'GET',
-            f"{MODUSIGN_BASE_URL}/documents/{document_id}/embedded-view"
-        )
-        return EmbeddedSignLinkResponse(embeddedUrl=data['embeddedUrl'])
+        try:
+            data = await self._make_request(
+                'GET',
+                f"{MODUSIGN_BASE_URL}/documents/{document_id}/embedded-view"
+            )
+            return EmbeddedSignLinkResponse(embeddedUrl=data['embeddedUrl'])
+        except Exception as e:
+            logger.error(f"Error in request_document_signature: {str(e)}")
+            raise
 
     async def delete_document(self, document_id: str) -> bool:
-        result = await self._make_request(
-            'DELETE',
-            f"{MODUSIGN_BASE_URL}/documents/{document_id}"
-        )
-        return result.get('success', False)
+        try:
+            result = await self._make_request(
+                'DELETE',
+                f"{MODUSIGN_BASE_URL}/documents/{document_id}"
+            )
+            return result.get('success', False)
+        except Exception as e:
+            logger.error(f"Error in delete_document: {str(e)}")
+            raise
 
-    async def get_document_details(self, document_id: str) -> Dict[str, Any]:
-        return await self._make_request(
-            'GET',
-            f"{MODUSIGN_BASE_URL}/documents/{document_id}"
+    async def get_template_details(self, template_id: str) -> Dict[str, Any]:
+        """템플릿 상세 정보를 조회합니다."""
+        try:
+            return await self._make_request(
+                'GET',
+                f"{MODUSIGN_BASE_URL}/templates/{template_id}"
+            )
+        except Exception as e:
+            logger.error(f"Error in get_template_details: {str(e)}")
+            raise
+
+    async def create_document(self, document_data: Dict[str, Any]) -> Dict:
+        """문서를 생성합니다"""
+        data = await self._make_request(
+            'POST',
+            f"{MODUSIGN_BASE_URL}/documents",
+            json=document_data
         )
+        return data
