@@ -1,22 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy import select, func
-from sqlalchemy.orm import joinedload
 from datetime import datetime, date, timedelta
 from typing import Optional
 
-from app.core.database import async_session, get_db
+from app.core.database import get_db
 from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
-from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesResponse, LeaveHistoriesCreate, LeaveHistoriesListResponse, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
+from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
 from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
-from app.common.dto.pagination_dto import PaginationDto
-from app.enums.users import StatusKor, Status
-from calendar import monthrange
+from app.enums.users import Status
 from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
+from sqlalchemy.ext.asyncio import AsyncSession
+
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 # 현재 사용자의 연차 일수 정보 조회
 @router.get("/current-user-leaves", response_model=UserLeavesDaysResponse, summary="현재 사용자의 연차 일수 정보 조회", description="현재 사용자의 연차 일수 정보를 조회합니다.")
@@ -25,6 +24,7 @@ async def get_current_user_leaves(
     branch_id: int = Query(..., description="지점 ID를 입력합니다."),
     year: Optional[int] = Query(None, description="연도를 입력합니다. 예) 2024"),
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if year is None:
@@ -75,7 +75,8 @@ async def get_leave_histories(
     search_phone: Optional[str] = Query(None, description="검색할 전화번호를 입력합니다. 공백인 경우 전체 조회합니다."), # 전화번호
     page: int = Query(1, gt=0, description="페이지 번호를 입력합니다. 기본값은 1입니다."),
     size: int = Query(10, gt=0, description="페이지당 레코드 수를 입력합니다. 기본값은 10입니다."),
-    current_user: Users = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자", "사원"]:
@@ -193,7 +194,8 @@ async def get_approve_leave(
     search_phone: Optional[str] = Query(None, description="검색할 전화번호를 입력합니다. 공백인 경우 전체 조회합니다."), # 전화번호
     page: int = Query(1, gt=0, description="페이지 번호를 입력합니다. 기본값은 1입니다."),
     size: int = Query(10, gt=0, description="페이지당 레코드 수를 입력합니다. 기본값은 10입니다."),
-    current_user: Users = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
          
@@ -311,6 +313,7 @@ async def create_leave_history(
     start_date: date = Query(..., description="시작일을 입력합니다. 예) YYYY-MM-DD"),
     end_date: date = Query(..., description="종료일을 입력합니다. 예) YYYY-MM-DD"),
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
@@ -343,7 +346,7 @@ async def create_leave_history(
         current_total = total_result.scalar() or 0.0
         
         # 새로운 total_decreased_days 계산
-        new_total_decreased = float(current_total) + decreased_days
+        # new_total_decreased = float(current_total) + decreased_days
 
 
         create = LeaveHistories(
@@ -359,22 +362,22 @@ async def create_leave_history(
         )
 
         db.add(create)
-        await db.flush()
+        # await db.flush()
         
-        user_leaves_days = UserLeavesDays(
-            user_id=current_user.id,
-            branch_id=branch_id,
-            leave_category_id=leave_create.leave_category_id,
-            increased_days=0.00,
-            decreased_days=decreased_days,
-            total_decreased_days=new_total_decreased,
-            description=leave_create.applicant_description or None,
-            is_paid=False,
-            is_approved=True,
-            leave_history_id=create.id
-        )
+        # user_leaves_days = UserLeavesDays(
+        #     user_id=current_user.id,
+        #     branch_id=branch_id,
+        #     leave_category_id=leave_create.leave_category_id,
+        #     increased_days=0.00,
+        #     decreased_days=decreased_days,
+        #     total_decreased_days=new_total_decreased,
+        #     description=leave_create.applicant_description or None,
+        #     is_paid=False,
+        #     is_approved=True,
+        #     leave_history_id=create.id
+        # )
         
-        db.add(user_leaves_days)
+        # db.add(user_leaves_days)
         
         await db.commit()
         return {"message": "연차 생성에 성공하였습니다."}
@@ -390,6 +393,7 @@ async def approve_leave(
     leave_id: int = Path(..., description="승인/반려 결정을 할 연차 ID를 입력합니다."),
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
@@ -416,6 +420,7 @@ async def approve_leave(
             leave_history.status = leave_approve.status
             leave_history.admin_description = leave_approve.admin_description or None
             leave_history.approve_date = datetime.now()
+            
             await db.commit()
             return {"message": "연차 승인/반려에 성공하였습니다."}
         else:
@@ -431,6 +436,7 @@ async def update_leave(
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     leave_id: int = Path(..., description="수정할 연차 ID를 입력합니다."),
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
@@ -473,7 +479,8 @@ async def update_leave(
 async def delete_leave(
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     leave_id: int = Path(..., description="삭제할 연차 ID를 입력합니다."),
-    current_user_id: int = Depends(get_current_user_id)
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')

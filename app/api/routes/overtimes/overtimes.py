@@ -1,28 +1,32 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select
 
-from app.core.database import async_session
+from app.core.database import get_db
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
-from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OvertimeUpdate, OverTime_History
+from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OverTime_History
 from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.models.users.users_model import Users
 from sqlalchemy.orm import load_only
 from app.enums.users import OverTimeHours
 from typing import Optional
 from datetime import date
-from calendar import monthrange
 from datetime import timedelta
-router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+from sqlalchemy.ext.asyncio import AsyncSession
 
+router = APIRouter(dependencies=[Depends(validate_token)])
+# db = async_session()
 
 # 오버타임 초과 근무 생성(신청)
 @router.post("", summary="오버타임 초과 근무 생성")
-async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depends(get_current_user_id)):
+async def create_overtime(
+    overtime: OvertimeCreate, 
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+    ):
     try:        
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -52,7 +56,10 @@ async def create_overtime(overtime: OvertimeCreate, current_user_id: int = Depen
 
 # 오버타임 관리자 메모 상세 조회
 @router.get('/manager/{id}', summary="오버타임 관리자 메모 상세 조회")
-async def get_manager(id : int):
+async def get_manager(
+    id : int,
+    db: AsyncSession = Depends(get_db)
+    ):
     try:
         find_manager_data = await db.execute(select(Overtimes).options(load_only(Overtimes.manager_memo)).where(Overtimes.id == id, Overtimes.deleted_yn == "N"))
 
@@ -67,7 +74,12 @@ async def get_manager(id : int):
 
 # 오버타임 초과 근무 승인
 @router.patch("/approve/{overtime_id}", summary="오버타임 승인")
-async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, current_user: Users = Depends(get_current_user)):
+async def approve_overtime(
+    overtime_id: int, 
+    overtime_select: OvertimeSelect, 
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+    ):
     try:
         stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N") & (Overtimes.status == "pending"))
         result = await db.execute(stmt)
@@ -195,7 +207,8 @@ async def approve_overtime(overtime_id: int, overtime_select: OvertimeSelect, cu
 async def reject_overtime(
     overtime_id: int,
     overtime_select: OvertimeSelect, 
-    current_user: Users = Depends(get_current_user)
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
     ):
     try:
         stmt = select(Overtimes).where((Overtimes.id == overtime_id) & (Overtimes.deleted_yn == "N"))
@@ -240,6 +253,7 @@ async def get_overtimes(
     status: Optional[str] = None,
     page: int = 1,
     size: int = 10,
+    db: AsyncSession = Depends(get_db)
     ):
     try:
         if date is None:
