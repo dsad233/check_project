@@ -36,6 +36,7 @@ async def create(*, session: AsyncSession, branch_id: int, auto_annual_leave_app
         auto_annual_leave_approval_create.branch_id = branch_id
     session.add(auto_annual_leave_approval_create)
     await session.commit()
+    await session.flush()
     await session.refresh(auto_annual_leave_approval_create)
     return auto_annual_leave_approval_create
 
