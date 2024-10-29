@@ -21,6 +21,7 @@ async def create(
         work_policies_create.branch_id = branch_id
     session.add(work_policies_create)
     await session.commit()
+    await session.flush()
     await session.refresh(work_policies_create)
     return work_policies_create
 
