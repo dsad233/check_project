@@ -27,6 +27,8 @@ aiologger = "^0.7.0"
 boto3 = "^1.35.44"
 pycryptodome = "^3.16.0"
 aiohttp = "^3.10.10"
+reportlab = "^4.2.5"
+python-multipart = "^0.0.16"
 
 
 [build-system]
