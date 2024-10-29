@@ -2,6 +2,8 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from app.enums.users import Role
+from app.exceptions.exceptions import ForbiddenError
+
 
 class PermissionMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
@@ -16,15 +18,14 @@ class PermissionMiddleware(BaseHTTPMiddleware):
         ]
 
     async def dispatch(self, request: Request, call_next):
-        if request.method == "OPTIONS":
-            return await call_next(request)
+        try:  # try 블록 추가
+            if request.method == "OPTIONS":
+                return await call_next(request)
 
-        path = request.url.path
-        if any(path.startswith(p) for p in self.public_paths):
-            return await call_next(request)
+            path = request.url.path
+            if any(path.startswith(p) for p in self.public_paths):
+                return await call_next(request)
 
-        try:
-            # URL에서 branch_id 추출 (branches 다음에 오는 숫자만 추출)
             path_parts = request.url.path.split('/')
             branch_id = None
 
@@ -32,27 +33,17 @@ class PermissionMiddleware(BaseHTTPMiddleware):
                 if part == "branches" and i + 1 < len(path_parts):
                     try:
                         branch_id = int(path_parts[i + 1])
-                        break
                     except ValueError:
                         continue
 
-            # 지점 접근 권한 체크만 수행
             if branch_id is not None:
-                response = await call_next(request)
-                if response.status_code == 200:
-                    user = getattr(request.state, 'user', None)
-                    if user and user.role != Role.MSO and user.branch_id != branch_id:
-                        return JSONResponse(
-                            status_code=401,
-                            content={"detail": "해당 지점에 접근할 권한이 없습니다."}
-                        )
-                return response
+                user = getattr(request.state, 'user', None)
+                if user and user.role != Role.MSO and user.branch_id != branch_id:
+                    raise ForbiddenError(detail="해당 지점에 대한 권한이 없습니다.")
 
-            return await call_next(request)
+            # 권한 체크가 끝난 후 실제 요청 처리
+            response = await call_next(request)
+            return response
 
-        except Exception as e:
-            print(f"Permission Middleware Error: {str(e)}")
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "권한이 없습니다."}
-            )
+        except ForbiddenError as fe:
+            raise fe  # FastAPI의 예외 처리기로 전달
