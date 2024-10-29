@@ -138,14 +138,6 @@ from app.enums.users import Weekday  # Weekday enum import 추가
 #     class Config:
 #         from_attributes = True
 
-class DayOfWeek(PyEnum):
-    MONDAY = 0
-    TUESDAY = 1
-    WEDNESDAY = 2
-    THURSDAY = 3
-    FRIDAY = 4
-    SATURDAY = 5
-    SUNDAY = 6
 class WorkPolicies(Base):
     __tablename__ = "work_policies"
     id = Column(Integer, primary_key=True, autoincrement=True)
