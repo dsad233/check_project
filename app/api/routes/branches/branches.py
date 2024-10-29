@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
+from app.cruds.branches.policies.salary_polices_crud import create_parttimer_policies
 from app.schemas.users_schemas import UserLeaveResponse, UsersLeaveResponse
 from app.cruds.branches.policies.salary_polices_crud import create_parttimer_policies
 from app.schemas.users_schemas import UserLeaveResponse
