@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from datetime import datetime, date, timedelta
@@ -22,8 +22,8 @@ db = async_session()
 @router.get("/current-user-leaves", response_model=UserLeavesDaysResponse, summary="현재 사용자의 연차 일수 정보 조회", description="현재 사용자의 연차 일수 정보를 조회합니다.")
 async def get_current_user_leaves(
     *,
-    branch_id: int,
-    year: Optional[int] = None,
+    branch_id: int = Query(..., description="지점 ID를 입력합니다."),
+    year: Optional[int] = Query(None, description="연도를 입력합니다. 예) 2024"),
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
@@ -68,13 +68,13 @@ async def get_current_user_leaves(
 @router.get("/list", summary="연차 신청 목록 조회", description="연차 신청 목록을 조회합니다.")
 async def get_leave_histories(
     search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
-    date: Optional[date] = None, # 시작일 계산을 위한 날짜 입력
-    branch_id: Optional[int] = None, # 지점
-    part_id: Optional[str] = None, # 파트
-    search_name: Optional[str] = None, # 이름
-    search_phone: Optional[str] = None, # 전화번호
-    page: int = 1,
-    size: int = 10,
+    date: Optional[date] = Query(None, description="시작일 계산을 위한 날짜를 입력합니다. 공백인 경우 오늘을 포함한 주의 일요일-토요일 기간을 조회합니다."), # 시작일 계산을 위한 날짜 입력
+    branch_id: Optional[int] = Query(None, description="검색할 지점 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 지점
+    part_id: Optional[str] = Query(None, description="검색할 파트 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 파트
+    search_name: Optional[str] = Query(None, description="검색할 이름을 입력합니다. 공백인 경우 전체 조회합니다."), # 이름
+    search_phone: Optional[str] = Query(None, description="검색할 전화번호를 입력합니다. 공백인 경우 전체 조회합니다."), # 전화번호
+    page: int = Query(1, gt=0, description="페이지 번호를 입력합니다. 기본값은 1입니다."),
+    size: int = Query(10, gt=0, description="페이지당 레코드 수를 입력합니다. 기본값은 10입니다."),
     current_user: Users = Depends(get_current_user)
 ):
     try:
@@ -186,13 +186,13 @@ async def get_leave_histories(
 @router.get("/approve-list", summary="연차 전체 승인 목록 조회", description="연차 전체 승인 목록을 조회합니다.")
 async def get_approve_leave(
     search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
-    date: Optional[date] = None, # 시작일
-    branch_id: Optional[int] = None, # 지점
-    part_id: Optional[str] = None, # 파트
-    search_name: Optional[str] = None, # 이름
-    search_phone: Optional[str] = None, # 전화번호
-    page: int = 1,
-    size: int = 10,
+    date: Optional[date] = Query(None, description="시작일 계산을 위한 날짜를 입력합니다. 공백인 경우 오늘을 포함한 주의 일요일-토요일 기간을 조회합니다. 예) YYYY-MM-DD"), # 시작일
+    branch_id: Optional[int] = Query(None, description="검색할 지점 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 지점
+    part_id: Optional[str] = Query(None, description="검색할 파트 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 파트
+    search_name: Optional[str] = Query(None, description="검색할 이름을 입력합니다. 공백인 경우 전체 조회합니다."), # 이름
+    search_phone: Optional[str] = Query(None, description="검색할 전화번호를 입력합니다. 공백인 경우 전체 조회합니다."), # 전화번호
+    page: int = Query(1, gt=0, description="페이지 번호를 입력합니다. 기본값은 1입니다."),
+    size: int = Query(10, gt=0, description="페이지당 레코드 수를 입력합니다. 기본값은 10입니다."),
     current_user: Users = Depends(get_current_user)
 ):
     try:
@@ -305,11 +305,11 @@ async def get_approve_leave(
 
 @router.post("", summary="연차 신청", description="연차를 신청합니다.")
 async def create_leave_history(
-    branch_id: int,
     leave_create: LeaveHistoriesCreate,
-    decreased_days: float,
-    start_date: date,
-    end_date: date,
+    branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
+    decreased_days: float = Query(..., description="사용할 연차 일수를 입력합니다. 타입은 float입니다. 예) 1.0"),
+    start_date: date = Query(..., description="시작일을 입력합니다. 예) YYYY-MM-DD"),
+    end_date: date = Query(..., description="종료일을 입력합니다. 예) YYYY-MM-DD"),
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
@@ -384,11 +384,11 @@ async def create_leave_history(
         raise HTTPException(status_code=500, detail=str(err))
 
 
-@router.post("/{leave_id}", summary="연차 승인/반려", description="연차를 승인/반려합니다.")
+@router.patch("/{leave_id}", summary="연차 승인/반려", description="연차를 승인/반려합니다.")
 async def approve_leave(
-    leave_id: int,
-    branch_id: int,
     leave_approve: LeaveHistoriesApprove,
+    leave_id: int = Path(..., description="승인/반려 결정을 할 연차 ID를 입력합니다."),
+    branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
@@ -427,9 +427,9 @@ async def approve_leave(
 
 @router.patch("/{leave_id}", summary="연차 수정", description="연차를 수정합니다.")
 async def update_leave(
-    branch_id: int,
-    leave_id: int,
     leave_update: LeaveHistoriesUpdate,
+    branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
+    leave_id: int = Path(..., description="수정할 연차 ID를 입력합니다."),
     current_user_id: int = Depends(get_current_user_id),
 ):
     try:
@@ -471,7 +471,9 @@ async def update_leave(
 
 @router.delete("/{leave_id}", summary="연차 삭제", description="연차를 삭제합니다.")
 async def delete_leave(
-    branch_id: int, leave_id: int, current_user_id: int = Depends(get_current_user_id)
+    branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
+    leave_id: int = Path(..., description="삭제할 연차 ID를 입력합니다."),
+    current_user_id: int = Depends(get_current_user_id)
 ):
     try:
         user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
