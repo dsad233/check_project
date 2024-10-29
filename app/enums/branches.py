@@ -38,3 +38,10 @@ class TimeUnit(str, Enum):
     
     MONTH = "월"
     DAY = "일"
+
+class BranchHistoryType(str, Enum):
+    """
+    브랜치 히스토리 타입 구분을 위한 Enum
+    """
+    AUTO_ANNUAL_LEAVE_GRANT = "AUTO_ANNUAL_LEAVE_GRANT"
+

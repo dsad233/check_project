@@ -18,11 +18,11 @@ from sqlalchemy.orm import relationship
 from app.core.database import Base
 from datetime import date
 from typing import Optional
-
+from sqlalchemy import text
 from pydantic import BaseModel
 from app.models.branches.user_leaves_days import UserLeavesDays as UserLeavesDays
 
-from app.enums.users import Role, Gender, MenuPermissions
+from app.enums.users import Role, Gender, MenuPermissions, EmploymentStatus
 
 # Users와 Parts의 다대다 관계를 위한 연결 테이블
 user_parts = Table('user_parts', Base.metadata,
@@ -57,13 +57,20 @@ class Users(Base):
     gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    remaining_annual_leave = Column(Integer, nullable=True, default=0)
+    remaining_annual_leave = Column(Integer, nullable=True, default=0, server_default=text("0"))
     last_company = Column(String(255), nullable=True)
     last_position = Column(String(255), nullable=True)
     last_career_start_date = Column(Date, nullable=True)
     last_career_end_date = Column(Date, nullable=True)
     role = Column(Enum(*[e.value for e in Role], name="user_role"), nullable=False, default=Role.EMPLOYEE)
-    is_part_timer = Column(Boolean, nullable=False, default=False)
+    employment_status = Column(
+        Enum(
+            *[e.value for e in EmploymentStatus],
+            name="employment_status"
+        ),
+        nullable=False,
+        default=EmploymentStatus.PERMANENT
+    )
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)

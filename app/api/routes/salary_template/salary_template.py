@@ -8,21 +8,23 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.cruds.salary_template import salary_template_crud
-from app.service import salary_template_service
+from app.service import branch_service
+from app.schemas.branches_schemas import SalaryTemplateRequest, SalaryTemplateResponse, SalaryTemplatesResponse
 from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.models.branches.salary_template_model import SalaryTemplate, SalaryTemplateDto
+from app.models.branches.salary_template_model import SalaryTemplate
 
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
-@router.get("/list", response_model=List[SalaryTemplateDto])
+@router.get("/list", response_model=SalaryTemplatesResponse)
 async def get_salary_templates(
     *,
     branch_id: int,
     session: AsyncSession = Depends(get_db),
+    request: BaseSearchDto = Depends(BaseSearchDto),
     current_user_id: int = Depends(get_current_user_id)
-) -> List[SalaryTemplateDto]:
-    return await salary_template_service.get_all_salary_template_and_allowance_policy(session=session, branch_id=branch_id)
+) -> SalaryTemplatesResponse:
+    return await branch_service.get_all_salary_template_and_allowance_policy(session=session, branch_id=branch_id, request=request)
 
 
 @router.post("/create", response_model=str)
@@ -31,7 +33,7 @@ async def create_salary_template(
     branch_id: int,
     session: AsyncSession = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id),
-    salary_template_create: SalaryTemplateDto
+    salary_template_create: SalaryTemplateRequest
 ) -> str: 
     salary_template = await salary_template_crud.find_by_branch_id_and_name(session=session, branch_id=branch_id, name=salary_template_create.name)
     if salary_template:
@@ -49,7 +51,7 @@ async def update_salary_template(
     salary_template_id: int,
     session: AsyncSession = Depends(get_db),
     current_user_id: int = Depends(get_current_user_id),
-    salary_template_update: SalaryTemplateDto
+    salary_template_update: SalaryTemplateRequest
 ) -> str:
     salary_template = await salary_template_crud.find_by_id(session=session, id=salary_template_id)
     if not salary_template:

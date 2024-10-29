@@ -2,12 +2,27 @@ import os
 from typing import Union
 from pydantic_settings import BaseSettings
 from pydantic import Field
+import base64
 
 class BaseAppSettings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
-    # MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
-    # MODUSIGN_WEBHOOK_URL: str = Field(..., env="MODUSIGN_WEBHOOK_URL")
+    MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
+    MODUSIGN_USER_EMAIL: str  
+
+    
+    @property
+    def MODUSIGN_HEADERS(self) -> dict:
+        if not self.MODUSIGN_API_KEY or not self.MODUSIGN_USER_EMAIL:
+            raise ValueError("MODUSIGN_API_KEY and MODUSIGN_USER_EMAIL are required")
+            
+        auth_string = f"{self.MODUSIGN_USER_EMAIL}:{self.MODUSIGN_API_KEY}"
+        encoded_auth = base64.b64encode(auth_string.encode()).decode()
+        
+        return {
+            "Content-Type": "application/json",
+            "Authorization": f"Basic {encoded_auth}"
+        }
 
     class Config:
         env_file = ".env"

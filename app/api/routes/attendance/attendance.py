@@ -2,10 +2,13 @@ from calendar import monthrange
 from datetime import date, datetime, timedelta
 import re
 from typing import Annotated, Any, Dict, Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import Date, and_, case, cast, distinct, func, text
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import Date, Row, and_, case, cast, distinct, func, text
 from sqlalchemy.future import select
-from app.core.database import async_session
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.common.dto.pagination_dto import PaginationDto
+from app.core.database import async_session, get_db
+from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.models.branches.branches_model import Branches
@@ -22,6 +25,28 @@ from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.orm import joinedload
 
+router = APIRouter(dependencies=[Depends(validate_token)])
+
+def calculate_total_ot(is_doctor: bool, record: Row) -> int:
+    """
+    OT 총액을 계산하는 함수
+    """
+    if is_doctor:
+        total = (
+            ((record.ot_30_count or 0) * (record.doctor_ot_30 or 0)) +
+            ((record.ot_60_count or 0) * (record.doctor_ot_60 or 0)) +
+            ((record.ot_90_count or 0) * (record.doctor_ot_90 or 0)) +
+            ((record.ot_120_count or 0) * (record.doctor_ot_120 or 0))
+        )
+    else:
+        total = (
+            ((record.ot_30_count or 0) * (record.common_ot_30 or 0)) +
+            ((record.ot_60_count or 0) * (record.common_ot_60 or 0)) +
+            ((record.ot_90_count or 0) * (record.common_ot_90 or 0)) +
+            ((record.ot_120_count or 0) * (record.common_ot_120 or 0))
+        )
+    
+    return int(total)
 
 def count_sundays(start_date: date, end_date: date) -> int:
     current_date = start_date
@@ -34,13 +59,13 @@ def count_sundays(start_date: date, end_date: date) -> int:
     
     return sunday_count
 
-router = APIRouter(dependencies=[Depends(validate_token)])
-attendance = async_session()
 
 
 @router.get("/attendance", response_model=Dict[str, Any])
+@available_higher_than(Role.ADMIN)
 async def find_attendance(
-    token: Annotated[Users, Depends(get_current_user)],
+    request: Request,
+    db: Annotated[AsyncSession,Depends(get_db)],
     branch: Optional[int] = Query(None, description="지점 ID"),
     part: Optional[int] = Query(None, description="파트 ID"),
     name: Optional[str] = Query(None, description="사용자 이름"),
@@ -54,7 +79,7 @@ async def find_attendance(
         raise HTTPException(status_code=400, detail="지점 정보가 필요합니다.")
     
     try:
-        async with attendance as session:
+        async with db as session:
             if year_month:
                 if not re.match(r"^\d{4}-(0[1-9]|1[0-2])$", year_month):
                     raise HTTPException(
@@ -219,7 +244,43 @@ async def find_attendance(
                 .group_by(Commutes.user_id)
             ).subquery()
 
-            # 최종 쿼리
+            # overtime_counts 서브쿼리
+            overtime_counts = (
+                select(
+                    Overtimes.applicant_id.label('user_id'),
+                    func.count(case((Overtimes.overtime_hours == '30', 1), else_=0)).label("ot_30_count"),
+                    func.count(case((Overtimes.overtime_hours == '60', 1), else_=0)).label("ot_60_count"),
+                    func.count(case((Overtimes.overtime_hours == '90', 1), else_=0)).label("ot_90_count"),
+                    func.count(case((Overtimes.overtime_hours == '120', 1), else_=0)).label("ot_120_count")
+                )
+                .where(
+                    and_(
+                        Overtimes.application_date.between(start_date, end_date),
+                        Overtimes.is_approved == "Y",
+                        Overtimes.deleted_yn == "N"
+                    )
+                )
+                .group_by(Overtimes.applicant_id)
+            ).subquery()
+            
+            overtime_policy = (
+                select(
+                    OverTimePolicies.branch_id,
+                    # 의사 OT 금액들
+                    OverTimePolicies.doctor_ot_30,
+                    OverTimePolicies.doctor_ot_60,
+                    OverTimePolicies.doctor_ot_90,
+                    OverTimePolicies.doctor_ot_120,
+                    # 일반 직원 OT 금액들
+                    OverTimePolicies.common_ot_30,
+                    OverTimePolicies.common_ot_60,
+                    OverTimePolicies.common_ot_90,
+                    OverTimePolicies.common_ot_120
+                )
+                .where(OverTimePolicies.deleted_yn == "N")
+            ).subquery()
+
+            # 최종 쿼리 (기존 + 새로운 필드들)
             final_query = (
                 select(
                     base_query,
@@ -228,7 +289,20 @@ async def find_attendance(
                     annual_leave_days.c.annual_leave_days,
                     unpaid_leave_days.c.unpaid_leave_days,
                     holiday_work_days.c.holiday_work_days,
-                    weekend_work_hours.c.weekend_work_hours
+                    weekend_work_hours.c.weekend_work_hours,
+                    overtime_counts.c.ot_30_count,
+                    overtime_counts.c.ot_60_count,
+                    overtime_counts.c.ot_90_count,
+                    overtime_counts.c.ot_120_count,
+                    overtime_policy.c.doctor_ot_30,
+                    overtime_policy.c.doctor_ot_60,
+                    overtime_policy.c.doctor_ot_90,
+                    overtime_policy.c.doctor_ot_120,
+                    overtime_policy.c.common_ot_30,
+                    overtime_policy.c.common_ot_60,
+                    overtime_policy.c.common_ot_90,
+                    overtime_policy.c.common_ot_120,
+                    Parts.is_doctor
                 )
                 .outerjoin(work_days_subq, base_query.c.id == work_days_subq.c.user_id)
                 .outerjoin(regular_leave_days, base_query.c.id == regular_leave_days.c.user_id)
@@ -236,19 +310,28 @@ async def find_attendance(
                 .outerjoin(unpaid_leave_days, base_query.c.id == unpaid_leave_days.c.user_id)
                 .outerjoin(holiday_work_days, base_query.c.id == holiday_work_days.c.user_id)
                 .outerjoin(weekend_work_hours, base_query.c.id == weekend_work_hours.c.user_id)
+                .outerjoin(overtime_counts, base_query.c.id == overtime_counts.c.user_id)
+                .outerjoin(overtime_policy, base_query.c.branch_id == overtime_policy.c.branch_id)
+                .join(Parts, base_query.c.part_id == Parts.id)
             )
-            
-            # 전체 레코드 수 계산
+
             total_count = await session.scalar(
                 select(func.count()).select_from(final_query.subquery())
             )
 
-            # 페이지네이션 적용
-            final_query = final_query.offset((page - 1) * size).limit(size)
+            # 페이지네이션 처리
+            pagination = PaginationDto(
+                total_record=total_count,
+                record_size=size
+            )
+
+            # offset, limit 계산에도 pagination 값 사용
+            final_query = final_query.offset((page - 1) * pagination.record_size).limit(pagination.record_size)
 
             result = await session.execute(final_query)
             records = result.fetchall()
 
+            # 응답 데이터 포맷팅 (기존 + 새로운 필드들)
             formatted_data = [
                 {
                     "id": record.id,
@@ -259,12 +342,20 @@ async def find_attendance(
                     "user_phone_number": record.user_phone_number,
                     "part_id": record.part_id,
                     "part_name": record.part_name,
-                    "work_days": record.work_days or 0, # 근무일수
-                    "regular_leave_days": record.regular_leave_days or 0, # 정규 휴무
-                    "annual_leave_days": record.annual_leave_days or 0, # 연차 사용
-                    "unpaid_leave_days": record.unpaid_leave_days or 0, # 무급 사용
-                    "holiday_work_days": record.holiday_work_days or 0, # 휴일 근무
-                    "weekend_work_hours": float(record.weekend_work_hours or 0) # 주말 근무 시간
+                    "work_days": record.work_days or 0, # 근무 일자
+                    "regular_leave_days": record.regular_leave_days or 0, # 정규 휴무일수   
+                    "annual_leave_days": record.annual_leave_days or 0, # 연차 사용일수
+                    "unpaid_leave_days": record.unpaid_leave_days or 0, # 무급 휴가 사용일수
+                    "holiday_work_days": record.holiday_work_days or 0, # 휴일 근무일수
+                    "weekend_work_hours": float(record.weekend_work_hours or 0), # 주말 근무 시간
+                    "ot_30_count": record.ot_30_count or 0, # 30분 근무 횟수
+                    "ot_60_count": record.ot_60_count or 0, # 60분 근무 횟수    
+                    "ot_90_count": record.ot_90_count or 0, # 90분 근무 횟수
+                    "ot_120_count": record.ot_120_count or 0, # 120분 근무 횟수
+                    "total_OT": calculate_total_ot(
+                        record.is_doctor,
+                        record
+                    )
                 }
                 for record in records
             ]
@@ -273,150 +364,15 @@ async def find_attendance(
                 "message": "근태 기록 조회 성공",
                 "data": formatted_data,
                 "pagination": {
-                    "total": total_count,
+                    "total": pagination.total_record,
                     "page": page,
-                    "size": size,
-                    "total_pages": (total_count + size - 1) // size,
+                    "size": pagination.record_size,
                 },
             }
-    
+
     except HTTPException as http_err:
         raise http_err
-
     except Exception as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"근태 기록 조회 실패: {str(e)}")
 
-
-# @router.get('/attendance')
-# async def find_attendance(token: Annotated[Users, Depends(get_current_user)]):
-#     try:
-#         find_attendance = await attendance.execute(
-#             select(Users, Branches, Parts, Commutes, LeaveHistories, Overtimes)
-#             .join(Branches, Users.branch_id == Branches.id)
-#             .join(Parts, Users.part_id == Parts.id)
-#             .join(Commutes, Users.id == Commutes.user_id)
-#             .outerjoin(LeaveHistories, Users.id == LeaveHistories.user_id)
-#             .join(Overtimes, Users.id == Overtimes.applicant_id)
-#         )
-#         result = find_attendance.fetchall()
-
-
-#         attendance_data = []
-#         for user, branch, part, commute, leave, overtime in result:
-#             find_user_work = await attendance.execute(select(Commutes).where(Commutes.user_id == user.id))
-#             result_user_work = find_user_work.scalars().all()
-#             # print("dsdadasdasdas : ",branch.__dict__)
-#             print("dsdadasdasdas : ",commute.__dict__)
-#             print("dsdadasdasdas : ",overtime.__dict__)
-#             attendance_info = {
-#                 "번호": user.id,
-#                 "지점": branch.name,
-#                 "이름": user.name,
-#                 "근무파트": part.name,
-#                 "근무일수": len(result_user_work) if commute else 0,
-#                 # "휴일근무": commute.holiday_work_days if commute else 0,
-#                 "정규 휴무": leave.regular_leave_days if leave else 0,
-#                 "연차 사용": leave.annual_leave_days if leave else 0,
-#                 "무급 사용": leave.unpaid_leave_days if leave else 0,
-#                 "재택 근무": "0일",
-#                 "휴일 근무": "0일",
-#                 "주말 근무 시간" : 0,
-#                 "주말 근무 수당" : 0,
-#                 "추가 근무 시간": "0시간",
-#                 "추가 근무 수당": 0,
-#                 # "O.T 30분 할증": overtime.ot_30min if overtime else 0,
-#                 # "O.T 60분 할증": overtime.ot_60min if overtime else 0,
-#                 # "O.T 90분 할증": overtime.ot_90min if overtime else 0,
-#                 # "O.T 총 금액": overtime.total_amount if overtime else 0
-#             }
-#             attendance_data.append(attendance_info)
-
-#         return {"message": "성공적으로 근로 관리 전체 조회를 완료하였습니다.", "data": attendance_data}
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(status_code=500, detail="근태 관리 전체 조회에 실패하였습니다.")
-
-
-# 근로 관리 생성
-# @router.get('/{branch_id}/parts/{part_id}/attendance/users/{user_id}')
-# async def find_attendance(branch_id : int, part_id : int, user_id : int, token:Annotated[Users, Depends(get_current_user)]):
-#     try:
-
-#         find_data = await attendance.execute(select(Parts).join(Branches, Parts, Overtimes, WorkPolicies))
-
-
-#         find_branch = await attendance.execute(select(Branches).where(Branches.id == branch_id, Branches.deleted_yn == "N"))
-#         result_branch = find_branch.scalar_one_or_none()
-
-#         if(result_branch == None):
-#             raise HTTPException(status_code=404, detail="지점 데이터가 존재하지 않습니다.")
-
-#         find_part = await attendance.execute(select(Parts).where(Parts.id == part_id, Parts.deleted_yn == "N"))
-#         result_part = find_part.scalar_one_or_none()
-
-#         if(result_part == None):
-#             raise HTTPException(status_code=404, detail="파트 데이터가 존재하지 않습니다.")
-
-#         find_overtimes = await attendance.execute(select(Overtimes).where(Overtimes.applicant_id == user_id))
-
-#         result_overtime = find_overtimes.scalar_one_or_none()
-
-#         if(result_overtime == None):
-#             raise HTTPException(status_code=404, detail="오버타임 데이터가 존재하지 않습니다.")
-
-#         find_user  = await attendance.execute(select(Users).where(Users.id == user_id))
-#         resutl_user = find_user.scalar_one_or_none()
-
-#         if(resutl_user == None):
-#             raise HTTPException(status_code=404, detail="유저 데이터가 존재하지 않습니다.")
-
-
-#         find_attendance = await attendance.execute(select(Users).where(Branches.id == branch_id, Branches.name))
-
-#         # new_attendance = Attendance(
-#         #     branch_id = result_branch.id,
-#         #     part_id = result_part.id,
-#         #     branch_name = result_branch.name,
-#         #     name = resutl_user.name,
-#         #     gender = resutl_user.gender,
-#         #     part_name = result_part.name,
-#         #     workdays =
-#         # )
-
-#         # find_working = await attendance.execute(select(WorkPolicies).where(WorkPolicies.))
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(status_code=500, detail= "근태 관리 생성에 실패하였습니다.")
-
-
-# @router.post('/attendance')
-# async def create_attendance(token: Annotated[Users, Depends(get_current_user)]):
-#     try:
-# new_attendance = Attendance(
-#     user_id=attendance_data.user_id,
-#     branch_id=attendance_data.branch_id,
-#     part_id=attendance_data.part_id,
-#     work_days=attendance_data.work_days,
-#     holiday_work_days=attendance_data.holiday_work_days,
-#     regular_leave_days=attendance_data.regular_leave_days,
-#     annual_leave_days=attendance_data.annual_leave_days,
-#     unpaid_leave_days=attendance_data.unpaid_leave_days,
-#     planned_work_days=attendance_data.planned_work_days,
-#     additional_work_hours=attendance_data.additional_work_hours,
-#     additional_work_pay=attendance_data.additional_work_pay,
-#     ot_30min=attendance_data.ot_30min,
-#     ot_60min=attendance_data.ot_60min,
-#     ot_90min=attendance_data.ot_90min,
-#     ot_total_amount=attendance_data.ot_total_amount
-# )
-
-# attendance.add(new_attendance)
-# await attendance.commit()
-# await attendance.refresh(new_attendance)
-
-# return {"message": "근태 정보가 성공적으로 생성되었습니다.", "data": new_attendance}
-# except Exception as err:
-#     await attendance.rollback()
-#     print(err)
-#     raise HTTPException(status_code=500, detail="근태 정보 생성에 실패하였습니다.")
