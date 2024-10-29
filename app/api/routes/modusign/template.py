@@ -35,8 +35,7 @@ async def create_test_template():
             "file": {
                 "name": "test_contract.pdf",
                 "base64": base64_content,
-                "extension": "pdf",
-                "contentType": "application/pdf"
+                "extension": "pdf"
             },
             "participants": [
                 {
@@ -44,7 +43,7 @@ async def create_test_template():
                     "signingOrder": 1
                 }
             ],
-            "elements": [
+            "fieldPositions": [
                 {
                     "type": "SIGN",
                     "role": "근로자",
@@ -52,7 +51,8 @@ async def create_test_template():
                     "y": 200,
                     "width": 120,
                     "height": 50,
-                    "page": 1
+                    "pageNumber": 1,
+                    "required": True
                 }
             ]
         }
@@ -71,7 +71,6 @@ async def create_template(
     elements: Optional[str] = Form(None)
 ):
     try:
-        # 기본 데이터 구성
         template_data = {
             "title": title,
             "file": {
@@ -82,13 +81,14 @@ async def create_template(
             "participants": json.loads(participants)
         }
         
-        # elements 처리
         if elements:
             try:
                 elements_data = json.loads(elements)
-                template_data["fieldPositions"] = [
-                    {
-                        "type": "SIGN",
+                field_positions = []
+                
+                for element in elements_data:
+                    field = {
+                        "type": element.get("type", "SIGN"),
                         "role": element["role"],
                         "x": int(element["x"]),
                         "y": int(element["y"]),
@@ -97,14 +97,20 @@ async def create_template(
                         "pageNumber": int(element.get("pageNumber", 1)),
                         "required": bool(element.get("required", True))
                     }
-                    for element in elements_data
-                ]
+                    
+                    # TEXT 타입인 경우 placeholder 추가
+                    if element.get("type") == "TEXT" and "placeholder" in element:
+                        field["placeholder"] = element["placeholder"]
+                        
+                    field_positions.append(field)
+                
+                template_data["fieldPositions"] = field_positions
                 logger.info(f"Added fieldPositions: {template_data['fieldPositions']}")
+                
             except Exception as e:
                 logger.error(f"Error processing elements data: {str(e)}")
                 raise HTTPException(status_code=400, detail=f"Invalid elements format: {str(e)}")
         
-        # API 요청 전송
         try:
             response = await template_service.create_template(template_data)
             logger.info(f"Template created successfully: {response}")
