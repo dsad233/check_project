@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Date, ForeignKey, Integer, Time
+from sqlalchemy import Column, Date, ForeignKey, Integer, String, Time
 from app.core.database import Base
 
 
@@ -9,9 +9,6 @@ class PartTimerWorkContract(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     contract_start_date = Column(Date, nullable=False)
     contract_end_date = Column(Date, nullable=False)
-    weekly_work_days = Column(Integer, nullable=False)
-    rest_minutes = Column(Integer, nullable=False)
-
 
 class PartTimerWorkingTime(Base):
     __tablename__ = "part_timer_working_time"
@@ -31,7 +28,15 @@ class PartTimerHourlyWage(Base):
     calculate_end_time = Column(Time, nullable=False)
     hourly_wage = Column(Integer, nullable=False)
 
+'''
+출퇴근 기록 별로 추가 정보
+'''
+class PartTimerAdditionalInfo(Base):
+    __tablename__ = "part_timer_additional_info"
 
+    commute_id = Column(Integer, ForeignKey("commutes.id"), primary_key=True, nullable=False)
+    part_details = Column(String(255), nullable=False)
+    rest_minutes = Column(Integer, nullable=False, default=30)
     
 
  
