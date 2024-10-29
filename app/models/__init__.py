@@ -35,6 +35,7 @@ from .branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
 from .branches.salary_template_model import SalaryTemplate
 from .common.minimum_wage_policies_model import MinimumWagePolicy
 from .histories.branch_histories_model import BranchHistories
+from .branches.user_leaves_days import UserLeavesDays
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
 
@@ -186,3 +187,12 @@ Document.document_send_histories = relationship("DocumentSendHistory", back_popu
 Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)
 SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_templates_policies")
 BranchHistories.branch = relationship("Branches", back_populates="branch_histories")
+
+Users.leaves = relationship("UserLeavesDays", back_populates="user", foreign_keys="UserLeavesDays.user_id")
+Users.approved_leaves = relationship("UserLeavesDays", back_populates="approver", foreign_keys="UserLeavesDays.approver_id")
+
+UserLeavesDays.user = relationship("Users", back_populates="leaves", foreign_keys="UserLeavesDays.user_id")
+UserLeavesDays.approver = relationship("Users", back_populates="approved_leaves", foreign_keys="UserLeavesDays.approver_id")
+UserLeavesDays.branch = relationship("Branches", back_populates="user_leaves")
+
+Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys="[UserLeavesDays.branch_id]")
