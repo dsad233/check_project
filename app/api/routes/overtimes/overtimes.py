@@ -12,7 +12,10 @@ from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.models.users.users_model import Users
 from sqlalchemy.orm import load_only
 from app.enums.users import OverTimeHours
-
+from typing import Optional
+from datetime import date
+from calendar import monthrange
+from datetime import timedelta
 router = APIRouter(dependencies=[Depends(validate_token)])
 db = async_session()
 
@@ -167,20 +170,48 @@ async def reject_overtime(overtime_id: int, overtime_select: OvertimeSelect, cur
 
 # 초과 근무 목록 조회
 @router.get("")
-async def get_overtimes(current_user: Users = Depends(get_current_user), skip: int = 0, limit: int = 100, name: str = None, phone_number: str = None, branch: str = None, part: str = None, status: str = None):
+async def get_overtimes(
+    current_user: Users = Depends(get_current_user), 
+    date: date = None,
+    name: Optional[str] = None, 
+    phone_number: Optional[str] = None, 
+    branch_id: Optional[int] = None, 
+    part_id: Optional[int] = None, 
+    status: Optional[str] = None,
+    page: int = 1,
+    size: int = 10,
+    ):
     try:
-        stmt = None
-        base_query = (
-            select(Overtimes)
-            .where(Overtimes.deleted_yn == "N")
+        if date is None:
+            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
+            date_obj = datetime.now().date()
+            current_weekday = date_obj.weekday()
+            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            date_start_day = date_obj - timedelta(days=current_weekday)
+            # 일요일부터 6일을 더해서 토요일을 구함
+            date_end_day = date_start_day + timedelta(days=6)
+        else:
+            date_obj = date
+            current_weekday = date_obj.weekday()
+            date_start_day = date_obj - timedelta(days=current_weekday)
+            date_end_day = date_start_day + timedelta(days=6)
+
+        base_query = select(Overtimes).where(
+            Overtimes.deleted_yn == "N",
+            Overtimes.application_date >= date_start_day,
+            Overtimes.application_date <= date_end_day
         )
         
+        print(f"date_start_day: {date_start_day}, date_end_day: {date_end_day}")
+        
+        stmt = None
+
         # 사원인 경우 자신의 기록만 조회
         if current_user.role == "사원":
             base_query = base_query.where(Overtimes.applicant_id == current_user.id)
 
         # Users 테이블과 JOIN (검색 조건이 있는 경우)
-        if name or phone_number or branch or part:
+        if name or phone_number or branch_id or part_id:
             base_query = base_query.join(Users, Overtimes.applicant_id == Users.id)
 
         # 이름 검색 조건
@@ -190,36 +221,76 @@ async def get_overtimes(current_user: Users = Depends(get_current_user), skip: i
         elif phone_number:
             base_query = base_query.where(Users.phone_number.like(f"%{phone_number}%"))
         # 지점 검색 조건
-        if branch:
+        if branch_id:
             base_query = base_query.join(Branches, Users.branch_id == Branches.id)\
-                .where(Branches.name.like(f"%{branch}%"))
+                .where(Branches.id == branch_id)
         # 파트 검색 조건
-        if part:
+        if part_id:
             base_query = base_query.join(Parts, Users.part_id == Parts.id)\
-                .where(Parts.name.like(f"%{part}%"))
+                .where(Parts.id == part_id)
         # 상태 검색 조건
         if status:
             base_query = base_query.where(Overtimes.status.like(f"%{status}%"))
 
         # 정렬, 페이징 적용
+        skip = (page - 1) * page
         stmt = base_query.order_by(Overtimes.application_date.desc())\
             .offset(skip)\
-            .limit(limit)
-
+            .limit(size)
+            
         result = await db.execute(stmt)
         overtimes = result.scalars().all()
+            
+        formatted_data = []
+        for overtime in overtimes:
+            # Users, Branches, Parts 테이블 조인 쿼리
+            user_query = select(Users, Branches, Parts).join(
+                Branches, Users.branch_id == Branches.id
+            ).join(
+                Parts, Users.part_id == Parts.id
+            ).where(Users.id == overtime.applicant_id)
+            
+            user_result = await db.execute(user_query)
+            user, branch, part = user_result.first()
 
-        count_query = select(func.count()).select_from(Overtimes).where(Overtimes.deleted_yn == "N")
+            overtime_data = {
+                "id": overtime.id,
+                "user_id": user.id,
+                "user_name": user.name,
+                "user_gender": user.gender,
+                "branch_id": branch.id,
+                "branch_name": branch.name,
+                "part_id": part.id,
+                "part_name": part.name,
+                "application_date": overtime.application_date,
+                "overtime_hours": overtime.overtime_hours,
+                "application_memo": overtime.application_memo,
+                "manager_memo": overtime.manager_memo,
+                "status": overtime.status,
+                "manager_id": overtime.manager_id,
+                "manager_name": overtime.manager_name,
+                "processed_date": overtime.processed_date,
+                "is_approved": overtime.is_approved
+            }
+            formatted_data.append(overtime_data)
+
+        # 전체 레코드 수 조회
+        count_query = select(func.count()).select_from(base_query.subquery())
         total_count = await db.execute(count_query)
         total_count = total_count.scalar_one()
 
         return {
             "message": "초과 근무 기록을 정상적으로 조회하였습니다.",
-            "data": overtimes,
-            "total": total_count,
-            "skip": skip,
-            "limit": limit,
+            "pagination": {
+                "total": total_count,
+                "page": page,
+                "size": size,
+                "total_pages": (total_count + size - 1) // size,
+            },
+            "data": formatted_data,
         }
+        
+        
     except HTTPException as http_err:
         await db.rollback()
         raise http_err
