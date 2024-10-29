@@ -30,7 +30,7 @@ async def find_by_email(
 
 async def find_all_by_branch_id(
     *, session: AsyncSession, branch_id: int
-) -> Optional[list[Users]]:
+) -> list[Users]:
     stmt = select(Users).options(selectinload(Users.part)).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N")
     result = await session.execute(stmt)
     users = result.scalars().all()

@@ -34,7 +34,7 @@ from .branches.entry_date_based_annual_leave_grant_model import EntryDateBasedAn
 from .branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
 from .branches.salary_template_model import SalaryTemplate
 from .common.minimum_wage_policies_model import MinimumWagePolicy
-
+from .histories.branch_histories_model import BranchHistories
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
 
@@ -63,7 +63,7 @@ Branches.auto_annual_leave_approval = relationship("AutoAnnualLeaveApproval", ba
 Branches.account_based_annual_leave_grant = relationship("AccountBasedAnnualLeaveGrant", back_populates="branch", uselist=False)
 Branches.entry_date_based_annual_leave_grant = relationship("EntryDateBasedAnnualLeaveGrant", back_populates="branch", uselist=False)
 Branches.condition_based_annual_leave_grant = relationship("ConditionBasedAnnualLeaveGrant", back_populates="branch")
-
+Branches.branch_histories = relationship("BranchHistories", back_populates="branch")
 LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 Branches.salary_templates = relationship("SalaryTemplate", back_populates="branch")
 
@@ -185,3 +185,4 @@ Document.document_send_histories = relationship("DocumentSendHistory", back_popu
 
 Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)
 SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_templates_policies")
+BranchHistories.branch = relationship("Branches", back_populates="branch_histories")
