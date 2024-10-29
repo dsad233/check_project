@@ -9,6 +9,7 @@ class BaseAppSettings(BaseSettings):
     JWT_ALGORITHM: str
     MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
     MODUSIGN_USER_EMAIL: str  
+    MODUSIGN_WEBHOOK_URL: str | None = None
     
     @property
     def MODUSIGN_HEADERS(self) -> dict:
