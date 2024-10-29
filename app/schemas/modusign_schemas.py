@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # 공통 컴포넌트
 class SigningMethod(BaseModel):
@@ -136,3 +136,35 @@ class RequesterInputField(BaseModel):
 
 class RequesterInput(BaseModel):
     fields: List[RequesterInputField]
+
+class TemplateMetadataUpdate(BaseModel):
+    metadatas: List[Metadata]
+
+    @model_validator(mode='after')
+    def validate_metadata(self):
+        # 중복 키 체크
+        keys = [item.key for item in self.metadatas]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Duplicate keys are not allowed in metadata")
+        
+        # 최대 10개 체크
+        if len(self.metadatas) > 10:
+            raise ValueError("Maximum 10 metadata items are allowed")
+            
+        return self
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "metadatas": [
+                    {
+                        "key": "company_name",
+                        "value": "회사명"
+                    },
+                    {
+                        "key": "start_date",
+                        "value": "계약시작일"
+                    }
+                ]
+            }
+        }

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 import logging
 from app.middleware.tokenVerify import validate_token
-from app.schemas.modusign_schemas import TemplateResponse, TemplateListResponse
+from app.schemas.modusign_schemas import TemplateResponse, TemplateListResponse, TemplateMetadataUpdate
 from app.service.template_service import TemplateService
-
+from typing import List
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/templates", dependencies=[Depends(validate_token)])
 template_service = TemplateService()
@@ -34,3 +34,19 @@ async def delete_template(template_id: str):
     
     success = await template_service.delete_template(template_id)
     return {"message": "Template deleted successfully"}
+
+@router.put("/{template_id}/metadatas")
+async def update_template_metadata(
+    template_id: str, 
+    metadata_update: TemplateMetadataUpdate
+):
+    """템플릿 메타데이터 업데이트"""
+    try:
+        result = await template_service.update_template_metadata(
+            template_id=template_id,
+            metadata=metadata_update.metadatas
+        )
+        return result
+    except Exception as e:
+        logger.error(f"Error in update_template_metadata: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))

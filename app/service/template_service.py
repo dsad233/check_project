@@ -100,3 +100,28 @@ class TemplateService:
         except Exception as e:
             logger.error(f"Error in delete_template: {str(e)}")
             raise
+
+    async def update_template_metadata(self, template_id: str, metadata: list) -> Dict:
+        """템플릿 메타데이터를 업데이트합니다"""
+        try:
+            if not template_id:
+                raise ValueError("Template ID is required")
+            
+            logger.info(f"Updating template metadata for ID: {template_id}")
+            logger.info(f"Metadata: {metadata}")
+            
+            # metadata를 객체로 감싸서 전송
+            result = await self._make_request(
+                'PUT',
+                f"{MODUSIGN_BASE_URL}/templates/{template_id}/metadatas",
+                json={
+                    "metadatas": [{"key": m.key, "value": m.value} for m in metadata]
+                }
+            )
+            
+            logger.info(f"Update template metadata response: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in update_template_metadata: {str(e)}")
+            raise
