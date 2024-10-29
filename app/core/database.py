@@ -18,7 +18,9 @@ engine = create_async_engine(settings.DATABASE_URL,
     poolclass=AsyncAdaptedQueuePool,
     connect_args={
         "charset": "utf8mb4",
-        "connect_timeout": 60
+        "connect_timeout": 60,
+        "pool_reset_on_return": "commit",  # 연결 반환 시 상태 초기화
+        "pool_use_lifo": True,  # 연결 회수 시 LIFO 방식으로 처리
     }
     )
 
