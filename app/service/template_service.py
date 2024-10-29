@@ -4,8 +4,8 @@ from fastapi import HTTPException
 from app.core.config import settings
 import base64
 import aiohttp
+from aiohttp.client_exceptions import ContentTypeError
 from app.schemas.modusign_schemas import TemplateListResponse, TemplateResponse
-import requests
 
 logger = logging.getLogger(__name__)
 MODUSIGN_BASE_URL = "https://api.modusign.co.kr"
@@ -26,39 +26,39 @@ class TemplateService:
     async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
         try:
             async with aiohttp.ClientSession() as session:
-                # 기본 헤더 설정
                 headers = {
                     **self.headers,
                     'Content-Type': 'application/json'
                 }
-                
-                # 추가 헤더가 있으면 업데이트
                 if 'headers' in kwargs:
                     headers.update(kwargs.pop('headers'))
                 
-                # 요청 정보 로깅
                 logger.info(f"Making {method} request to: {url}")
                 logger.info(f"Headers: {headers}")
-                logger.info(f"Request data: {kwargs.get('json')}")
                 
                 async with session.request(method, url, headers=headers, **kwargs) as response:
-                    response_text = await response.text()
                     logger.info(f"Response status: {response.status}")
-                    logger.info(f"Response body: {response_text}")
                     
                     if response.status >= 400:
+                        response_text = await response.text()
+                        logger.error(f"API request failed: {response_text}")
                         try:
                             error_data = await response.json()
                             detail = f"API Error: {error_data.get('error', {}).get('name', 'Unknown')} - {error_data}"
                         except:
                             detail = f"API Error: {response_text}"
-                        logger.error(f"API request failed: {detail}")
                         raise HTTPException(status_code=response.status, detail=detail)
                     
-                    if response.status == 204:
+                    if method.upper() == 'DELETE' and response.status in (200, 204):
                         return {"success": True}
-                        
-                    return await response.json()
+                    
+                    try:
+                        return await response.json()
+                    except ContentTypeError:
+                        response_text = await response.text()
+                        if not response_text:
+                            return {"success": True}
+                        raise
                 
         except aiohttp.ClientError as e:
             logger.error(f"HTTP request failed: {str(e)}")
