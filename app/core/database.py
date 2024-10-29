@@ -11,14 +11,16 @@ meta = MetaData()
 engine = create_async_engine(settings.DATABASE_URL,
     echo=True, 
     pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=20,
-    max_overflow=10,
+    pool_recycle=1800,
+    pool_size=30,
+    max_overflow=20,
     pool_timeout=30,
     poolclass=AsyncAdaptedQueuePool,
     connect_args={
         "charset": "utf8mb4",
-        "connect_timeout": 60
+        "connect_timeout": 60,
+        "pool_reset_on_return": "commit",  # 연결 반환 시 상태 초기화
+        "pool_use_lifo": True,  # 연결 회수 시 LIFO 방식으로 처리
     }
     )
 
