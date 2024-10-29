@@ -38,28 +38,26 @@ async def create_clock_in(request: Request, current_user: Users = Depends(get_cu
         existing_commute = existing_commute.scalar_one_or_none()
 
         if existing_commute:
-            raise HTTPException(
-                status_code=404,
-                detail="이미 오늘의 출근 기록이 존재합니다."
-            )
+            return {
+                "message": "이미 오늘의 출근 기록이 존재합니다.",
+                "data": existing_commute,
+            }
         
         stmt = select(CommutePolicies).where(CommutePolicies.branch_id == current_user.branch_id)
         result = await db.execute(stmt)
         commute_policy = result.scalar_one_or_none()
 
         if not commute_policy:
-            raise HTTPException(
-                status_code=404,
-                detail="출퇴근 정책이 존재하지 않습니다."
-            )
+            return {
+                "message": "출퇴근 정책이 존재하지 않습니다.",
+            }
 
         allowed_ip = commute_policy.allowed_ip_commute.split(",")
         client_ip = request.headers.get("x-real-ip", request.client.host)
         if client_ip not in allowed_ip:
-            raise HTTPException(
-                status_code=404,
-                detail="IP 주소가 허용되지 않습니다."
-            )
+            return {
+                "message": "IP 주소가 허용되지 않습니다.",
+            }
 
         # 새 출근 기록 생성
         new_commute = Commutes(
@@ -101,14 +99,8 @@ async def create_clock_out(request: Request, current_user: Users = Depends(get_c
         commute = result.scalar_one_or_none()
 
         if not commute:
-            raise HTTPException(
-                status_code=404, detail="오늘의 출근 기록을 찾을 수 없습니다."
-            )
-
-        if commute.clock_out:
             return {
-                "message": "이미 오늘의 퇴근 기록이 존재합니다.",
-                "data": commute,
+                "message": "오늘의 출근 기록을 찾을 수 없습니다.",
             }
         
         stmt = select(CommutePolicies).where(CommutePolicies.branch_id == current_user.branch_id)
@@ -116,18 +108,16 @@ async def create_clock_out(request: Request, current_user: Users = Depends(get_c
         commute_policy = result.scalar_one_or_none()
 
         if not commute_policy:
-            raise HTTPException(
-                status_code=404,
-                detail="출퇴근 정책이 존재하지 않습니다."
-            )
+            return {    
+                "message": "출퇴근 정책이 존재하지 않습니다.",
+            }
         
         allowed_ip = commute_policy.allowed_ip_commute.split(",")
         client_ip = request.headers.get("x-real-ip", request.client.host)
         if client_ip not in allowed_ip:
-            raise HTTPException(
-                status_code=404,
-                detail="IP 주소가 허용되지 않습니다."
-            )
+            return {
+                "message": "IP 주소가 허용되지 않습니다.",
+            }
 
         # 현재 시간을 퇴근 시간으로 설정
         clock_out = datetime.now()
@@ -145,11 +135,11 @@ async def create_clock_out(request: Request, current_user: Users = Depends(get_c
         await db.execute(update_stmt)
         await db.commit()
 
-        return {"message": "퇴근 기록이 성공적으로 생성되었습니다."}
+        return {
+            "message": "퇴근 기록이 성공적으로 생성되었습니다.",
+            "data": update_data,
+        }
 
-    except HTTPException as http_err:
-        await db.rollback()
-        raise http_err
     except Exception as err:
         await db.rollback()
         print("에러가 발생하였습니다.")
