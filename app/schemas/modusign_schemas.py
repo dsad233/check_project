@@ -40,11 +40,18 @@ class DocumentContent(BaseModel):
     title: str = Field(..., description="문서 제목")
     metadatas: List[Metadata] = Field(default_factory=list, description="메타데이터 목록")
     participantMappings: List[ParticipantMapping] = Field(..., description="참가자 매핑 목록")
-    requesterInputMappings: List[RequesterInputMapping] = Field(..., description="요청자 입력 매핑 목록")
+    requesterInputMappings: List[RequesterInputMapping] = Field(default_factory=list, description="요청자 입력 매핑 목록")
 
 class CreateDocumentRequest(BaseModel):
     templateId: str = Field(..., description="템플릿 ID")
     document: DocumentContent = Field(..., description="문서 내용")
+
+class CreateDocumentFormRequest(BaseModel):
+    title: str
+    participants: List[dict]
+
+    class Config:
+        from_attributes = True
 
 class Document(BaseModel):
     id: str

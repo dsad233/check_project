@@ -12,7 +12,11 @@ class PermissionMiddleware(BaseHTTPMiddleware):
             "/docs",
             "/openapi.json",
             "/redoc",
-            "/favicon.ico"
+            "/favicon.ico",
+            "/modusign/documents",  # GET 문서 목록 조회
+            "/modusign/documents/{document_id}",  # GET 문서 상세 조회
+            "/modusign/documents/{document_id}/participant-fields",  # GET 서명자 입력란 조회
+            "/modusign/documents/request-with-template",  # POST 템플릿으로 서명 요청
         ]
 
     async def dispatch(self, request: Request, call_next):
