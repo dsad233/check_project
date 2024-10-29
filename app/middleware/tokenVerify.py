@@ -8,6 +8,7 @@ from app.core.database import async_session, get_db
 from app.middleware.jwt.jwtService import JWTDecoder, JWTService
 from app.models.users.users_model import Users
 from app.middleware.permission import UserPermission
+from app.enums.users import Role
 
 users = async_session()
 
@@ -64,6 +65,10 @@ async def validate_token(req: Request, auth: str = Security(auth_header)):
 
         if find_user is None:
             raise HTTPException(status_code=404, detail="유저가 존재하지 않습니다.")
+
+        # 사용자 역할 체크(휴직자/퇴사자면 401 에러 반환)
+        if find_user.role in [Role.ON_LEAVE, Role.RESIGNED]:
+            raise HTTPException(status_code=401, detail="휴직자/퇴사자는 제한된 기능만 사용할 수 있습니다.")
 
         # 요청 객체에 사용자 ID를 추가
         req.state.user_id = user_id
