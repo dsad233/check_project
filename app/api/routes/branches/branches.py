@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
-from app.cruds.branches.policies.salary_polices_crud import create_allowance_policies, create_parttimer_policies
+from app.cruds.branches.policies.salary_polices_crud import create_parttimer_policies
 from app.schemas.users_schemas import UserLeaveResponse
 from app.service import user_service
 from app.cruds.branches import branches_crud
@@ -88,7 +88,7 @@ async def create_branch(
     await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
     await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
     await condition_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
-    await create_allowance_policies(session, branch_id)
+    await create_parttimer_policies(session, branch_id)
     
     return f"{branch_id}번 지점이 생성되었습니다."
 
