@@ -6,7 +6,7 @@ from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
-from app.models.users.users_work_contract_model import WorkContract
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -157,7 +157,11 @@ Users.menu_permissions = relationship("Parts", secondary=user_menus, back_popula
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
 
-WorkContract.fixed_rest_days = relationship("FixedRestDay", backref="work_contract")
+WorkContract.fixed_rest_days = relationship("FixedRestDay", back_populates="work_contract")
+FixedRestDay.work_contract = relationship("WorkContract", foreign_keys=[FixedRestDay.work_contract_id], back_populates="fixed_rest_days")
+
+WorkContract.user = relationship("Users", back_populates="work_contract")
+Users.work_contract = relationship("WorkContract", back_populates="user")
 
 Document.user = relationship('Users', back_populates="documents")
 Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
