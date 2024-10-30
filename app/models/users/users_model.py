@@ -107,7 +107,7 @@ class UserCreate(BaseModel):
     name: str
     email: str
     password: str
-    phone_number: Optional[str] = None
+    phone_number: str
     address: Optional[str] = None
     education: Optional[str] = None
     birth_date: Optional[date] = None
