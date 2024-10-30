@@ -8,6 +8,7 @@ from app.api import main
 from app.api.routes.auth import auth
 from contextlib import asynccontextmanager
 from app.core.log_config import get_logger
+from app.middleware.token_middleware import TokenMiddleware
 
 
 @asynccontextmanager
@@ -34,6 +35,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
+
+
+# Add token middleware
+app.add_middleware(TokenMiddleware) #type: ignore
 
 # app.include_router(auth.router, prefix="/api")
 
