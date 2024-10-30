@@ -4,6 +4,7 @@ from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from app.enums.users import Role
+from app.core.permissions.auth_utils import RoleAuthority
 
 
 class RoleBranchMiddleware(BaseHTTPMiddleware):
@@ -20,17 +21,24 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
             "/favicon.ico"
         ]
 
-        # 일반 사원 접근 가능 경로
-        self.EMPLOYEE_PATHS = {
-            "/users/me/"  # /users/me/* 모든 하위 경로 포함
-
+        # 일반 사원 이상 접근 가능 경로
+        self.EMPLOYEE_LEVEL_PATHS = {
+            "/users/",
+            "/commutes/clock-in",
+            "/commutes/clock-out",
+            "/overtimes",
+            "/overtimes/manager"
+            "/leave-categories",
+            "/leave-histories",
+            "/leave-histories/list"
+            "/user-management",
+            "/user-management/me"
         }
 
-        # 관리자 이상(파트 관리자 이상) 접근 가능 경로
-        self.ADMIN_PATHS = {
-            "/user-management/",
-            "/branches/",
-            "/menu-management/"
+        # 관리자 이상 접근 가능 경로
+        self.ADMIN_LEVEL_PATHS = {
+            "/branches",
+            "/menu-management",
         }
 
         # # 통합 관리자 이상 접근 가능 경로
@@ -54,14 +62,15 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
         if any(path.startswith(p) for p in self.PUBLIC_PATHS):
             return await call_next(request)
 
-        # 로그인 체크
-        if not hasattr(request.state, "user") or request.state.user is None:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "로그인이 필요합니다."}
-            )
 
         user = request.state.user
+
+        # 퇴사자/휴직자 접근 제한
+        if user.role in [Role.RESIGNED, Role.ON_LEAVE]:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "접근 권한이 없습니다. (퇴사자/휴직자)"}
+            )
 
         # MSO 전용 경로 체크
         if any(path.startswith(p) for p in self.MSO_PATHS):
@@ -71,13 +80,21 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
                     content={"detail": "MSO 권한이 필요합니다."}
                 )
 
-        # 관리자 경로 체크
-        if any(path.startswith(p) for p in self.ADMIN_PATHS):
-            if user.role not in [Role.MSO, Role.SUPER_ADMIN, Role.ADMIN]:
+        # 관리자 레벨 경로 체크
+        if any(path.startswith(p) for p in self.ADMIN_LEVEL_PATHS):
+            if not RoleAuthority.check_role_level(user.role, Role.ADMIN):
                 return JSONResponse(
                     status_code=401,
                     content={"detail": "관리자 이상의 권한이 필요합니다."}
                 )
 
-        # 그 외는 모든 로그인 사용자 접근 가능 - TODO) 개발 모드 / 배포 모드일 경우에는 에러 처리 필요
+        # 일반 사원 레벨 경로 체크
+        if any(path.startswith(p) for p in self.EMPLOYEE_LEVEL_PATHS):
+            if not RoleAuthority.check_role_level(user.role, Role.EMPLOYEE):
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "접근 권한이 없습니다."}
+                )
+
+        # 그 외 TODO) 개발 모드 / 배포 모드일 경우에는 에러 처리 필요
         return await call_next(request)
