@@ -6,7 +6,7 @@ cd ~/checks-be/workswave-backend || exit 1
 # Git commands - each one checks for success
 git fetch origin || exit 1
 git checkout develop || exit 1
-git reset --hard origin/develop || exit 1
+#git reset --hard origin/develop || exit 1
 
 # Docker cleanup commands
 # Using set -e to ensure script exits on any error
