@@ -1,1016 +1,377 @@
-import re
-from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import Annotated, Any, Dict, List, Optional
-from app.common.dto.pagination_dto import PaginationDto
-from app.core.database import async_session, get_db
-from app.core.permissions.auth_utils import available_higher_than
-from app.enums.users import Role
-from app.middleware.tokenVerify import validate_token, get_current_user
-from app.models.branches.leave_categories_model import LeaveCategory
-from app.models.branches.rest_days_model import RestDays
-from app.models.closed_days.closed_days_model import ClosedDays
-from app.models.users.leave_histories_model import LeaveHistories
-from app.models.users.users_model import Users
-from app.models.parts.parts_model import Parts
-from app.models.commutes.commutes_model import Commutes
-from app.models.branches.branches_model import Branches
-from app.models.branches.work_policies_model import WorkPolicies
+from datetime import date, datetime, UTC, time
+from calendar import calendar, day_name, monthrange
+from sqlalchemy import and_, func, or_
 from sqlalchemy.future import select
-from sqlalchemy.orm import load_only, selectinload, subqueryload
-from sqlalchemy import and_, distinct, func, or_
+from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
-from datetime import date, datetime
-from calendar import monthrange
-from fastapi.responses import StreamingResponse
-import pandas as pd
-import io
 
+from app.core.database import get_db
+from app.core.permissions.auth_utils import available_higher_than
+from app.middleware.tokenVerify import validate_token
+from app.enums.users import Role, StatusKor
+from app.models.branches.work_policies_model import WorkPolicies, WorkSchedule
+from app.models.users.users_model import Users
+from app.models.commutes.commutes_model import Commutes
+from app.models.users.leave_histories_model import LeaveHistories
+from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.users.users_work_contract_model import WorkContract
+from app.models.users.overtimes_model import OverTime_History, Overtimes
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
 
-""" 출퇴근 관리 결근 상태 조회 """
-
-
-async def get_absence_status(session, user, check_date: date) -> str:
-    try:
-        if user.resignation_date and check_date > user.resignation_date:
-            return "퇴사"
-        if check_date < user.hire_date:
-            return "미입사"
-        if user.role == Role.ON_LEAVE:
-            return "휴직"
-        
-        # 승인된 휴가 체크
-        leave_history = await session.scalar(
-            select(LeaveHistories).where(
-                and_(
-                    LeaveHistories.user_id == user.id,
-                    LeaveHistories.application_date == check_date,
-                    LeaveHistories.status == "승인",
-                    LeaveHistories.deleted_yn == "N"
-                )
-            ).options(selectinload(LeaveHistories.leave_category))
+async def get_user_query(session, branch_id, part_id, user_name, phone_number):
+    # part_id가 있는데 branch_id가 없으면 에러
+    if part_id and not branch_id:
+        raise HTTPException(
+            status_code=400,
+            detail="지점을 선택하지 않고 파트를 선택할 수 없습니다."
         )
+        
+    query = (
+        select(Users)
+        .options(
+            selectinload(Users.branch),
+            selectinload(Users.part),
+        )
+        .where(Users.deleted_yn == "N")
+    )
 
-        if leave_history:
-            return leave_history.leave_category.name
+    if branch_id:
+        query = query.where(Users.branch_id == branch_id)
+    if part_id:
+        query = query.where(Users.part_id == part_id)
+    if user_name:
+        query = query.where(Users.name == user_name)
+    if phone_number:
+        query = query.where(Users.phone_number == phone_number)
 
-        # 휴무일 체크
-        rest_day = await session.scalar(
-            select(RestDays).where(
-                and_(
-                    RestDays.branch_id == user.branch_id,
-                    RestDays.date == check_date,
-                    RestDays.deleted_yn == "N",
+    return query
+
+
+async def get_date_range(year: Optional[int], month: Optional[int]):
+    today = datetime.now(UTC)
+
+    # year나 month가 None이면 현재 년월 사용
+    if year is None or month is None:
+        year, month = today.year, today.month
+
+    # month가 1-12 범위인지 확인
+    if not (1 <= month <= 12):
+        raise HTTPException(status_code=400, detail="올바른 월이 아닙니다. (1-12)")
+
+    _, last_day = monthrange(year, month)
+
+    return (
+        datetime(year, month, 1, tzinfo=UTC),
+        datetime(year, month, last_day, 23, 59, 59, tzinfo=UTC),
+        last_day,
+    )
+
+
+async def get_user_data(session, user_id, branch_id, start_date, end_date):
+    # 근로계약 정보 조회 및 즉시 가져오기
+    contract_result = await session.execute(
+        select(WorkContract)
+        .where(
+            and_(
+                WorkContract.user_id == user_id,
+                WorkContract.contract_start_date <= end_date.date(),
+                or_(
+                    WorkContract.contract_end_date.is_(None),
+                    WorkContract.contract_end_date >= start_date.date(),
                 )
             )
         )
+        .order_by(WorkContract.contract_start_date.desc())
+        .limit(1)
+    )
+    contract = contract_result.scalar_one_or_none()
 
-        if rest_day:
-            return f"휴무({rest_day.rest_type})"
+    # 근무 정책 조회
+    work_policy_result = await session.execute(
+        select(WorkPolicies)
+        .options(selectinload(WorkPolicies.work_schedules))
+        .where(and_(WorkPolicies.branch_id == branch_id, WorkPolicies.deleted_yn == "N"))
+    )
+    work_policy = work_policy_result.scalar_one_or_none()
 
-        # 휴점일 체크
-        closed_day_query = select(ClosedDays).where(
+    # 출퇴근 기록 조회
+    commutes_result = await session.execute(
+        select(Commutes).where(
             and_(
-                ClosedDays.branch_id == user.branch_id,
-                ClosedDays.closed_day_date == check_date,
+                Commutes.user_id == user_id,
+                Commutes.clock_in >= start_date,
+                Commutes.clock_in <= end_date,
+                Commutes.deleted_yn == "N",
+            )
+        )
+    )
+    commutes = commutes_result.scalars().all()
+
+    # 휴가 기록 조회
+    leaves_result = await session.execute(
+        select(LeaveHistories)
+        .options(joinedload(LeaveHistories.leave_category))
+        .where(
+            and_(
+                LeaveHistories.user_id == user_id,
+                LeaveHistories.application_date >= start_date.date(),
+                LeaveHistories.application_date <= end_date.date(),
+                LeaveHistories.status == StatusKor.APPROVED,
+                LeaveHistories.deleted_yn == "N",
+            )
+        )
+    )
+    leaves = leaves_result.scalars().all()
+
+    # 휴점일 조회
+    closed_days_result = await session.execute(
+        select(ClosedDays).where(
+            and_(
+                ClosedDays.branch_id == branch_id,
+                ClosedDays.closed_day_date >= start_date.date(),
+                ClosedDays.closed_day_date <= end_date.date(),
                 ClosedDays.deleted_yn == "N",
             )
         )
-        closed_day = await session.scalar(closed_day_query)
+    )
+    closed_days = closed_days_result.scalars().all()
 
-        if closed_day:
-            return "휴점"
+    # 초과근무 기록 조회
+    overtimes_result = await session.execute(
+        select(Overtimes).where(
+            and_(
+                Overtimes.applicant_id == user_id,
+                Overtimes.application_date >= start_date.date(),
+                Overtimes.application_date <= end_date.date(),
+                Overtimes.deleted_yn == "N",
+            )
+        )
+    )
+    overtimes = overtimes_result.scalars().all()
 
-        return "결근"
-    except Exception as e:
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"출퇴근 기록 조회 실패: {str(e)}")
+    return {
+        "contract": contract,
+        "work_policy": work_policy,
+        "commutes": commutes,
+        "leaves": leaves,
+        "closed_days": closed_days,
+        "overtimes": overtimes,
+    }
 
 
-""" 출퇴근 관리 한 달 기록 생성 """
+async def process_daily_record(
+    current_date,
+    user_id,
+    work_policy,
+    contract,
+    commutes,
+    leaves,
+    closed_days,
+    overtimes,
+):
+    record_data = {"date": current_date.strftime("%Y-%m-%d")}
 
+    # 정기휴무 체크 수정
+    if work_policy and work_policy.work_schedules:
+        holiday_schedule = next(
+            (
+                schedule
+                for schedule in work_policy.work_schedules
+                if schedule.day_of_week == day_name[current_date.weekday()].lower()
+                and schedule.is_holiday
+            ),
+            None,
+        )
+        if holiday_schedule:
+            record_data["status"] = "병원 정기휴무"
+            return record_data
 
-async def create_daily_records(
-    session, year: int, month: int, user, work_policy
-) -> List[Dict]:
-    today = date.today()
-    _, last_day = monthrange(year, month)
+    # 휴점일 체크
+    closed_day = next(
+        (cd for cd in closed_days if cd.closed_day_date == current_date), None
+    )
+    if closed_day:
+        record_data.update({"status": "휴점"})
+        return record_data
 
-    if year == today.year and month == today.month:
-        last_day = today.day
+    # 계약상 정기휴무 체크
+    if contract:
+        if current_date > contract.contract_end_date:
+            record_data["status"] = "퇴사자"
+            return record_data
 
-    daily_records = []
-    for day in range(1, last_day + 1):
-        check_date = date(year, month, day)
-        # 일요일 체크 (weekday()가 6이면 일요일)
-        if check_date.weekday() == 6:
-            daily_record = {
-                "date": check_date.strftime("%Y-%m-%d"),
-                "status": "일요일 정기휴무",
+        weekday = current_date.weekday()
+        if (
+            (weekday == 6 and contract.sunday_is_rest)
+            or (weekday == 5 and contract.saturday_is_rest)
+            or (weekday < 5 and contract.weekly_is_rest)
+        ):
+            record_data["status"] = "직원 정기휴무"
+            return record_data
+        
+    # 출근 기록 체크
+    commute = next((c for c in commutes if c.clock_in.date() == current_date), None)
+    if commute:
+        record_data.update(
+            {
+                "status": "출근",
+                "clock_in": commute.clock_in.strftime("%H:%M:%S"),
+                "clock_out": (
+                    commute.clock_out.strftime("%H:%M:%S")
+                    if commute.clock_out
+                    else None
+                ),
+                "work_hours": (
+                    round(commute.work_hours, 2) if commute.work_hours else None
+                ),
+                "late": False,
+                "overtime": False,
             }
-        else:
-            status = await get_absence_status(session, user, check_date)
-            daily_record = {
-                "date": check_date.strftime("%Y-%m-%d"),
-                "status": status,
-            }
+        )
 
-        daily_records.append(daily_record)
+        # 지각 체크
+        if contract and contract.weekly_work_start_time:
+            weekday = current_date.weekday()
+            
+            # 근무일인지 체크 (휴무일이 아닌 날)
+            should_check_attendance = False  # 기본값을 False로
+            if (weekday < 5 and not contract.weekly_is_rest) or \
+               (weekday == 5 and not contract.saturday_is_rest) or \
+               (weekday == 6 and not contract.sunday_is_rest):
+                should_check_attendance = True  # 근무일인 경우에만 True
 
-    return daily_records
+            if should_check_attendance:
+                clock_in_time = commute.clock_in.replace(tzinfo=None).time()
+                is_late = clock_in_time > contract.weekly_work_start_time
+                record_data["late"] = is_late
 
+        # 초과근무 체크
+        if commute.clock_out and contract and contract.weekly_work_end_time:
+            weekday = current_date.weekday()
+            
+            # 근무일인지 체크 (휴무일이 아닌 날)
+            should_check_overtime = False  # 기본값을 False로
+            if (weekday < 5 and not contract.weekly_is_rest) or \
+               (weekday == 5 and not contract.saturday_is_rest) or \
+               (weekday == 6 and not contract.sunday_is_rest):
+                should_check_overtime = True  # 근무일인 경우에만 True
 
-""" 출퇴근 관리 기록 조회 """
+            if should_check_overtime:
+                clock_out_time = commute.clock_out.replace(tzinfo=None).time()
+                
+                # 해당 날짜의 승인된 초과근무가 있는지 확인
+                approved_overtime = next(
+                    (ot for ot in overtimes 
+                     if ot.application_date == current_date 
+                     and ot.is_approved == "Y"), 
+                    None
+                )
+                
+                # 초과근무가 승인되었고, 퇴근 시간이 정규 근무 종료 시간을 초과한 경우
+                is_overtime = True if approved_overtime and clock_out_time > contract.weekly_work_end_time else False
+                
+                record_data["overtime"] = is_overtime
+
+        return record_data
+
+    # 휴가 체크
+    leave = next((l for l in leaves if l.application_date == current_date), None)
+    if leave:
+        record_data.update({"status": f"{leave.leave_category.name}"})
+        return record_data
+
+    return record_data
 
 
 @router.get("/commutes-manager", response_model=Dict[str, Any])
 @available_higher_than(Role.ADMIN)
 async def get_commutes_manager(
     request: Request,
-    db: Annotated[AsyncSession,Depends(get_db)],
-    branch: Optional[int] = Query(None, description="지점 ID"),
-    part: Optional[int] = Query(None, description="파트 ID"),
-    name: Optional[str] = Query(None, description="사용자 이름"),
-    phone_number: Optional[str] = Query(None, description="전화번호"),
-    year_month: Optional[str] = Query(None, description="조회 년월 (YYYY-MM 형식)"),
+    db: Annotated[AsyncSession, Depends(get_db)],
+    branch_id: Optional[int] = Query(None, description="지점 ID"),
+    part_id: Optional[int] = Query(None, description="파트 ID"),
+    user_name: Optional[str] = Query(None, description="사용자 이름"),
+    phone_number: Optional[str] = Query(None, description="사용자 전화번호"),
+    year: Optional[int] = Query(None, description="조회 년도"),
+    month: Optional[int] = Query(None, description="조회 월"),
     page: int = Query(1, gt=0),
     size: int = Query(10, gt=0),
 ):
-    if part and not branch:
-        raise HTTPException(status_code=400, detail="지점 정보가 필요합니다.")
-
     try:
         async with db as session:
-            today = datetime.now()
-            if year_month:
-                if not re.match(r"^\d{4}-(0[1-9]|1[0-2])$", year_month):
-                    raise HTTPException(
-                        status_code=400, detail="올바른 년월 형식이 아닙니다. (YYYY-MM)"
-                    )
-                date_obj = datetime.strptime(year_month, "%Y-%m")
-                year = date_obj.year
-                month = date_obj.month
-            else:
-                year = today.year
-                month = today.month
+            # 날짜 범위 설정
+            start_date, end_date, last_day = await get_date_range(year, month)
+            today = datetime.now(UTC).date()
 
-            start_date = date(year, month, 1)
-            end_date = min(date(year, month, monthrange(year, month)[1]), date.today())
+            if end_date.date() > today:
+                end_date = datetime.combine(today, time(23, 59, 59, tzinfo=UTC))
 
-            # 사용자 및 출퇴근 기록 조회
-            query = (
-                select(Users)
-                .options(
-                    # 필요한 컬럼만 로드
-                    load_only(
-                        Users.id,
-                        Users.name,
-                        Users.gender,
-                        Users.branch_id,
-                        Users.part_id,
-                        Users.hire_date,
-                        Users.resignation_date,
-                        Users.role,
-                    ),
-                    # 관련 테이블에서도 필요한 컬럼만 로드
-                    subqueryload(Users.branch).load_only(Branches.id, Branches.name),
-                    subqueryload(Users.part).load_only(Parts.id, Parts.name),
-                    # 해당 기간의 출퇴근 기록만 로드
-                    subqueryload(
-                        Users.commutes.and_(
-                            Commutes.clock_in >= start_date,
-                            Commutes.clock_in <= end_date,
-                            Commutes.deleted_yn == "N",
-                        )
-                    ),
-                )
-                .join(Branches, Users.branch_id == Branches.id)
-                .join(
-                    WorkPolicies,
-                    and_(
-                        WorkPolicies.branch_id == Branches.id,
-                        WorkPolicies.deleted_yn == "N",
-                    ),
-                )
-                .where(Users.deleted_yn == "N")
+            # 사용자 쿼리 생성 및 실행
+            query = await get_user_query(
+                session=session,
+                branch_id=branch_id,
+                part_id=part_id,
+                user_name=user_name,
+                phone_number=phone_number,
             )
-
-            if branch:
-                query = query.where(Users.branch_id == branch)
-            if part:
-                query = query.where(Users.part_id == part)
-            if name:
-                query = query.where(Users.name == name)
-            if phone_number:
-                query = query.where(Users.phone_number == phone_number)
-
             total_count = await session.scalar(
                 select(func.count()).select_from(query.subquery())
             )
-
-            # 페이지네이션 적용
-            pagination = PaginationDto(
-                total_record=total_count,
-                record_size=size
-            )
-            users = query.offset((page - 1) * pagination.record_size).limit(pagination.record_size)
-            users = await session.execute(users)
+            users = await session.execute(query.offset((page - 1) * size).limit(size))
             users = users.scalars().unique().all()
 
-            formatted_data = []
+            result = []
             for user in users:
-                # 근무 정책 조회
-                work_policy = await session.scalar(
-                    select(WorkPolicies).where(
-                        and_(
-                            WorkPolicies.branch_id == user.branch_id,
-                            WorkPolicies.deleted_yn == "N",
+                # 사용자 관련 데이터 조회
+                user_data = await get_user_data(
+                    session, user.id, user.branch_id, start_date, end_date
+                )
+
+                daily_records = []
+                current_date = start_date.date()
+                while current_date <= end_date.date():
+                    if current_date <= today:
+                        record = await process_daily_record(
+                            current_date,
+                            user,
+                            user_data["work_policy"],
+                            user_data["contract"],
+                            user_data["commutes"],
+                            user_data["leaves"],
+                            user_data["closed_days"],
+                            user_data["overtimes"],
                         )
+                        if record and "status" in record:
+                            daily_records.append(record)
+                    current_date = date.fromordinal(current_date.toordinal() + 1)
+
+                if daily_records:
+                    result.append(
+                        {
+                            "user_id": user.id,
+                            "user_name": user.name,
+                            "gender": user.gender,
+                            "branch_id": user.branch_id,
+                            "branch_name": user.branch.name,
+                            "weekly_work_days": user_data[
+                                "work_policy"
+                            ].weekly_work_days,
+                            "part_id": user.part_id,
+                            "part_name": user.part.name,
+                            "commute_records": daily_records,
+                        }
                     )
-                )
-
-                daily_records = await create_daily_records(
-                    session, year, month, user, work_policy
-                )
-
-                # 출퇴근 기록 매핑
-                for commute in user.commutes:
-                    if (
-                        commute.deleted_yn == "N"
-                        and start_date <= commute.clock_in.date() <= end_date
-                    ):
-                        day_idx = commute.clock_in.day - 1
-
-                        # 지각, 초과근무 체크
-                        if work_policy:
-                            is_holiday = "휴무" in daily_records[day_idx]["status"]
-                            
-                            if commute.clock_in:
-                                # 휴무일인 경우 토요일 시간으로 체크, 아닌 경우 평일 시간으로 체크
-                                policy_start_time = (
-                                    work_policy.saturday_start_time 
-                                    if is_holiday 
-                                    else work_policy.weekday_start_time
-                                )
-                                
-                                if policy_start_time:
-                                    policy_start = datetime.combine(
-                                        commute.clock_in.date(),
-                                        policy_start_time,
-                                    )
-                                    late = (commute.clock_in - policy_start).total_seconds() > 0
-
-                            if commute.clock_out:
-                                # 휴무일인 경우 토요일 시간으로 체크, 아닌 경우 평일 시간으로 체크
-                                policy_end_time = (
-                                    work_policy.saturday_end_time 
-                                    if is_holiday 
-                                    else work_policy.weekday_end_time
-                                )
-                                
-                                if policy_end_time:
-                                    policy_end = datetime.combine(
-                                        commute.clock_in.date(),
-                                        policy_end_time,
-                                    )
-                                    overtime = (commute.clock_out - policy_end).total_seconds() > 0
-
-                        # 휴무일이 아닌 경우에만 상태를 "출근"으로 변경
-                        if "휴무" not in daily_records[day_idx]["status"]:
-                            daily_records[day_idx].update(
-                                {
-                                    "clock_in": commute.clock_in.strftime("%H:%M:%S"),
-                                    "clock_out": (
-                                        commute.clock_out.strftime("%H:%M:%S")
-                                        if commute.clock_out
-                                        else None
-                                    ),
-                                    "work_hours": commute.work_hours,
-                                    "status": "출근",
-                                    "late": late,
-                                    "overtime": overtime,
-                                }
-                            )
-                        else:
-                            # 휴무일인 경우 상태는 유지하고 출퇴근 정보만 추가
-                            daily_records[day_idx].update(
-                                {
-                                    "clock_in": commute.clock_in.strftime("%H:%M:%S"),
-                                    "clock_out": (
-                                        commute.clock_out.strftime("%H:%M:%S")
-                                        if commute.clock_out
-                                        else None
-                                    ),
-                                    "work_hours": commute.work_hours,
-                                    "late": late,
-                                    "overtime": overtime,
-                                }
-                            )
-
-                user_data = {
-                    "user_id": user.id,
-                    "user_name": user.name,
-                    "user_gender": user.gender,
-                    "branch_id": user.branch_id,
-                    "branch_name": user.branch.name,
-                    "part_name": user.part.name,
-                    "weekly_work_days": (
-                        work_policy.weekly_work_days if work_policy else None
-                    ),
-                    "commute_records": daily_records,
-                }
-                formatted_data.append(user_data)
 
             return {
                 "message": "출퇴근 기록 조회 성공",
-                "data": formatted_data,
-                "pagination": {
-                    "total": total_count,
-                    "page": page,
-                    "size": size,
-                },
+                "data": result,
+                "pagination": {"total": total_count, "page": page, "size": size},
+                "last_day": last_day,
             }
 
-    except HTTPException as http_err:
-        raise http_err
-
     except Exception as e:
-        print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=f"출퇴근 기록 조회 실패: {str(e)}")
-
-
-""" 유틸 """
-# FE 에서 처리
-
-
-# 출 퇴근 관리 기록 전체 조회 엑셀 다운로드
-# @router.get("/commutes-manager/excel")
-# async def get_all_commutes_manager_excel(
-#     token: Annotated[Users, Depends(get_current_user)]
-# ):
-#     try:
-
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(
-#             select(Commutes)
-#             .where(Commutes.deleted_yn == "N")
-#             .order_by(Commutes.clock_in.asc())
-#         )
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(
-#             select(ClosedDays)
-#             .where(ClosedDays.deleted_yn == "N")
-#             .options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date))
-#         )
-#         result_closed_day = find_closed_day.scalars().all()
-
-#         find_data = await commutes_manager.execute(
-#             select(Users, Branches, Parts)
-#             .join(Branches, Branches.id == Users.branch_id)
-#             .join(Parts, Parts.id == Users.part_id)
-#             .options(
-#                 load_only(Users.id, Users.name, Users.gender),
-#                 load_only(Branches.name),
-#                 load_only(Parts.name),
-#             )
-#             .distinct(Users.id)
-#             .where(
-#                 Users.deleted_yn == "N",
-#                 Branches.deleted_yn == "N",
-#                 Parts.deleted_yn == "N",
-#             )
-#             .order_by(Users.name.asc())
-#         )
-#         result = find_data.fetchall()
-
-#         # 데이터를 pandas DataFrame으로 변환
-#         df_users = pd.DataFrame(
-#             [
-#                 {
-#                     "사용자 ID": row.Users.id,
-#                     "이름": row.Users.name,
-#                     "성별": row.Users.gender,
-#                     "부서": row.Parts.name,
-#                     "지점": row.Branches.name,
-#                 }
-#                 for row in result
-#             ]
-#         )
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.request_user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.request_user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-
-#         # Excel 파일 생성
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-#             df_users.to_excel(writer, sheet_name="사용자 정보", index=False)
-#             df_commutes.to_excel(writer, sheet_name="출퇴근 기록", index=False)
-#             df_closed_days.to_excel(writer, sheet_name="휴가 기록", index=False)
-#         output.seek(0)
-
-#         # 스트리밍 응답으로 Excel 파일 반환
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename=commutes_report_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-#             },
-#         )
-
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(
-#             status_code=500, detail="출퇴근 데이터 엑셀 파일 생성에 실패하였습니다."
-#         )
-
-
-# # 출 퇴근 관리 기록 date로 전체 조회 엑셀 다운로드
-# @router.get("/commutes-manager/date/excel")
-# async def get_all_date_commutes_manager_excel(
-#     date: str, token: Annotated[Users, Depends(get_current_user)]
-# ):
-#     try:
-#         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-#         date_start_day = date_obj.replace(day=1)
-
-#         _, last_day = monthrange(date_obj.year, date_obj.month)
-#         date_end_day = date_obj.replace(day=last_day)
-
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(
-#             select(Commutes)
-#             .join(Users)
-#             .where(
-#                 Commutes.deleted_yn == "N",
-#                 Commutes.clock_in >= date_start_day,
-#                 Commutes.clock_in <= date_end_day,
-#             )
-#             .order_by(Commutes.clock_in.asc())
-#         )
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(
-#             select(ClosedDays)
-#             .join(Users)
-#             .where(
-#                 ClosedDays.deleted_yn == "N",
-#                 ClosedDays.closed_day_date >= date_start_day,
-#                 ClosedDays.closed_day_date <= date_end_day,
-#             )
-#             .options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date))
-#         )
-#         result_closed_day = find_closed_day.scalars().all()
-
-#         find_data = await commutes_manager.execute(
-#             select(Users, Branches, Parts)
-#             .join(Branches, Branches.id == Users.branch_id)
-#             .join(Parts, Parts.id == Users.part_id)
-#             .options(
-#                 load_only(Users.id, Users.name, Users.gender),
-#                 load_only(Branches.name),
-#                 load_only(Parts.name),
-#             )
-#             .distinct(Users.id)
-#             .where(
-#                 Users.deleted_yn == "N",
-#                 Branches.deleted_yn == "N",
-#                 Parts.deleted_yn == "N",
-#             )
-#             .order_by(Users.name.asc())
-#         )
-#         result = find_data.fetchall()
-
-#         # 데이터를 pandas DataFrame으로 변환
-#         df_users = pd.DataFrame(
-#             [
-#                 {
-#                     "사용자 ID": row.Users.id,
-#                     "이름": row.Users.name,
-#                     "성별": row.Users.gender,
-#                     "부서": row.Parts.name,
-#                     "지점": row.Branches.name,
-#                 }
-#                 for row in result
-#             ]
-#         )
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.request_user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.request_user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-
-#         # Excel 파일 생성
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-#             df_users.to_excel(writer, sheet_name="사용자 정보", index=False)
-#             df_commutes.to_excel(writer, sheet_name="출퇴근 기록", index=False)
-#             df_closed_days.to_excel(writer, sheet_name="휴가 기록", index=False)
-#         output.seek(0)
-
-#         # 스트리밍 응답으로 Excel 파일 반환
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename=all_commutes_report_{date}_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-#             },
-#         )
-
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(
-#             status_code=500,
-#             detail="날짜별 전체 출퇴근, 휴가 데이터 및 사용자 정보 엑셀 파일 생성에 실패하였습니다.",
-#         )
-
-
-# # 출 퇴근 관리 기록 지점별 전체 조회 엑셀 다운로드
-# @router.get("/{branch_id}/commutes-manager/excel")
-# async def get_branch_all_commutes_manager_excel(
-#     branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]
-# ):
-#     try:
-#         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-#         date_start_day = date_obj.replace(day=1)
-
-#         _, last_day = monthrange(date_obj.year, date_obj.month)
-#         date_end_day = date_obj.replace(day=last_day)
-
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(
-#             select(Commutes)
-#             .where(
-#                 Users.branch_id == branch_id,
-#                 Commutes.deleted_yn == "N",
-#                 Commutes.clock_in >= date_start_day,
-#                 Commutes.clock_in <= date_end_day,
-#             )
-#             .order_by(Commutes.clock_in.asc())
-#         )
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(
-#             select(ClosedDays)
-#             .where(ClosedDays.deleted_yn == "N")
-#             .options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date))
-#         )
-#         result_closed_day = find_closed_day.scalars().all()
-
-#         find_data = await commutes_manager.execute(
-#             select(Users, Branches, Parts)
-#             .join(Branches, Branches.id == Users.branch_id)
-#             .join(Parts, Parts.id == Users.part_id)
-#             .options(
-#                 load_only(Users.id, Users.name, Users.gender),
-#                 load_only(Branches.name),
-#                 load_only(Parts.name),
-#             )
-#             .distinct(Users.id)
-#             .where(
-#                 Users.deleted_yn == "N",
-#                 Branches.id == branch_id,
-#                 Branches.deleted_yn == "N",
-#                 Parts.deleted_yn == "N",
-#                 Commutes.clock_in >= date_start_day,
-#                 Commutes.clock_in <= date_end_day,
-#                 Commutes.deleted_yn == "N",
-#             )
-#             .order_by(Users.name.asc())
-#         )
-#         result = find_data.fetchall()
-
-#         # 데이터를 pandas DataFrame으로 변환
-#         df_users = pd.DataFrame(
-#             [
-#                 {
-#                     "사용자 ID": row.Users.id,
-#                     "이름": row.Users.name,
-#                     "성별": row.Users.gender,
-#                     "부서": row.Parts.name,
-#                     "지점": row.Branches.name,
-#                 }
-#                 for row in result
-#             ]
-#         )
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.request_user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.request_user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-
-#         # Excel 파일 생성
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-#             df_users.to_excel(writer, sheet_name="사용자 정보", index=False)
-#             df_commutes.to_excel(writer, sheet_name="출퇴근 기록", index=False)
-#             df_closed_days.to_excel(writer, sheet_name="휴가 기록", index=False)
-#         output.seek(0)
-
-#         # 스트리밍 응답으로 Excel 파일 반환
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename=branch_{branch_id}_commutes_report_{date}_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-#             },
-#         )
-
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(
-#             status_code=500,
-#             detail="지점별 출퇴근 데이터 엑셀 파일 생성에 실패하였습니다.",
-#         )
-
-
-# # 출 퇴근 관리 기록 지점별 데이트 전체 조회 엑셀 다운로드
-# @router.get("/{branch_id}/commutes-manager/date/excel")
-# async def get_branch_all_date_commutes_manager_excel(
-#     branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]
-# ):
-#     try:
-#         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-#         date_start_day = date_obj.replace(day=1)
-
-#         _, last_day = monthrange(date_obj.year, date_obj.month)
-#         date_end_day = date_obj.replace(day=last_day)
-
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(
-#             select(Commutes)
-#             .join(Users)
-#             .where(
-#                 Users.branch_id == branch_id,
-#                 Commutes.deleted_yn == "N",
-#                 Commutes.clock_in >= date_start_day,
-#                 Commutes.clock_in <= date_end_day,
-#             )
-#             .order_by(Commutes.clock_in.asc())
-#         )
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(
-#             select(ClosedDays)
-#             .join(Users)
-#             .where(
-#                 Users.branch_id == branch_id,
-#                 ClosedDays.deleted_yn == "N",
-#                 ClosedDays.closed_day_date >= date_start_day,
-#                 ClosedDays.closed_day_date <= date_end_day,
-#             )
-#             .options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date))
-#         )
-#         result_closed_day = find_closed_day.scalars().all()
-
-#         find_data = await commutes_manager.execute(
-#             select(Users, Branches, Parts)
-#             .join(Branches, Branches.id == Users.branch_id)
-#             .join(Parts, Parts.id == Users.part_id)
-#             .options(
-#                 load_only(Users.id, Users.name, Users.gender),
-#                 load_only(Branches.name),
-#                 load_only(Parts.name),
-#             )
-#             .distinct(Users.id)
-#             .where(
-#                 Users.deleted_yn == "N",
-#                 Branches.id == branch_id,
-#                 Branches.deleted_yn == "N",
-#                 Parts.deleted_yn == "N",
-#             )
-#             .order_by(Users.name.asc())
-#         )
-#         result = find_data.fetchall()
-
-#         # 데이터를 pandas DataFrame으로 변환
-#         df_users = pd.DataFrame(
-#             [
-#                 {
-#                     "사용자 ID": row.Users.id,
-#                     "이름": row.Users.name,
-#                     "성별": row.Users.gender,
-#                     "부서": row.Parts.name,
-#                     "지점": row.Branches.name,
-#                 }
-#                 for row in result
-#             ]
-#         )
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.request_user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.request_user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-
-#         # Excel 파일 생성
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-#             df_users.to_excel(writer, sheet_name="사용자 정보", index=False)
-#             df_commutes.to_excel(writer, sheet_name="출퇴근 기록", index=False)
-#             df_closed_days.to_excel(writer, sheet_name="휴가 기록", index=False)
-#         output.seek(0)
-
-#         # 스트리밍 응답으로 Excel 파일 반환
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename=branch_{branch_id}_commutes_report_{date}_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-#             },
-#         )
-
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(
-#             status_code=500,
-#             detail="지점별 출퇴근, 휴가 데이터 및 사용자 정보 엑셀 파일 생성에 실패하였습니다.",
-#         )
-
-
-# # 출 퇴근 관리 기록 파트별 전체 조회 엑셀 다운로드
-# @router.get("/{branch_id}/parts/{part_id}/commutes-manager/excel")
-# async def get_part_all_commutes_manager_excel(
-#     branch_id: int, part_id: int, token: Annotated[Users, Depends(get_current_user)]
-# ):
-#     try:
-
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(
-#             select(Commutes)
-#             .where(
-#                 Users.branch_id == branch_id,
-#                 Users.part_id == part_id,
-#                 Commutes.deleted_yn == "N",
-#             )
-#             .order_by(Commutes.clock_in.asc())
-#         )
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(
-#             select(ClosedDays)
-#             .where(ClosedDays.deleted_yn == "N")
-#             .options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date))
-#         )
-#         result_closed_day = find_closed_day.scalars().all()
-
-#         find_data = await commutes_manager.execute(
-#             select(Users, Branches, Parts)
-#             .join(Branches, Branches.id == Users.branch_id)
-#             .join(Parts, Parts.id == Users.part_id)
-#             .options(
-#                 load_only(Users.id, Users.name, Users.gender),
-#                 load_only(Branches.name),
-#                 load_only(Parts.name),
-#             )
-#             .distinct(Users.id)
-#             .where(
-#                 Users.deleted_yn == "N",
-#                 Branches.id == branch_id,
-#                 Branches.deleted_yn == "N",
-#                 Parts.id == part_id,
-#                 Parts.deleted_yn == "N",
-#                 Commutes.deleted_yn == "N",
-#             )
-#             .order_by(Users.name.asc())
-#         )
-#         result = find_data.fetchall()
-
-#         # 데이터를 pandas DataFrame으로 변환
-#         df_users = pd.DataFrame(
-#             [
-#                 {
-#                     "사용자 ID": row.Users.id,
-#                     "이름": row.Users.name,
-#                     "성별": row.Users.gender,
-#                     "부서": row.Parts.name,
-#                     "지점": row.Branches.name,
-#                 }
-#                 for row in result
-#             ]
-#         )
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.request_user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.request_user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-
-#         # Excel 파일 생성
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-#             df_users.to_excel(writer, sheet_name="사용자 정보", index=False)
-#             df_commutes.to_excel(writer, sheet_name="출퇴근 기록", index=False)
-#             df_closed_days.to_excel(writer, sheet_name="휴가 기록", index=False)
-#         output.seek(0)
-
-#         # 스트리밍 응답으로 Excel 파일 반환
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename=branch_{branch_id}_part_{part_id}_commutes_report_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-#             },
-#         )
-
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(
-#             status_code=500,
-#             detail="지점 및 부서별 출퇴근 데이터 엑셀 파일 생성에 실패하였습니다.",
-#         )
-
-
-# # 출 퇴근 관리 기록 파트별 데이트 전체 조회 엑셀 다운로드
-# @router.get("/{branch_id}/parts/{part_id}/commutes-manager/date/excel")
-# async def get_branch_part_all_date_commutes_manager_excel(
-#     branch_id: int,
-#     part_id: int,
-#     date: str,
-#     token: Annotated[Users, Depends(get_current_user)],
-# ):
-#     try:
-#         date_obj = datetime.strptime(date, "%Y-%m-%d").date()
-#         date_start_day = date_obj.replace(day=1)
-
-#         _, last_day = monthrange(date_obj.year, date_obj.month)
-#         date_end_day = date_obj.replace(day=last_day)
-
-#         # 유저 출 퇴근 시간 조회
-#         find_work_data = await commutes_manager.execute(
-#             select(Commutes)
-#             .join(Users)
-#             .where(
-#                 Users.branch_id == branch_id,
-#                 Users.part_id == part_id,
-#                 Commutes.deleted_yn == "N",
-#                 Commutes.clock_in >= date_start_day,
-#                 Commutes.clock_in <= date_end_day,
-#             )
-#             .order_by(Commutes.clock_in.asc())
-#         )
-#         result_work_data = find_work_data.scalars().all()
-
-#         # 유저 휴가 조회
-#         find_closed_day = await commutes_manager.execute(
-#             select(ClosedDays)
-#             .join(Users)
-#             .where(
-#                 Users.branch_id == branch_id,
-#                 Users.part_id == part_id,
-#                 ClosedDays.deleted_yn == "N",
-#                 ClosedDays.closed_day_date >= date_start_day,
-#                 ClosedDays.closed_day_date <= date_end_day,
-#             )
-#             .options(load_only(ClosedDays.user_id, ClosedDays.closed_day_date))
-#         )
-#         result_closed_day = find_closed_day.scalars().all()
-
-#         find_data = await commutes_manager.execute(
-#             select(Users, Branches, Parts)
-#             .join(Branches, Branches.id == Users.branch_id)
-#             .join(Parts, Parts.id == Users.part_id)
-#             .options(
-#                 load_only(Users.id, Users.name, Users.gender),
-#                 load_only(Branches.name),
-#                 load_only(Parts.name),
-#             )
-#             .distinct(Users.id)
-#             .where(
-#                 Users.deleted_yn == "N",
-#                 Branches.id == branch_id,
-#                 Branches.deleted_yn == "N",
-#                 Parts.id == part_id,
-#                 Parts.deleted_yn == "N",
-#             )
-#             .order_by(Users.name.asc())
-#         )
-#         result = find_data.fetchall()
-
-#         # 데이터를 pandas DataFrame으로 변환
-#         df_users = pd.DataFrame(
-#             [
-#                 {
-#                     "사용자 ID": row.Users.id,
-#                     "이름": row.Users.name,
-#                     "성별": row.Users.gender,
-#                     "부서": row.Parts.name,
-#                     "지점": row.Branches.name,
-#                 }
-#                 for row in result
-#             ]
-#         )
-
-#         df_commutes = pd.DataFrame([
-#             {
-#                 "사용자 ID": commute.request_user_id,
-#                 "출근 시간": commute.clock_in,
-#                 "퇴근 시간": commute.clock_out,
-#                 "근무 시간": commute.work_hours,
-#             }
-#             for commute in result_work_data
-#         ])
-
-#         df_closed_days = pd.DataFrame([
-#             {
-#                 "사용자 ID": closed_day.request_user_id,
-#                 "휴가 날짜": closed_day.closed_day_date,
-#             }
-#             for closed_day in result_closed_day
-#         ])
-
-#         # Excel 파일 생성
-#         output = io.BytesIO()
-#         with pd.ExcelWriter(output, engine="xlsxwriter") as writer:
-#             df_users.to_excel(writer, sheet_name="사용자 정보", index=False)
-#             df_commutes.to_excel(writer, sheet_name="출퇴근 기록", index=False)
-#             df_closed_days.to_excel(writer, sheet_name="휴가 기록", index=False)
-#         output.seek(0)
-
-#         # 스트리밍 응답으로 Excel 파일 반환
-#         return StreamingResponse(
-#             output,
-#             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-#             headers={
-#                 "Content-Disposition": f"attachment; filename=branch_{branch_id}_part_{part_id}_commutes_report_{date}_{datetime.now().strftime('%Y%m%d%H%M%S')}.xlsx"
-#             },
-#         )
-
-#     except Exception as err:
-#         print(err)
-#         raise HTTPException(
-#             status_code=500,
-#             detail="지점별 출퇴근, 휴가 데이터 및 사용자 정보 엑셀 파일 생성에 실패하였습니다.",
-#         )
