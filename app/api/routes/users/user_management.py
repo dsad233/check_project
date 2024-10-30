@@ -26,7 +26,7 @@ from app.middleware.permission import UserPermission
 router = APIRouter(dependencies=[Depends(validate_token)])
 # db = async_session()
 
-@available_higher_than(Role.ADMIN)
+#@available_higher_than(Role.ADMIN)
 class UserManagement:
     router = router
 

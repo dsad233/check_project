@@ -23,7 +23,7 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 
 @router.get("/get", response_model=BranchListResponse, summary="지점 목록 조회")
 async def read_branches(
-    *, session: AsyncSession = Depends(get_db), search: BaseSearchDto = Depends(BaseSearchDto), user: int = Depends(get_current_user)
+    *, session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto), user: int = Depends(get_current_user)
 ) -> BranchListResponse:
     """
     지점 목록을 조회합니다.
@@ -37,21 +37,21 @@ async def read_branches(
             raise NotFoundError(detail=f"{user.branch_id}번 지점이 없습니다.")
         return BranchListResponse(data=[branch], pagination=PaginationDto(total_record=1))
 
-    return await branch_service.get_branches(session=session, search=search)
+    return await branch_service.get_branches(session=session, request=request)
 
 
 @router.post("/create", response_model=bool, status_code=201, summary="지점 생성")
 @available_higher_than(Role.MSO)
 async def create_branch(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_create: BranchRequest
+    *, context: Request, session: AsyncSession = Depends(get_db), request: BranchRequest
 ) -> bool:
     
-    return await branch_service.create_branch(session=session, branch_create=branch_create)
+    return await branch_service.create_branch(session=session, request=request)
 
 
 @router.get("/{branch_id}/get", response_model=BranchResponse, summary="지점 조회")
 async def read_branch(
-    *, session: AsyncSession = Depends(get_db), branch_id: int, user: Users = Depends(get_current_user)
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> BranchResponse:
 
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
@@ -63,21 +63,21 @@ async def read_branch(
 @router.patch("/{branch_id}/update", response_model=bool, summary="지점 수정")
 @available_higher_than(Role.MSO)
 async def update_branch(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_id: int, branch_update: BranchRequest
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: BranchRequest
 ) -> bool:
 
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     
-    await branches_crud.update(session=session, branch_id=branch_id, branch_update=Branches(**branch_update.model_dump()))
+    await branches_crud.update(session=session, branch_id=branch_id, request=Branches(**request.model_dump()))
     return True
 
 
 @router.delete("/{branch_id}/delete", response_model=bool, summary="지점 삭제")
 @available_higher_than(Role.MSO)
 async def delete_branch(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_id: int
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> bool:
     
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
@@ -90,13 +90,13 @@ async def delete_branch(
 @router.get("/deleted/list", response_model=BranchListResponse, summary="삭제된 지점 목록 조회")
 @available_higher_than(Role.MSO)
 async def read_deleted_branches(
-    *, session: AsyncSession = Depends(get_db), request:Request,  search: BaseSearchDto = Depends(BaseSearchDto)
+    *, context: Request,  session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto)
 ) -> BranchListResponse:
 
     count = await branches_crud.count_deleted_all(session=session)
     pagination = PaginationDto(total_record=count)
     branches = await branches_crud.find_deleted_all(
-        session=session, search=search
+        session=session, request=request
     )
     if branches is None:
         branches = []
@@ -106,7 +106,7 @@ async def read_deleted_branches(
 @router.patch("/{branch_id}/revive", response_model=bool, summary="삭제된 지점 복구")
 @available_higher_than(Role.MSO)
 async def revive_branch(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_id: int
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> bool:
     
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
@@ -119,34 +119,32 @@ async def revive_branch(
 @router.get("/{branch_id}/users/leave", response_model=UsersLeaveResponse, summary="지점 내 유저들의 잔여 연차 수 및 연차 부여 방식 조회")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def read_branch_users_leave(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_id: int, search: BaseSearchDto = Depends(BaseSearchDto)
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: BaseSearchDto = Depends(BaseSearchDto)
 ) -> UsersLeaveResponse:
 
-    return await user_service.get_branch_users_leave(session=session, branch_id=branch_id, search=search)
+    return await user_service.get_branch_users_leave(session=session, branch_id=branch_id, request=request)
 
 
 @router.patch("/{branch_id}/users/leave/plus", response_model=bool, summary="유저 연차 수동 부여")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def manual_grant_annual_leave(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_id: int, manual_grant_request: ManualGrantRequest
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: ManualGrantRequest
 ) -> bool:
     
-    memo = manual_grant_request.memo
-    for user_id in manual_grant_request.user_ids:
-        await user_service.plus_remaining_annual_leave(session=session, user_id=user_id, count=manual_grant_request.count)
+    memo = request.memo
+    for user_id in request.user_ids:
+        await user_service.plus_remaining_annual_leave(session=session, user_id=user_id, count=request.count)
     return True
 
 
 @router.patch("/{branch_id}/users/leave/minus", response_model=bool, summary="유저 연차 수동 차감")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def manual_minus_annual_leave(
-    *, request: Request, session: AsyncSession = Depends(get_db), branch_id: int, manual_minus_request: ManualGrantRequest
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: ManualGrantRequest
 ) -> bool:
     
-    memo = manual_minus_request.memo
-    print("=============================================")
-    print(manual_minus_request.count)
-    for user_id in manual_minus_request.user_ids:
-        await user_service.minus_remaining_annual_leave(session=session, user_id=user_id, count=manual_minus_request.count)
+    memo = request.memo
+    for user_id in request.user_ids:
+        await user_service.minus_remaining_annual_leave(session=session, user_id=user_id, count=request.count)
     return True
 

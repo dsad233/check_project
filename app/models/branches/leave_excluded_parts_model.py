@@ -26,11 +26,3 @@ class LeaveExcludedPart(Base):
     leave_category_id = Column(Integer, ForeignKey("leave_categories.id"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
 
-class LeaveExcludedPartResponse(BaseModel):
-    id: int = Field(..., gt=0)
-    leave_category_id: int = Field(..., gt=0)
-    part_id: int = Field(..., gt=0)
-
-    class Config:
-        from_attributes = True
-

@@ -42,6 +42,8 @@ from .parts.hour_wage_template_model import HourWageTemplate
 from .branches.salary_polices_model import SalaryTemplatesPolicies
 from .branches.parttimer_policies_model import ParttimerPolicies
 
+from .branches.personnel_record_categories_model import PersonnelRecordCategory
+
 # Users.salary = relationship("UserSalary", back_populates="user")
 
 # 일 대 다 관계
@@ -186,3 +188,6 @@ Document.document_send_histories = relationship("DocumentSendHistory", back_popu
 Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)
 SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_templates_policies")
 BranchHistories.branch = relationship("Branches", back_populates="branch_histories")
+
+Branches.personnel_record_categories = relationship("PersonnelRecordCategory", back_populates="branch")
+PersonnelRecordCategory.branch = relationship("Branches", back_populates="personnel_record_categories")
