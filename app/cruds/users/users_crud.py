@@ -61,28 +61,38 @@ async def add_user(
         await session.rollback()
         raise e
 
-async def plus_remaining_annual_leave(
+async def plus_total_leave_days(
     *, session: AsyncSession, user: Users, count: int
 ) -> Users:
-    user.remaining_annual_leave += count
+    user.total_leave_days += count
     await session.flush()
     await session.commit()
     await session.refresh(user)
     findUser = await find_by_id(session=session, user_id=user.id)
-    print(findUser.remaining_annual_leave)
+    print(findUser.total_leave_days)
     return user
 
-async def minus_remaining_annual_leave(
+# async def minus_remaining_annual_leave(
+#     *, session: AsyncSession, user: Users, count: int
+# ) -> Users:
+#     if user.remaining_annual_leave < count:
+#         raise BadRequestError(detail="잔여 연차가 부족합니다.")
+#     user.remaining_annual_leave -= count
+#     await session.flush()
+#     await session.commit()
+#     await session.refresh(user)
+#     return user
+
+async def minus_total_leave_days(
     *, session: AsyncSession, user: Users, count: int
 ) -> Users:
-    if user.remaining_annual_leave < count:
-        raise BadRequestError(detail="잔여 연차가 부족합니다.")
-    user.remaining_annual_leave -= count
+    if user.total_leave_days < count:
+        raise BadRequestError(detail="잔여 연차가부족합니다.")
+    user.total_leave_days -= count
     await session.flush()
     await session.commit()
     await session.refresh(user)
     return user
-
 
 async def get_users_count(
     *, session: AsyncSession, branch_id: int

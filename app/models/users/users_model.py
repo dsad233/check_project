@@ -18,7 +18,6 @@ from datetime import date
 from typing import Optional
 from sqlalchemy import text
 from pydantic import BaseModel
-from app.models.branches.user_leaves_days import UserLeavesDays as UserLeavesDays
 
 from app.enums.users import Role, Gender, MenuPermissions, EmploymentStatus
 
