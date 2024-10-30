@@ -33,24 +33,26 @@ docker volume rm $(docker volume ls -q) || true
 # Finally, build and start containers
 docker-compose -f docker-compose.yml up --build -d
 
+# 컨테이너가 완전히 시작될 때까지 잠시 대기
+echo "Waiting for containers to start..."
+sleep 10
+
 # health check
+set +e
 echo "Waiting for application to start..."
-max_attempts=4  # 최대 20초 대기 (5초 x 4번)
+max_attempts=6  # 최대 30초 대기 (5초 x 6번)
 attempt=1
 while [ $attempt -le $max_attempts ]; do
-   status_code=$(curl -s -o /dev/null -w "%{http_code}" localhost:80/docs)
-   if [ "$status_code" = "200" ]; then
-       echo "Health check passed: /docs endpoint returned 200"
-       exit 0
-   fi
-   echo "Attempt $attempt of $max_attempts: Waiting for service to be ready... (Status code: $status_code)"
-   sleep 5
-   attempt=$((attempt + 1))
+    status_code=$(curl -s -o /dev/null -w "%{http_code}" localhost:80/docs)
+    echo "Attempt $attempt of $max_attempts: Waiting for service to be ready... (Status code: $status_code)"
+    if [ "$status_code" = "200" ]; then
+        echo "Health check passed: /docs endpoint returned 200"
+        exit 0
+    fi
+    sleep 5
+    attempt=$((attempt + 1))
 done
 
 echo "Health check failed: /docs endpoint did not return 200 after $max_attempts attempts"
 echo "Last status code: $status_code"
 exit 1
-
-# Reset error handling
-set +e
