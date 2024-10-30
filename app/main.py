@@ -19,6 +19,7 @@ app = FastAPI(lifespan=lifespan)
 
 origins = [
     "https://workswave-frontend-one.vercel.app",
+    "https://develop-check.mementoai.io",
     "http://localhost:5173",
     "http://52.78.246.46"
 ]
