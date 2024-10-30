@@ -52,20 +52,17 @@ async def create_overtime(
             overtime_hours=overtime.overtime_hours,
             application_memo=overtime.application_memo,
         )
-
-        db.add(new_overtime)
-        await db.commit()
         
         # 기존 overtime_history 확인
         existing_history = await db.execute(
             select(OverTime_History).where(
-                OverTime_History.user_id == current_user_id,
-                OverTime_History.deleted_at == "N",
+                OverTime_History.user_id == current_user_id
             )
         )
         history = existing_history.scalar_one_or_none()
+        print(f"history : {history}")
         
-        if not history:
+        if history is None:
             history = OverTime_History(
                 user_id = current_user_id,
                 ot_30_total = 0,
@@ -76,12 +73,16 @@ async def create_overtime(
                 ot_90_money = 0
             )
             db.add(history)
-            await db.flush()
+
+        db.add(new_overtime)
+        await db.flush()
+        await db.commit()
 
         return {
             "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
             "data": new_overtime,
         }
+        
     except HTTPException as http_err:
         await db.rollback()
         raise http_err
