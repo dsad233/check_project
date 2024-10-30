@@ -61,7 +61,7 @@ class DefaultAllowancePoliciesDto(BaseModel):
     holiday_work: bool = Field(description="휴일수당", default=False)
     job_duty: bool = Field(description="직무수당", default=False)
     meal: bool = Field(description="식대", default=False)
-    base_salary: bool = Field(description="기본급 사용여부", default=False)
+
 
     class Config:
         from_attributes = True
