@@ -4,9 +4,10 @@ from sqlalchemy.orm import relationship
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
+from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
-from app.models.users.users_work_contract_model import WorkContract
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -34,9 +35,16 @@ from .branches.entry_date_based_annual_leave_grant_model import EntryDateBasedAn
 from .branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
 from .branches.salary_template_model import SalaryTemplate
 from .common.minimum_wage_policies_model import MinimumWagePolicy
-
+from .histories.branch_histories_model import BranchHistories
+from .branches.user_leaves_days import UserLeavesDays
 # parts
 from .parts.hour_wage_template_model import HourWageTemplate
+
+# salary_policies
+from .branches.salary_polices_model import SalaryTemplatesPolicies
+from .branches.parttimer_policies_model import ParttimerPolicies
+
+from .branches.personnel_record_categories_model import PersonnelRecordCategory
 
 # Users.salary = relationship("UserSalary", back_populates="user")
 
@@ -59,7 +67,7 @@ Branches.auto_annual_leave_approval = relationship("AutoAnnualLeaveApproval", ba
 Branches.account_based_annual_leave_grant = relationship("AccountBasedAnnualLeaveGrant", back_populates="branch", uselist=False)
 Branches.entry_date_based_annual_leave_grant = relationship("EntryDateBasedAnnualLeaveGrant", back_populates="branch", uselist=False)
 Branches.condition_based_annual_leave_grant = relationship("ConditionBasedAnnualLeaveGrant", back_populates="branch")
-
+Branches.branch_histories = relationship("BranchHistories", back_populates="branch")
 LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 Branches.salary_templates = relationship("SalaryTemplate", back_populates="branch")
 
@@ -87,6 +95,11 @@ LeaveCategory.leave_excluded_parts = relationship("LeaveExcludedPart", back_popu
 
 Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Parts.closed_days = relationship("ClosedDays", back_populates="part")
+Branches.parttimer_policies = relationship("ParttimerPolicies", back_populates="branch", uselist=False)
+Branches.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="branch")
+
+ParttimerPolicies.branch = relationship("Branches", back_populates="parttimer_policies")
+SalaryTemplatesPolicies.branch = relationship("Branches", back_populates="salary_templates_policies")
 # 다 대 일 관계
 LeaveHistories.user = relationship("Users", back_populates="leave_histories")
 LeaveHistories.leave_category = relationship("LeaveCategory", back_populates="leave_histories")
@@ -148,7 +161,11 @@ Users.menu_permissions = relationship("Parts", secondary=user_menus, back_popula
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
 
-WorkContract.fixed_rest_days = relationship("FixedRestDay", backref="work_contract")
+WorkContract.fixed_rest_days = relationship("FixedRestDay", back_populates="work_contract")
+FixedRestDay.work_contract = relationship("WorkContract", foreign_keys=[FixedRestDay.work_contract_id], back_populates="fixed_rest_days")
+
+WorkContract.user = relationship("Users", back_populates="work_contract")
+Users.work_contract = relationship("WorkContract", back_populates="user")
 
 Document.user = relationship('Users', back_populates="documents")
 Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
@@ -169,3 +186,27 @@ DocumentSendHistory.request_user = relationship("Users", foreign_keys=[DocumentS
 Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.user_id], back_populates="user")
 Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="request_user")
 Document.document_send_histories = relationship("DocumentSendHistory", back_populates="document")
+
+Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)
+SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_templates_policies")
+BranchHistories.branch = relationship("Branches", back_populates="branch_histories")
+
+Users.leaves = relationship("UserLeavesDays", back_populates="user", foreign_keys="UserLeavesDays.user_id")
+Users.approved_leaves = relationship("UserLeavesDays", back_populates="approver", foreign_keys="UserLeavesDays.approver_id")
+
+UserLeavesDays.user = relationship("Users", back_populates="leaves", foreign_keys="UserLeavesDays.user_id")
+UserLeavesDays.approver = relationship("Users", back_populates="approved_leaves", foreign_keys="UserLeavesDays.approver_id")
+UserLeavesDays.branch = relationship("Branches", back_populates="user_leaves")
+
+Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys="[UserLeavesDays.branch_id]")
+
+# users.part_timer
+Users.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="users", uselist=False)
+PartTimerWorkContract.users = relationship("Users", back_populates="part_timer_work_contracts")
+PartTimerWorkContract.part_timer_hourly_wages = relationship("PartTimerHourlyWage", back_populates="part_timer_work_contracts", uselist=False)
+PartTimerHourlyWage.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_hourly_wages", uselist=False)
+PartTimerAdditionalInfo.commutes = relationship("Commutes", back_populates="part_timer_additional_infos")
+Commutes.part_timer_additional_infos = relationship("PartTimerAdditionalInfo", back_populates="commutes")
+
+Branches.personnel_record_categories = relationship("PersonnelRecordCategory", back_populates="branch")
+PersonnelRecordCategory.branch = relationship("Branches", back_populates="personnel_record_categories")

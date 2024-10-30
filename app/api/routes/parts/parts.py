@@ -8,19 +8,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import PartCreate, PartResponse, Parts, PartUpdate
 from app.models.users.users_model import Users
 from app.core.database import get_db
+from app.models.branches.salary_polices_model import SalaryTemplatesPolicies
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 
 @router.get("", response_model=list[PartResponse])
-async def getParts(branch_id: int, current_user_id: int = Depends(get_current_user_id)):
+async def getParts(branch_id: int,
+                   current_user_id: int = Depends(get_current_user_id),
+                   db: AsyncSession = Depends(get_db)
+                   ):
     try:
         user_query = select(Users).where(
             Users.id == current_user_id, Users.deleted_yn == "N"
@@ -60,6 +64,7 @@ async def createPart(
     branch_id: int,
     part_create: PartCreate,
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     async with semaphore:  # 세마포어를 사용하여 동시 접근 제어
         try:
@@ -113,6 +118,15 @@ async def createPart(
 
             try:
                 db.add(new_part)
+                await db.flush()  # 새로운 part의 ID를 얻기 위해 flush
+
+                # 급여 템플릿 정책 생성
+                salary_template_policy = SalaryTemplatesPolicies(
+                    branch_id=branch_id,
+                    part_id=new_part.id
+                )
+                db.add(salary_template_policy)
+                
                 await db.commit()
                 return {"message": "부서 생성에 성공하였습니다.", "status": "success"}
             
@@ -136,7 +150,10 @@ async def createPart(
 
 @router.delete("/{part_id}")
 async def deletePart(
-    branch_id: int, part_id: int, current_user_id: int = Depends(get_current_user_id)
+    branch_id: int,
+    part_id: int,
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         user_query = select(Users).where(
@@ -178,6 +195,7 @@ async def updatePart(
     part_id: int,
     part_update: PartUpdate,
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         user_query = select(Users).where(

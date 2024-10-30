@@ -1,85 +1,77 @@
 import logging
-import requests
-from sqlalchemy.orm import Session
-from typing import Dict, Any
-from app.schemas.sign_schemas import CreateSignWebhookRequest
-from app.core.modusign_config import MODUSIGN_BASE_URL, MODUSIGN_HEADERS
+from typing import Dict
+from fastapi import HTTPException
+from app.core.config import settings
+import aiohttp
 
 logger = logging.getLogger(__name__)
+MODUSIGN_API_URL = "https://api.modusign.co.kr"
 
-async def process_webhook(request: CreateSignWebhookRequest, db: Session) -> None:
-    document_id = request.document.id
-    event_type = request.event.type
-    
-    try:
-        document_details = await get_document_details(document_id)
-        
-        event_handlers = {
-            "document_started": handle_document_started,
-            "document_signed": handle_document_signed,
-            "document_all_signed": handle_document_all_signed,
-            "document_rejected": handle_document_rejected,
-            "document_request_canceled": handle_document_request_canceled,
-            "document_signing_canceled": handle_document_signing_canceled
-        }
-        
-        handler = event_handlers.get(event_type)
-        if handler:
-            await handler(document_details, db)
-        else:
-            logger.warning(f"Unhandled webhook event type: {event_type}")
-    
-    except Exception as e:
-        logger.error(f"Error processing webhook for document {document_id}: {str(e)}")
+class WebhookService:
+    def __init__(self):
+        self.headers = settings.MODUSIGN_HEADERS
 
-async def get_document_details(document_id: str) -> Dict[str, Any]:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}"
-    response = requests.get(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-    return response.json()
+    async def create_webhook(self, webhook_data: dict) -> Dict:
+        """웹훅 생성"""
+        try:
+            result = await self._make_request(
+                'POST',
+                f"{MODUSIGN_API_URL}/webhooks",
+                json={
+                    "url": f"{settings.MODUSIGN_WEBHOOK_URL}/webhook/callback",
+                    "events": webhook_data['events'],
+                    "name": webhook_data['name'],
+                    "description": webhook_data.get('description'),
+                    "enabled": webhook_data.get('enabled', True)
+                }
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Error in create_webhook: {str(e)}")
+            raise
 
-async def update_document_status(document_id: str, status: str, db: Session) -> None:
-    # 내부 데이터베이스 상태 업데이트 로직 구현
-    # 예: db.query(Document).filter(Document.id == document_id).update({"status": status})
-    # db.commit()
-    pass
+    async def handle_webhook(self, webhook_data: dict) -> Dict:
+        """웹훅 이벤트 처리"""
+        try:
+            event_type = webhook_data.get('event')
+            logger.info(f"Received webhook event: {event_type}")
+            logger.info(f"Webhook data: {webhook_data}")
 
-async def handle_document_started(document_details: Dict[str, Any], db: Session) -> None:
-    logger.info(f"Document started: {document_details['id']}")
-    await update_document_status(document_details['id'], 'STARTED', db)
+            # 이벤트 타입별 처리
+            if event_type == "document.completed":
+                document = webhook_data.get('data', {}).get('document', {})
+                logger.info(f"Document completed: {document}")
+                
+            elif event_type == "participant.signed":
+                participant = webhook_data.get('data', {}).get('participant', {})
+                logger.info(f"Participant signed: {participant}")
+            
+            return {"status": "success", "event": event_type}
+            
+        except Exception as e:
+            logger.error(f"Error in handle_webhook: {str(e)}")
+            raise
 
-async def handle_document_signed(document_details: Dict[str, Any], db: Session) -> None:
-    logger.info(f"Document signed: {document_details['id']}")
-    await update_document_status(document_details['id'], 'SIGNED', db)
-    await remind_next_signer(document_details['id'])
+    async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.request(method, url, headers=self.headers, **kwargs) as response:
+                    if response.status >= 400:
+                        error_text = await response.text()
+                        raise HTTPException(status_code=response.status, detail=error_text)
+                    return await response.json()
+        except Exception as e:
+            logger.error(f"API request failed: {str(e)}")
+            raise
 
-async def handle_document_all_signed(document_details: Dict[str, Any], db: Session) -> None:
-    logger.info(f"Document all signed: {document_details['id']}")
-    await update_document_status(document_details['id'], 'COMPLETED', db)
-
-async def handle_document_rejected(document_details: Dict[str, Any], db: Session) -> None:
-    logger.info(f"Document rejected: {document_details['id']}")
-    await update_document_status(document_details['id'], 'REJECTED', db)
-
-async def handle_document_request_canceled(document_details: Dict[str, Any], db: Session) -> None:
-    logger.info(f"Document request canceled: {document_details['id']}")
-    await update_document_status(document_details['id'], 'CANCELED', db)
-
-async def handle_document_signing_canceled(document_details: Dict[str, Any], db: Session) -> None:
-    logger.info(f"Document signing canceled: {document_details['id']}")
-    await update_document_status(document_details['id'], 'SIGNING_CANCELED', db)
-    await request_correction(document_details['id'])
-
-async def remind_next_signer(document_id: str) -> None:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/remind-signing"
-    response = requests.post(url, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
-
-async def request_correction(document_id: str) -> None:
-    url = f"{MODUSIGN_BASE_URL}/documents/{document_id}/request-correction"
-    payload = {
-        "participantId": "PARTICIPANT_ID",  # 실제 참여자 ID로 대체해야 함
-        "message": "서명 내용을 수정해 주세요."
-    }
-    response = requests.post(url, json=payload, headers=MODUSIGN_HEADERS)
-    response.raise_for_status()
+    async def get_webhook(self, webhook_id: str) -> Dict:
+        """웹훅 상세 조회"""
+        try:
+            result = await self._make_request(
+                'GET',
+                f"{MODUSIGN_API_URL}/webhooks/{webhook_id}"
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Error in get_webhook: {str(e)}")
+            raise

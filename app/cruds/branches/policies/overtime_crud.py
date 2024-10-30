@@ -20,6 +20,7 @@ async def create(
         overtime_policies_create.branch_id = branch_id
     session.add(overtime_policies_create)
     await session.commit()
+    await session.flush()
     await session.refresh(overtime_policies_create)
 
 async def update(

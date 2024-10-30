@@ -4,7 +4,7 @@ FROM python:3.11-slim
 # Set environment variables to optimize Python's behavior in Docker
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
-ENV MODE=prod
+ENV MODE=dev
 
 # Install system dependencies required for building Python packages with C extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \

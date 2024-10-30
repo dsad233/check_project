@@ -12,6 +12,15 @@ class Role(str, Enum):
     EMPLOYEE = "사원"
     RESIGNED = "퇴사자"
     ON_LEAVE = "휴직자"
+    TEMPORARY = "임시생성"
+
+
+class EmploymentStatus(str, Enum):
+    """
+    전체 근무 상태 구성용 Enum
+    """
+    PERMANENT = "정규직"
+    TEMPORARY = "계약직"
 
 
 class MenuPermissions(str, Enum):
@@ -82,6 +91,6 @@ class Weekday(str, Enum):
     WEDNESDAY = "wednesday"
     THURSDAY = "thursday"
     FRIDAY = "friday"
-    SATURDAY = "satruday"
-    SUNDAY = "sunnday"
+    SATURDAY = "saturday"
+    SUNDAY = "sunday"
 
