@@ -140,7 +140,7 @@ async def update_auto_leave_policies_and_parts(
     await branch_histories_crud.create_branch_history(
         session=session, 
         branch_id=branch_id, 
-        history_create=BranchHistories(
+        request=BranchHistories(
             branch_id=branch_id, 
             created_by=current_user_id, 
             snapshot_id=snapshot_id, 
@@ -181,15 +181,13 @@ async def get_branch_histories(*, session: AsyncSession, branch_id: int, request
     return BranchHistoriesResponse(data=branch_histories, pagination=PaginationDto(total_record=total_count))
 
 
-async def get_branches(*, session: AsyncSession, search: BaseSearchDto) -> BranchListResponse:
+async def get_branches(*, session: AsyncSession, request: BaseSearchDto) -> BranchListResponse:
     count = await branches_crud.count_all(session=session)
-    if search.page == 0:
+    if request.page == 0:
         branches = await branches_crud.find_all(session=session)
         pagination = PaginationDto(total_record=count, record_size=count)
     else:
-        branches = await branches_crud.find_all_by_limit(
-        session=session, offset=search.offset, limit=search.record_size
-        )
+        branches = await branches_crud.find_all_by_limit(session=session, request=request)
         pagination = PaginationDto(total_record=count)
     if branches is None:
         branches = []
@@ -199,13 +197,13 @@ async def get_branches(*, session: AsyncSession, search: BaseSearchDto) -> Branc
 async def create_branch(
         *, 
         session: AsyncSession, 
-        branch_create: BranchRequest
+        request: BranchRequest
 ) -> bool:
 
-    branch = await branches_crud.create(session=session, branch_create=Branches(**branch_create.model_dump()))
+    branch = await branches_crud.create(session=session, request=Branches(**request.model_dump()))
     branch_id = branch.id
     # 정책 생성
-    if branch_id != None:
+    if branch_id is not None:
         await holiday_work_crud.create(session=session, branch_id=branch_id)
         await overtime_crud.create(session=session, branch_id=branch_id)
         await work_crud.create(session=session, branch_id=branch_id)
