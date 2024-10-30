@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from app.core.config import settings
 import base64
 import aiohttp
+from aiohttp.client_exceptions import ContentTypeError
 from app.schemas.modusign_schemas import TemplateListResponse, TemplateResponse
 
 logger = logging.getLogger(__name__)
@@ -25,31 +26,39 @@ class TemplateService:
     async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
         try:
             async with aiohttp.ClientSession() as session:
-                headers = self.headers.copy()
-                headers['content-type'] = 'application/json'
+                headers = {
+                    **self.headers,
+                    'Content-Type': 'application/json'
+                }
+                if 'headers' in kwargs:
+                    headers.update(kwargs.pop('headers'))
                 
-                logger.info(f"Making request to {url}")
-                logger.info(f"Request headers: {headers}")
+                logger.info(f"Making {method} request to: {url}")
+                logger.info(f"Headers: {headers}")
                 
                 async with session.request(method, url, headers=headers, **kwargs) as response:
-                    response_text = await response.text()
                     logger.info(f"Response status: {response.status}")
-                    logger.info(f"Response headers: {response.headers}")
-                    logger.info(f"Response body: {response_text}")
                     
                     if response.status >= 400:
+                        response_text = await response.text()
+                        logger.error(f"API request failed: {response_text}")
                         try:
                             error_data = await response.json()
-                            detail = f"API Error: {error_data.get('error', {}).get('name', 'Unknown')} - {error_data.get('error', {}).get('message', error_data)}"
+                            detail = f"API Error: {error_data.get('error', {}).get('name', 'Unknown')} - {error_data}"
                         except:
                             detail = f"API Error: {response_text}"
-                        logger.error(f"API request failed: {detail}")
                         raise HTTPException(status_code=response.status, detail=detail)
                     
-                    if response.status == 204:
+                    if method.upper() == 'DELETE' and response.status in (200, 204):
                         return {"success": True}
-                        
-                    return await response.json()
+                    
+                    try:
+                        return await response.json()
+                    except ContentTypeError:
+                        response_text = await response.text()
+                        if not response_text:
+                            return {"success": True}
+                        raise
                 
         except aiohttp.ClientError as e:
             logger.error(f"HTTP request failed: {str(e)}")
@@ -73,8 +82,46 @@ class TemplateService:
 
     async def delete_template(self, template_id: str) -> bool:
         """템플릿을 삭제합니다"""
-        result = await self._make_request(
-            'DELETE',
-            f"{MODUSIGN_BASE_URL}/templates/{template_id}"
-        )
-        return result.get('success', False)
+        try:
+            if not template_id:
+                raise ValueError("Template ID is required")
+                
+            logger.info(f"Deleting template with ID: {template_id}")
+            
+            # URL에 쿼리 파라미터로 template_id 추가
+            result = await self._make_request(
+                method='DELETE',
+                url=f"{MODUSIGN_BASE_URL}/templates?id={template_id}"
+            )
+            
+            logger.info(f"Delete template response: {result}")
+            return result.get('success', False)
+            
+        except Exception as e:
+            logger.error(f"Error in delete_template: {str(e)}")
+            raise
+
+    async def update_template_metadata(self, template_id: str, metadata: list) -> Dict:
+        """템플릿 메타데이터를 업데이트합니다"""
+        try:
+            if not template_id:
+                raise ValueError("Template ID is required")
+            
+            logger.info(f"Updating template metadata for ID: {template_id}")
+            logger.info(f"Metadata: {metadata}")
+            
+            # metadata를 객체로 감싸서 전송
+            result = await self._make_request(
+                'PUT',
+                f"{MODUSIGN_BASE_URL}/templates/{template_id}/metadatas",
+                json={
+                    "metadatas": [{"key": m.key, "value": m.value} for m in metadata]
+                }
+            )
+            
+            logger.info(f"Update template metadata response: {result}")
+            return result
+            
+        except Exception as e:
+            logger.error(f"Error in update_template_metadata: {str(e)}")
+            raise

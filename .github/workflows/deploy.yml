@@ -36,3 +36,4 @@ jobs:
             yes | docker builder prune || true
             docker volume rm $(docker volume ls -q) || true
             docker-compose -f docker-compose.yml up --build -d
+            #rds live서버 가동은 윗줄 주석하고 이걸 사용 : docker-compose -f docker_rds_live_server/docker-compose.yml up --build -d
