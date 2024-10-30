@@ -7,6 +7,13 @@ class WorkTypeEnum(enum.Enum):
     REMOTE = "재택"
     HOLIDAY = "휴일"
 
+    @staticmethod
+    def get_work_type(value):
+        try:
+            return WorkTypeEnum(value)
+        except ValueError:
+            return None
+
 class PartTimerWorkContract(Base):
     __tablename__ = "part_timer_work_contracts"
 
