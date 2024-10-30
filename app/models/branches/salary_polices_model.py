@@ -9,9 +9,9 @@ from sqlalchemy import (
     String,
 )
 from app.core.database import Base
-from pydantic import BaseModel, Field  # Optional과 List 제거
+from pydantic import BaseModel, Field
 
-from app.models.branches.allowance_policies_model import AllowancePoliciesDto, AllowancePoliciesResponse
+from app.models.branches.allowance_policies_model import AllowancePoliciesResponse
 from app.models.branches.parttimer_policies_model import ParttimerPoliciesDto
 
 

@@ -43,6 +43,8 @@ from .parts.hour_wage_template_model import HourWageTemplate
 from .branches.salary_polices_model import SalaryTemplatesPolicies
 from .branches.parttimer_policies_model import ParttimerPolicies
 
+from .branches.personnel_record_categories_model import PersonnelRecordCategory
+
 # Users.salary = relationship("UserSalary", back_populates="user")
 
 # 일 대 다 관계
@@ -195,3 +197,6 @@ PartTimerWorkContract.part_timer_hourly_wages = relationship("PartTimerHourlyWag
 PartTimerHourlyWage.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_hourly_wages", uselist=False)
 PartTimerAdditionalInfo.commutes = relationship("Commutes", back_populates="part_timer_additional_infos")
 Commutes.part_timer_additional_infos = relationship("PartTimerAdditionalInfo", back_populates="commutes")
+
+Branches.personnel_record_categories = relationship("PersonnelRecordCategory", back_populates="branch")
+PersonnelRecordCategory.branch = relationship("Branches", back_populates="personnel_record_categories")

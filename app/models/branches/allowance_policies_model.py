@@ -41,6 +41,14 @@ class AllowancePolicies(Base):
     meal_allowance = Column(Integer, nullable=True, default=0, server_default=text('0')) # 식대
     doctor_holiday_work_pay = Column(Integer, nullable=False, default=0)  # 의사 휴일수당
     common_holiday_work_pay = Column(Integer, nullable=False, default=0)  # 일반 휴일수당
+    
+    is_additional_holiday_hundred = Column(Boolean, default=False) # 휴일 근로 수당 100원 단위
+    is_unused_annual_leave_hundred = Column(Boolean, default=False) # 미사용 연차 수당 100원 단위
+    is_annual_leave_deduction_hundred = Column(Boolean, default=False) # 연차사용공제 100원 단위
+    is_attendance_deduction_hundred = Column(Boolean, default=False) # 근태공제 100원 단위
+    
+    display_meal_calc = Column(Boolean, default=False) # 식대 계산 표시
+    display_night_calc = Column(Boolean, default=False) # 야간 수당 계산 표시
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
@@ -74,6 +82,14 @@ class AllowancePoliciesResponse(BaseModel):
     job_duty: bool = Field(description="직무수당", default=False)
     meal: bool = Field(description="식대", default=False)
     base_salary: bool = Field(description="기본급 사용여부", default=False)
+    
+    is_additional_holiday_hundred: bool = Field(description="휴일 근로 수당 100원 단위", default=False)
+    is_unused_annual_leave_hundred: bool = Field(description="미사용 연차 수당 100원 단위", default=False)
+    is_annual_leave_deduction_hundred: bool = Field(description="연차사용공제 100원 단위", default=False)
+    is_attendance_deduction_hundred: bool = Field(description="근태공제 100원 단위", default=False)
+    
+    display_meal_calc: bool = Field(description="식대 계산 표시", default=False)
+    display_night_calc: bool = Field(description="야간 수당 계산 표시", default=False)
 
     class Config:
         from_attributes = True
@@ -92,3 +108,11 @@ class AllowancePoliciesUpdate(BaseSettings):
     holiday_work : Optional[bool] = None
     job_duty : Optional[bool] = None
     meal : Optional[bool] = None
+    
+    is_additional_holiday_hundred: Optional[bool] = None
+    is_unused_annual_leave_hundred: Optional[bool] = None
+    is_annual_leave_deduction_hundred: Optional[bool] = None
+    is_attendance_deduction_hundred: Optional[bool] = None
+    
+    display_meal_calc: Optional[bool] = None
+    display_night_calc: Optional[bool] = None
