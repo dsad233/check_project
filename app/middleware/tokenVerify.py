@@ -4,17 +4,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
-from app.core.database import async_session, get_db
+from app.core.database import get_db
 from app.middleware.jwt.jwtService import JWTDecoder, JWTService
 from app.models.users.users_model import Users
 from app.middleware.permission import UserPermission
 from app.enums.users import Role
 
-users = async_session()
+# users = async_session()
 
 auth_header = APIKeyHeader(name="Authorization-Swagger", auto_error=False)
 
-async def validate_token(req: Request, auth: str = Security(auth_header)):
+async def validate_token(
+        req: Request,
+        auth: str = Security(auth_header),
+        users: AsyncSession = Depends(get_db)
+        ):
     print(auth)
     print(req.headers.get("Authorization"))
     try:

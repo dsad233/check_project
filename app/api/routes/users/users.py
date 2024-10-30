@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only
 
 from app.api.routes.auth.auth import hashPassword
-from app.core.database import async_session, get_db
+from app.core.database import get_db
 from app.middleware.tokenVerify import get_current_user_id, validate_token, get_current_user
 from app.models.users.users_model import Users, UserUpdate
 from app.models.branches.branches_model import Branches
