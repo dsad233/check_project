@@ -1,6 +1,11 @@
-from sqlalchemy import Column, Date, ForeignKey, Integer, String, Time
+from sqlalchemy import Column, Date, ForeignKey, Integer, Time, Enum
 from app.core.database import Base
+import enum
 
+class WorkTypeEnum(enum.Enum):
+    HOSPITAL = "병원"
+    REMOTE = "재택"
+    HOLIDAY = "휴일"
 
 class PartTimerWorkContract(Base):
     __tablename__ = "part_timer_work_contracts"
@@ -35,8 +40,7 @@ class PartTimerAdditionalInfo(Base):
     __tablename__ = "part_timer_additional_infos"
 
     commute_id = Column(Integer, ForeignKey("commutes.id"), primary_key=True, nullable=False)
-    work_type = Column(String(255), nullable=False)
+    work_type = Column(Enum(WorkTypeEnum), nullable=False)
     rest_minutes = Column(Integer, nullable=False, default=30)
-    
-
- 
+    work_set_start_time = Column(Time, nullable=False)
+    work_set_end_time = Column(Time, nullable=False)
