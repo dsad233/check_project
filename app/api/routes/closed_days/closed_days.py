@@ -5,20 +5,21 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, HTTPException, Body
 from sqlalchemy import and_, func, select, extract
 
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import get_current_user, validate_token
 from app.models.closed_days.closed_days_model import ClosedDays, ClosedDayCreate, ClosedDayUpdate
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
 from calendar import monthrange
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 
 # 휴무일 지점 생성
 @router.post("/{branch_id}/closed-days")
-async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)]):
+async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -48,7 +49,7 @@ async def create_branch_closed_day(branch_id : int, closed_day: ClosedDayCreate,
 
 # 휴무일 파트 생성
 @router.post("/{branch_id}/parts/{part_id}/closed-days/{user_id}")
-async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)]):
+async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, closed_day: ClosedDayCreate, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
 
         if token.role.strip() == "MSO 최고권한":
@@ -84,7 +85,7 @@ async def create_part_closed_day(branch_id : int, part_id : int, user_id : int, 
     
 # 휴무일 지점 다중 휴무 생성
 @router.post("/{branch_id}/closed-days/arrays")
-async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
+async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...), db: AsyncSession = Depends(get_db)):
     try:
 
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
@@ -118,7 +119,7 @@ async def create_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
     
 # 휴무일 파트 다중 휴무 생성
 @router.post("/{branch_id}/parts/{part_id}/closed-days/arrays/users/{user_id}")
-async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...)):
+async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[ClosedDayCreate] = Body(...), db: AsyncSession = Depends(get_db)):
     try:
 
         if token.role.strip() == "MSO 최고권한":
@@ -156,7 +157,7 @@ async def create_part_arrays_closed_day(branch_id : int, part_id : int, user_id 
 
 # 휴일 전체 조회 [어드민만]
 @router.get("/closed-days")
-async def get_all_closed_days(token : Annotated[Users, Depends(get_current_user)]):
+async def get_all_closed_days(token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() != "MSO 최고권한":
             raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
@@ -177,7 +178,7 @@ async def get_all_closed_days(token : Annotated[Users, Depends(get_current_user)
 
 # 휴일 데이트 전체 입력 조회 [어드민만]
 @router.get("/closed-days/{date}")
-async def get_all_date_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_all_date_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() != "MSO 최고권한":
             raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
@@ -206,7 +207,7 @@ async def get_all_date_closed_days(date : str, token : Annotated[Users, Depends(
 
 # 휴일 월간 전체 조회 [어드민만]
 @router.get("/closed-days/month/{date}")
-async def get_month_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_month_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() != "MSO 최고권한":
             raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
@@ -234,7 +235,7 @@ async def get_month_closed_days(date : str, token : Annotated[Users, Depends(get
 
 # 휴일 주간 전체 조회 [어드민만]
 @router.get("/closed-days/week/{date}")
-async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() != "MSO 최고권한":
             raise HTTPException(status_code=403, detail="조회 권한이 존재하지 없습니다.")
@@ -264,7 +265,7 @@ async def get_week_closed_days(date : str, token : Annotated[Users, Depends(get_
 
 # 휴일 지점 월간 전체 조회 [어드민만]
 @router.get("/{branch_id}/closed-days/branch-month/{date}")
-async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_branch_month_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -293,7 +294,7 @@ async def get_branch_month_closed_days(branch_id : int, date : str, token : Anno
     
 # 휴일 파트 월간 전체 조회 [어드민만]
 @router.get("/{branch_id}/parts/{part_id}/closed-days/part-month/{date}")
-async def get_part_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_part_month_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한":
             pass 
@@ -329,7 +330,7 @@ async def get_part_month_closed_days(branch_id : int, part_id : int, date : str,
 
 # 휴일 지점 일요일만 월간 전체 조회 [어드민만]
 @router.get("/{branch_id}/closed-days/branch-month/sunday/{date}")
-async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)]):
+async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         # 권한 확인
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
@@ -398,7 +399,7 @@ async def get_branch_month_sunday_closed_days(branch_id: int, date: str, token: 
 
 # 휴일 지점 일요일 휴무 지정 [어드민만]
 @router.patch("/{branch_id}/closed-days/sunday-result")
-async def branch_sunday_result_closed_days(branch_id : int, id : int, token : Annotated[Users, Depends(get_current_user)], sundayOff: bool):
+async def branch_sunday_result_closed_days(branch_id : int, id : int, token : Annotated[Users, Depends(get_current_user)], sundayOff: bool, db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -438,7 +439,7 @@ async def branch_sunday_result_closed_days(branch_id : int, id : int, token : An
     
 # 휴일 지점 주간 조회 [어드민만]
 @router.get("/{branch_id}/closed-days/branch-week/{date}")
-async def get_branch_week_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_branch_week_closed_days(branch_id : int, date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -471,7 +472,7 @@ async def get_branch_week_closed_days(branch_id : int, date : str, token : Annot
 
 # 휴일 파트 주간 조회 [어드민만] 
 @router.get("/{branch_id}/parts/{part_id}/closed-days/part-week/{date}")
-async def get_part_week_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)]):
+async def get_part_week_closed_days(branch_id : int, part_id : int, date : str, token : Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한":
             pass 
@@ -508,7 +509,7 @@ async def get_part_week_closed_days(branch_id : int, part_id : int, date : str, 
     
 # 휴일 지점별 전체 조회 
 @router.get("/{branch_id}/closed-days")
-async def get_branch_all_closed_days(branch_id : int):
+async def get_branch_all_closed_days(branch_id : int, db: AsyncSession = Depends(get_db)):
     try:
 
         stmt = select(ClosedDays).where(
@@ -527,7 +528,7 @@ async def get_branch_all_closed_days(branch_id : int):
 
 # 휴일 지점별 전체 조회 (데이트 입력)
 @router.get("/{branch_id}/closed-days/get-date/{date}")
-async def get_branch_all_date_closed_days(branch_id : int, date : str):
+async def get_branch_all_date_closed_days(branch_id : int, date : str, db: AsyncSession = Depends(get_db)):
     try:
         date_start_day = datetime.strptime(date, "%Y-%m-%d").date()
         now_date_year = date_start_day.year
@@ -551,7 +552,7 @@ async def get_branch_all_date_closed_days(branch_id : int, date : str):
 
 # 휴일 파트별 전체 조회 (데이트 입력)
 @router.get("/{branch_id}/parts/{part_id}/closed-days/{date}")
-async def get_part_all_date_closed_days(branch_id : int, part_id : int, date : str):
+async def get_part_all_date_closed_days(branch_id : int, part_id : int, date : str, db: AsyncSession = Depends(get_db)):
     try:
         date_start_day = datetime.strptime(date, "%Y-%m-%d").date()
         now_date_year = date_start_day.year
@@ -576,7 +577,7 @@ async def get_part_all_date_closed_days(branch_id : int, part_id : int, date : s
     
 # 휴일 지점 상세 조회
 @router.get("/{branch_id}/closed-days/get-id/{id}")
-async def get_branch_one_closed_days(branch_id : int, id : int):
+async def get_branch_one_closed_days(branch_id : int, id : int, db: AsyncSession = Depends(get_db)):
     try:
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -599,7 +600,7 @@ async def get_branch_one_closed_days(branch_id : int, id : int):
 
 # 휴일 파트 상세 조회
 @router.get("/{branch_id}/parts/{part_id}/closed-days/{id}")
-async def get_part_one_closed_days(branch_id: int, part_id: int, id: int):
+async def get_part_one_closed_days(branch_id: int, part_id: int, id: int, db: AsyncSession = Depends(get_db)):
     try:
         stmt = select(ClosedDays).where(ClosedDays.branch_id == branch_id, ClosedDays.part_id == part_id, ClosedDays.id == id, ClosedDays.deleted_yn == "N")
         result = await db.execute(stmt)
@@ -622,7 +623,7 @@ async def get_part_one_closed_days(branch_id: int, part_id: int, id: int):
 
 # 휴무일 지점 수정 [어드민만]
 @router.patch("/{branch_id}/closed-days/{id}")
-async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)]):
+async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -656,7 +657,7 @@ async def update_branch_closed_day(branch_id: int, id : int, closed_day_update: 
 
 # 휴무일 파트 수정 [어드민만]
 @router.patch("/{branch_id}/parts/{part_id}/closed-days/{id}")
-async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)]):
+async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed_day_update: ClosedDayUpdate, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한":
             pass 
@@ -695,7 +696,7 @@ async def update_part_closed_day(branch_id: int, part_id : int, id : int, closed
     
 # 휴무일 지점 삭제 [어드민만]
 @router.delete("/{branch_id}/closed-days/{id}")
-async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -727,7 +728,7 @@ async def delete_branch_closed_day(branch_id: int, id : int, token:Annotated[Use
     
 # 휴무일 파트 삭제 [어드민만]
 @router.delete("/{branch_id}/parts/{part_id}/closed-days/{id}")
-async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한":
             pass 
@@ -765,7 +766,7 @@ async def delete_part_closed_day(branch_id: int, part_id : int, id : int, token:
     
 # 휴무일 지점 다중 삭제 [어드민만]
 @router.delete("/{branch_id}/closed-days/arrays/delete")
-async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[int] = Body(...)):
+async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Users, Depends(get_current_user)], array_list: List[int] = Body(...), db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -796,7 +797,7 @@ async def delete_branch_arrays_closed_day(branch_id : int, token : Annotated[Use
 
 # 휴무일 지점 소프트 삭제 [어드민만]
 @router.patch("/{branch_id}/closed-days/softdelete/{id}")
-async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -829,7 +830,7 @@ async def branch_soft_delete_closed_dday(branch_id: int, id : int, token:Annotat
     
 # 휴무일 파트 소프트 삭제 [어드민만]
 @router.patch("/{branch_id}/parts/{part_id}/closed-days/softdelete/{id}")
-async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한":
             pass 
@@ -869,7 +870,7 @@ async def part_soft_delete_closed_day(branch_id: int, part_id : int, id : int, t
 
 # 휴무일 지점 복구 [어드민만]
 @router.patch("/{branch_id}/closed-days/restore/{id}")
-async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한" or token.role.strip() == "최고관리자":
             pass 
@@ -903,7 +904,7 @@ async def branch_restore_closed_day(branch_id: int, id : int, token:Annotated[Us
 
 # 휴무일 파트 복구 [어드민만]
 @router.patch("/{branch_id}/parts/{part_id}/closed-days/restore/{id}")
-async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)]):
+async def part_resotre_closed_day(branch_id: int, part_id : int, id : int, token:Annotated[Users, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
     try:
         if token.role.strip() == "MSO 최고권한":
             pass 
