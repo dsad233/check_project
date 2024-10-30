@@ -4,6 +4,7 @@ from sqlalchemy.orm import relationship
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
+from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
 from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
@@ -188,6 +189,14 @@ Document.document_send_histories = relationship("DocumentSendHistory", back_popu
 Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)
 SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_templates_policies")
 BranchHistories.branch = relationship("Branches", back_populates="branch_histories")
+
+# users.part_timer
+Users.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="users", uselist=False)
+PartTimerWorkContract.users = relationship("Users", back_populates="part_timer_work_contracts")
+PartTimerWorkContract.part_timer_hourly_wages = relationship("PartTimerHourlyWage", back_populates="part_timer_work_contracts", uselist=False)
+PartTimerHourlyWage.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_hourly_wages", uselist=False)
+PartTimerAdditionalInfo.commutes = relationship("Commutes", back_populates="part_timer_additional_infos")
+Commutes.part_timer_additional_infos = relationship("PartTimerAdditionalInfo", back_populates="commutes")
 
 Branches.personnel_record_categories = relationship("PersonnelRecordCategory", back_populates="branch")
 PersonnelRecordCategory.branch = relationship("Branches", back_populates="personnel_record_categories")
