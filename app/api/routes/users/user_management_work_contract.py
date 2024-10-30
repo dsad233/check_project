@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.dto.response_dto import ResponseDTO
-from app.core.database import async_session, get_db
+from app.core.database import get_db
 from app.cruds.user_management.users_work_contract_crud import find_work_contract_by_user_id, find_user_by_user_id, \
     find_work_contract_part_timer_by_user_id, create_work_contract_with_rest_days, \
     find_work_contract_by_work_contract_id, update_work_contract_with_rest_days
