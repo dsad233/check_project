@@ -2,7 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from app.schemas.parts_schemas import PartIdWithName
 from app.common.dto.pagination_dto import PaginationDto
-from datetime import datetime
+from datetime import datetime, time
 
 
 class AccountBasedGrantDto(BaseModel):
@@ -186,3 +186,64 @@ class ManualGrantRequest(BaseModel):
     user_ids: list[int]
     memo: Optional[str] = None
 
+
+class HourWageTemplateRequest(BaseModel):
+    part_id: Optional[int] = Field(description="직책 ID")
+    name: str = Field(description="템플릿 명")
+    start_time: time = Field(description="시작 시간")
+    end_time: time = Field(description="종료 시간")
+    hour_wage: int = Field(description="시급")
+    home_hour_wage: int = Field(description="재택근무시급 시급")
+
+    @field_validator('part_id', mode='before')
+    @classmethod
+    def set_part_id(cls, v):
+        return None if v == 0 else v
+    
+
+class HourWageTemplateResponse(BaseModel):
+    id: int = Field(description="아이디")
+    part_id: Optional[int] = Field(default=0, description="직책 ID")
+    name: str = Field(description="템플릿 명")
+    start_time: time = Field(description="시작 시간")
+    end_time: time = Field(description="종료 시간")
+    hour_wage: int = Field(description="시급")
+    home_hour_wage: int = Field(description="재택근무시급 시급")
+
+    @field_validator('part_id', mode='before')
+    @classmethod
+    def set_part_id(cls, v):
+        return 0 if v is None else v
+
+    class Config:
+        from_attributes = True
+
+
+class HourWageTemplatesResponse(BaseModel):
+    data: list[HourWageTemplateResponse]
+    pagination: PaginationDto
+
+
+class LeaveCategoryDto(BaseModel):
+    id: Optional[int] = Field(default=None, description="휴무 ID")
+    name: str = Field(description="휴무 명")
+    leave_count: int = Field(description="차감 일수")
+    is_paid: bool = Field(description="유급 여부")
+
+    @field_validator("id")
+    def validate_file_extension(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
+
+    class Config:
+        from_attributes = True
+
+
+class LeaveExcludedPartResponse(BaseModel):
+    id: int = Field(..., gt=0)
+    leave_category_id: int = Field(..., gt=0)
+    part_id: int = Field(..., gt=0)
+
+    class Config:
+        from_attributes = True

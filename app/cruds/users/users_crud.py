@@ -31,9 +31,9 @@ async def find_by_email(
     return user
 
 async def find_all_by_branch_id(
-    *, session: AsyncSession, branch_id: int, search: BaseSearchDto
+    *, session: AsyncSession, branch_id: int, request: BaseSearchDto
 ) -> list[Users]:
-    stmt = select(Users).options(selectinload(Users.part)).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N").offset(search.offset).limit(search.record_size)
+    stmt = select(Users).options(selectinload(Users.part)).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N").offset(request.offset).limit(request.record_size)
     result = await session.execute(stmt)
     users = result.scalars().all()
     return users

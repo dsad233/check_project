@@ -133,6 +133,7 @@ async def check_part_in_branch(db: AsyncSession, part_id: int, branch_id: int) -
     return result.scalar_one_or_none() is not None
 
 
+
 async def can_manage_user_permissions(current_user: Users, target_user: Users, db: AsyncSession, part_id: int = None) -> bool:
     """사용자가 다른 사용자의 권한을 관리할 수 있는지 확인하는 메서드"""
     if not current_user.role or not target_user.role:
@@ -141,65 +142,48 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users, d
     current_level = ROLE_LEVELS[current_user.role]
     target_level = ROLE_LEVELS[target_user.role]
 
-    # 권한 관리 주체 체크: 파트 관리자/일반 직원/휴직자/퇴사자는 권한 관리 불가
-    if current_user.role in [Role.ADMIN, Role.EMPLOYEE, Role.RESIGNED, Role.RESIGNED]:
-        raise HTTPException(
-            status_code=403,
-            detail= "파트관리자/일반사원/휴직자/퇴사자는 권한 관리를 할 수 없습니다."
-        )
-
-    # 권한 관리 대상 체크
-    if target_user.role in [ Role.EMPLOYEE, Role.RESIGNED, Role.ON_LEAVE]:
-        raise HTTPException(
-            status_code=403,
-            detail="일반사원/퇴사자/휴직자는 권한 관리를 할 수 없습니다. 관리자로 권한을 변경해주세요."
-        )
-
-
-    # 1. 해당 파트가 지점에 있는지 체크
-    if part_id:
-        if not await check_part_in_branch(db, part_id, target_user.branch_id):
+    # 1. MSO 관련 로직 먼저 체크
+    if target_user.role == Role.MSO:
+        # MSO만 다른 MSO의 권한을 관리할 수 있음
+        if current_user.role != Role.MSO:
             raise HTTPException(
-                status_code=400,
-                detail=f"파트 ID {part_id}는 해당 지점에 존재하지 않습니다."
+                status_code=403,
+                detail="MSO 관련 권한은 오직 MSO만 관리할 수 있습니다."
             )
-
-    # 2. MSO 관련 로직 먼저 체크 (MSO만 다른 MSO 관리 가능)
-    if target_user.role == Role.MSO and current_user.role != Role.MSO:
-        raise HTTPException(
-            status_code=403,
-            detail="MSO 관련 권한은 오직 MSO만 관리할 수 있습니다."
-        )
     # MSO는 모든 지점의 모든 사용자 관리 가능
     if current_user.role == Role.MSO:
+        if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
+            raise HTTPException(
+                status_code=400,
+                detail=f"파트 ID {part_id}는 해당 사용자가 속한 지점에 존재하지 않습니다."
+            )
         return True
 
-    # 3. Level 체크 (MSO 제외 모든 관리자급)
-    if target_level <= current_level:
-        role_names = {
-            Role.SUPER_ADMIN: "최고관리자",
-            Role.INTEGRATED_ADMIN: "통합관리자"
-        }
-        role_name = role_names.get(current_user.role, "현재 사용자")
-        raise HTTPException(
-            status_code=403,
-            detail=f"{role_name}는 같은 레벨, 보다 높은 권한을 가진 사용자의 권한은 수정할 수 없습니다."
-    )
+    # 2. 지점 확인 (MSO를 제외한 모든 관리자급)
+    if current_user.role in [Role.SUPER_ADMIN, Role.INTEGRATED_ADMIN, Role.ADMIN]:
+        if current_user.branch_id != target_user.branch_id:
+            raise HTTPException(status_code=403, detail="다른 지점의 사용자의 권한은 관리할 수 없습니다.")
 
-    # 4. 지점 체크 (최고 관리자/통합 관리자)
-    if current_user.branch_id != target_user.branch_id:
+    # 파트가 해당 지점에 속하는지 확인
+    if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
         raise HTTPException(
-            status_code=403,
-            detail="다른 지점의 사용자의 권한은 관리할 수 없습니다."
+            status_code=400,
+            detail=f"파트 ID {part_id}는 해당 사용자가 속한 지점에 존재하지 않습니다."
         )
 
-    # 4. 역할별 권한 체크
+    # 3. 역할별 권한 체크
     # 최고 관리자 (MSO를 제외한 모든 권한 관리 가능)
     if current_user.role == Role.SUPER_ADMIN:
         return True
 
     # 통합 관리자
+    # 자기 지점의, 자신보다 숫자가 같거나 높은 레벨 권한을 관리하려고 하면 Error
     if current_user.role == Role.INTEGRATED_ADMIN:
+        if target_level <= current_level:
+            raise HTTPException(
+                status_code=403,
+                detail="통합 관리자는 같은 레벨, 보다 높은 권한을 가진 사용자의 권한은 수정할 수 없습니다."
+            )
         return True
 
     raise HTTPException(
