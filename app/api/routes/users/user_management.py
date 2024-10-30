@@ -22,11 +22,12 @@ from app.models.parts.parts_model import Parts, PartUpdate
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
 from app.middleware.permission import UserPermission
+from app.service.user_management import UserManagementService
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-# db = async_session()
+user_management_service = UserManagementService()
 
-# @available_higher_than(Role.ADMIN)
+
 class UserManagement:
     router = router
 
@@ -220,16 +221,13 @@ class UserManagement:
 
     @router.post("", response_model=ResponseDTO[CreatedUserDto])
     async def create_user(
-            user: UserCreate,
-            db: AsyncSession = Depends(get_db),
-            current_user: Users = Depends(get_current_user)):
-        if await find_by_email(session=db, email=user.email):
-            raise HTTPException(status_code=400, detail="이미 등록된 이메일 주소입니다.")
-
-        # TODO: 메서드를 사용하는 사용자의 권한 조회 로직 필요
-
-        new_user = Users(**user.model_dump())
-        created_user = await add_user(session=db, user=new_user)
+            user_create: UserCreate,
+            current_user: Users = Depends(get_current_user)
+    ):
+        user = Users(**user_create.model_dump())
+        created_user = await user_management_service.register_user(
+            user=user
+        )
         data = await CreatedUserDto.build(user=created_user)
 
         return ResponseDTO(
