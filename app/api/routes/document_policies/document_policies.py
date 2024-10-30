@@ -3,13 +3,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.future import select
 
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.branches.document_policies_model import DocumentPolicies
 from app.models.users.users_model import Users
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-document = async_session()
+# document = async_session()
 
 
 # 문서 정책 생성
@@ -17,7 +18,7 @@ document = async_session()
 
 # 문서 정책 전체 조회
 @router.get("/{branch_id}/branch_policies/{branch_policy_id}/document_policies")
-async def get_document(branch_id: int, branch_policy_id: int):
+async def get_document(branch_id: int, branch_policy_id: int, document: AsyncSession = Depends(get_db)):
     try:
         find_document = await document.execute(
             select(DocumentPolicies)
@@ -49,7 +50,7 @@ async def get_document(branch_id: int, branch_policy_id: int):
 
 # 문서 상세 조회
 @router.get("/{branch_id}/branch_policies/{branch_policy_id}/document_policies/{id}")
-async def get_one_document(branch_id: int, branch_policy_id: int, id: int):
+async def get_one_document(branch_id: int, branch_policy_id: int, id: int, document: AsyncSession = Depends(get_db)):
     try:
         find_one_document = await document.execute(
             select(DocumentPolicies).where(
@@ -79,7 +80,7 @@ async def get_one_document(branch_id: int, branch_policy_id: int, id: int):
 
 # 문서 정책 조회
 @router.get("/{branch_id}/branch_policies/{branch_policy_id}/document_policies")
-async def get_document(branch_id: int, branch_policy_id: int):
+async def get_document(branch_id: int, branch_policy_id: int, document: AsyncSession = Depends(get_db)):
     try:
         find_document = await document.execute(
             select(DocumentPolicies)
@@ -116,6 +117,7 @@ async def update_document(
     branch_policy_id: int,
     id: int,
     token:Annotated[Users, Depends(get_current_user)],
+    document: AsyncSession = Depends(get_db)
 ):
     try:
         if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
@@ -150,6 +152,7 @@ async def delete_document(
     branch_policy_id: int,
     id: int,
     token:Annotated[Users, Depends(get_current_user)],
+    document: AsyncSession = Depends(get_db)
 ):
     try:
         if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
@@ -190,6 +193,7 @@ async def delete_document(
     branch_policy_id: int,
     id: int,
     token:Annotated[Users, Depends(get_current_user)],
+    document: AsyncSession = Depends(get_db)
 ):
     try:
         if token.role != "MSO 최고권한" or token.role != "최고관리자" or token.role != "통합관리자":
