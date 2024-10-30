@@ -18,7 +18,7 @@ class RequestCreateWorkContract(BaseModel):
     contract_start_date: str
     contract_end_date: Optional[str] = None
     is_fixed_rest_day: bool
-    fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]]
+    fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]] = None
     weekly_work_start_time: str
     weekly_work_end_time: str
     weekly_is_rest: bool
@@ -30,6 +30,32 @@ class RequestCreateWorkContract(BaseModel):
     sunday_is_rest: bool
     break_start_time: str
     break_end_time: str
+
+    @classmethod
+    def to_model(cls) -> WorkContract:
+        return WorkContract(
+            user_id=cls.user_id,
+            contract_start_date=cls.contract_start_date,
+            contract_end_date=cls.contract_end_date,
+            is_fixed_rest_day=cls.is_fixed_rest_day,
+            fixed_rest_days=[
+                FixedRestDay(
+                    rest_day=rest_day.rest_day,
+                    every_over_week=rest_day.every_over_week
+                ) for rest_day in cls.fixed_rest_days
+            ] if cls.fixed_rest_days else [],
+            weekly_work_start_time=cls.weekly_work_start_time,
+            weekly_work_end_time=cls.weekly_work_end_time,
+            weekly_is_rest=cls.weekly_is_rest,
+            saturday_work_start_time=cls.saturday_work_start_time,
+            saturday_work_end_time=cls.saturday_work_end_time,
+            saturday_is_rest=cls.saturday_is_rest,
+            sunday_work_start_time=cls.sunday_work_start_time,
+            sunday_work_end_time=cls.sunday_work_end_time,
+            sunday_is_rest=cls.sunday_is_rest,
+            break_start_time=cls.break_start_time,
+            break_end_time=cls.break_end_time
+        )
 
 
 class RequestPatchWorkContract(BaseModel):
