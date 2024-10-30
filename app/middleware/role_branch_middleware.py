@@ -1,5 +1,5 @@
 from typing import Optional
-
+import re
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
@@ -10,6 +10,9 @@ from app.core.permissions.auth_utils import RoleAuthority
 class RoleBranchMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
+
+        # 정규식 패턴: /branches/숫자로 시작하는 모든 경로 체크
+        self.BRANCH_ID_PATTERN = re.compile(r"^/branches/(\d+)(?:/.*)?$")
 
         # public paths는 TokenMiddleware와 동일하게 유지
         self.PUBLIC_PATHS = [
@@ -71,6 +74,19 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
                 status_code=403,
                 content={"detail": "접근 권한이 없습니다. (퇴사자/휴직자)"}
             )
+
+        # /branches/{branch_id}/* 패턴 체크
+        branch_match = self.BRANCH_ID_PATTERN.match(path)
+        if branch_match:
+            branch_id = int(branch_match.group(1))
+            print(branch_id, "::::", user.role)
+            # MSO가 아니고 본인 지점이 아닌 경우
+            if user.role != Role.MSO and user.branch_id != branch_id:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "해당 지점에 대한 접근 권한이 없습니다. 본인 소속 지점만 접근할 수 있습니다."}
+                )
+
 
         # MSO 전용 경로 체크
         if any(path.startswith(p) for p in self.MSO_PATHS):
