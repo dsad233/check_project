@@ -27,6 +27,7 @@ async def create(*, session: AsyncSession, branch_id: int, entry_date_based_annu
         entry_date_based_annual_leave_grant_create.branch_id = branch_id
     session.add(entry_date_based_annual_leave_grant_create)
     await session.commit()
+    await session.flush()
     await session.refresh(entry_date_based_annual_leave_grant_create)
     return entry_date_based_annual_leave_grant_create
     

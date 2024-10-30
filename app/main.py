@@ -10,7 +10,6 @@ from contextlib import asynccontextmanager
 from app.core.log_config import get_logger
 
 
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await startup_event()
@@ -28,7 +27,7 @@ origins = [
 add_exception_handlers(app)
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],

@@ -21,6 +21,7 @@ async def create(
         auto_overtime_policies_create.branch_id = branch_id
     session.add(auto_overtime_policies_create)
     await session.commit()
+    await session.flush()
     await session.refresh(auto_overtime_policies_create)
 
 async def update(

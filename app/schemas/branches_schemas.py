@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from app.schemas.parts_schemas import PartIdWithName
 from app.common.dto.pagination_dto import PaginationDto
+from datetime import datetime
 
 
 class AccountBasedGrantDto(BaseModel):
@@ -136,3 +137,52 @@ class BranchHistoryResponse(BaseModel):
 class BranchHistoriesResponse(BaseModel):
     data: list[BranchHistoryResponse]
     pagination: PaginationDto
+
+
+class BranchRequest(BaseModel):
+    code: str = Field(description="지점 코드")
+    name: str = Field(description="지점 이름")
+    representative_name: str = Field(description="대표 원장 이름")
+    registration_number: str = Field(description="사업자번호")
+    call_number: str = Field(description="전화번호")
+    address: str = Field(description="지점 주소")
+    corporate_seal: Optional[str] = Field(description="법인 도장", default=None)
+    nameplate: Optional[str] = Field(description="명판", default=None)
+    mail_address: str = Field(description="메일 주소")
+
+    @field_validator("corporate_seal", "nameplate")
+    def validate_file_extension(cls, v):
+        if v == "":
+            return None
+        return v
+
+
+class BranchResponse(BaseModel):
+    id: int = Field(description="지점 아이디")
+    code: str = Field(description="지점 코드")
+    name: str = Field(description="지점 이름")
+    representative_name: str = Field(description="대표 원장 이름")
+    registration_number: str = Field(description="사업자번호")
+    call_number: str = Field(description="전화번호")
+    address: str = Field(description="지점 주소")
+    corporate_seal: Optional[str] = Field(description="법인 도장")
+    nameplate: Optional[str] = Field(description="명판")
+    mail_address: str = Field(description="메일 주소")
+    created_at: datetime = Field(description="생성 일자")
+    updated_at: datetime = Field(description="수정 일자")
+    deleted_yn: str = Field(description="삭제 여부")
+
+    class Config:
+        from_attributes = True
+
+
+class BranchListResponse(BaseModel):
+    data: list[BranchResponse] = Field(description="지점 목록")
+    pagination: PaginationDto = Field(description="페이지네이션")
+
+
+class ManualGrantRequest(BaseModel):
+    count: int
+    user_ids: list[int]
+    memo: Optional[str] = None
+
