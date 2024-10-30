@@ -9,16 +9,17 @@ from app.schemas.branches_schemas import BranchHistoryResponse
 async def create_branch_history(
         session: AsyncSession, 
         branch_id: int, 
-        history_create: BranchHistories
+        request: BranchHistories
 ) -> BranchHistories:
     
-    session.add(history_create)
+    session.add(request)
     await session.commit()
-    await session.refresh(history_create)
-    return history_create
+    await session.refresh(request)
+    return request
 
 
 async def get_branch_histories(
+        *,
         session: AsyncSession, 
         branch_id: int, 
         history_type: BranchHistoryType,
@@ -53,6 +54,7 @@ async def get_branch_histories(
     
 
 async def get_total_cnt(
+        *,
         session: AsyncSession, 
         branch_id: int, 
         history_type: BranchHistoryType

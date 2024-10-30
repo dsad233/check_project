@@ -8,7 +8,6 @@ from app.api import main
 from app.api.routes.auth import auth
 from contextlib import asynccontextmanager
 from app.core.log_config import get_logger
-from app.middleware.permission_middleware import PermissionMiddleware
 
 
 @asynccontextmanager
@@ -20,14 +19,14 @@ app = FastAPI(lifespan=lifespan)
 
 origins = [
     "https://workswave-frontend-one.vercel.app",
+    "https://develop-check.mementoai.io",
     "http://localhost:5173",
     "http://52.78.246.46"
 ]
 
+# Register exception handlers
+add_exception_handlers(app)
 
-# 미들웨어 순서 중요!
-# 1. Permission 미들웨어 (마지막에 실행)
-# 2. CORS 미들웨어 (먼저 실행)
 app.add_middleware(
     CORSMiddleware,  # type: ignore
     allow_origins=origins,
@@ -35,10 +34,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
-# Register exception handlers
-add_exception_handlers(app)
-
-app.add_middleware(PermissionMiddleware)  # type: ignore
 
 # app.include_router(auth.router, prefix="/api")
 

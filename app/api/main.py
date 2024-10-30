@@ -11,6 +11,7 @@ from app.api.routes.overtimes import overtimes
 from app.api.routes.overtime_manager import overtime_manager
 from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
+from app.api.routes.personnel_record_category import personnel_record_category
 from app.api.routes.salary_bracket import salary_bracket
 from app.api.routes.users import users, user_management
 from app.api.routes.users.user_management_contract import user_management_contract
@@ -63,6 +64,7 @@ app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-
 app.include_router(document.router, prefix='/modusign-document', tags=['Modusign_Document'])
 app.include_router(template.router, prefix='/modusign-template', tags=['Modusign_Template'])
 app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-policies', tags=['Salary_Policies'])
+app.include_router(personnel_record_category.router, prefix='/branches/{branch_id}/personnel-record-categories', tags=['Personnel_Record_Categories'])
 
 @app.get("/health")
 def health_check():
