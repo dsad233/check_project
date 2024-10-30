@@ -41,8 +41,8 @@ class LeaveHistories(Base):
     decreased_days = Column(Numeric(10, 2), default=0.00)
     
     application_date = Column(Date, nullable=False)
-    start_date = Column(Date, nullable=True)
-    end_date = Column(Date, nullable=True)
+    start_date = Column(Date, nullable=True) # 추가 사항
+    end_date = Column(Date, nullable=True) # 추가 사항
     approve_date = Column(Date, nullable=True)
     applicant_description = Column(String(255), nullable=True)
     admin_description = Column(String(255), nullable=True)
@@ -69,6 +69,8 @@ class LeaveHistoriesResponse(BaseModel):
     application_date: datetime
     leave_category_name: str
     decreased_days: float
+    start_date: datetime
+    end_date: datetime
     
     status: str
     applicant_description: Optional[str]
