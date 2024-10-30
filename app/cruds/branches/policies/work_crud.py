@@ -30,29 +30,32 @@ def generate_break_times(work_policy_id: int) -> list[BreakTime]:
     return break_times
 
 async def create(
-    *, session: AsyncSession, branch_id: int, work_policies_create: WorkPolicies
+    *,
+    session: AsyncSession,
+    branch_id: int,
 ) -> WorkPolicies:
-
+    # 기존 정책 존재 여부 확인
     if await find_by_branch_id(session=session, branch_id=branch_id) is not None:
         raise BadRequestError(f"{branch_id}번 지점의 근무 정책이 이미 존재합니다.")
     
-    # branch_id가 None인 경우 기본값 설정
-    if work_policies_create.branch_id is None:
-        work_policies_create.branch_id = branch_id
-    
-    # weekly_work_days가 None인 경우 기본값 설정
-    if work_policies_create.weekly_work_days is None:
-        work_policies_create.weekly_work_days = 5
+    # WorkPolicies 객체 생성
+    work_policies = WorkPolicies(
+        branch_id=branch_id,
+        weekly_work_days=5,  # 기본값
+        created_at=datetime.now(),
+        updated_at=datetime.now(),
+        deleted_yn="N"
+    )
 
-    session.add(work_policies_create)
+    session.add(work_policies)
     await session.commit()
     await session.flush()
-    await session.refresh(work_policies_create)
+    await session.refresh(work_policies)
 
     # 월요일부터 일요일까지의 WorkSchedule 생성
     for day in Weekday:
         work_schedule = WorkSchedule(
-            work_policy_id=work_policies_create.id,
+            work_policy_id=work_policies.id,
             day_of_week=day,
             start_time=time(9, 0),
             end_time=time(18, 0),
@@ -61,12 +64,12 @@ async def create(
         session.add(work_schedule)
 
     # BreakTime 4개 생성
-    break_times = generate_break_times(work_policies_create.id)
+    break_times = generate_break_times(work_policies.id)
     for break_time in break_times:
         session.add(break_time)
 
     await session.commit()
-    return work_policies_create 
+    return work_policies
 
 
 async def update(*, session: AsyncSession, branch_id: int, work_policies_update: WorkPolicies) -> None:
