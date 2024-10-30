@@ -1,7 +1,7 @@
 from typing import Annotated
 
 import bcrypt
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Response, HTTPException
 from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
 
@@ -10,6 +10,7 @@ from app.core.database import async_session
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
+from app.enums.users import Role
 
 router = APIRouter()
 users = async_session()
@@ -67,9 +68,7 @@ def verifyPassword(password: str, hashed_password: str) -> bool:
 @router.post("/login")
 async def login(login: Login, res : Response):
     try:
-        stmt = select(Users).where(
-            (Users.email == login.email) & (Users.deleted_yn == "N")
-        )
+        stmt = select(Users).where(Users.email == login.email).where(Users.deleted_yn == "N")
         result = await users.execute(stmt)
         findUser = result.scalar_one_or_none()
 
@@ -79,6 +78,13 @@ async def login(login: Login, res : Response):
         if not verifyPassword(login.password, findUser.password):
             return JSONResponse(
                 status_code=400, content="패스워드가 일치하지 않습니다."
+            )
+
+        # 퇴사자/휴직자 체크
+        if findUser.role in [Role.RESIGNED.value, Role.ON_LEAVE.value]:
+            return JSONResponse(
+                status_code=401,
+                content="퇴사자 또는 휴직자는 로그인할 수 없습니다."
             )
 
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())

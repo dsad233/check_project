@@ -49,6 +49,4 @@ class LeaveCategoryDto(BaseModel):
     class Config:
         from_attributes = True
 
-    class Config:
-        from_attributes = True
 

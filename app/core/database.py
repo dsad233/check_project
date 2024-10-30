@@ -11,9 +11,9 @@ meta = MetaData()
 engine = create_async_engine(settings.DATABASE_URL,
     echo=True, 
     pool_pre_ping=True,
-    pool_recycle=3600,
-    pool_size=20,
-    max_overflow=10,
+    pool_recycle=1800,
+    pool_size=30,
+    max_overflow=20,
     pool_timeout=30,
     poolclass=AsyncAdaptedQueuePool,
     connect_args={
@@ -31,6 +31,7 @@ async_session = async_sessionmaker(
 )
 
 Base = declarative_base()
+
 
 async def get_db():
     db = async_session()

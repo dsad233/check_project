@@ -10,19 +10,30 @@ from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.leave_categories_model import LeaveCategory
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 
+from fastapi import HTTPException
+
 logger = logging.getLogger(__name__)
 
 async def create(
-    *, branch_id: int, session: AsyncSession, leave_category_create: LeaveCategory
-) -> int:
+    *, branch_id: int, session: AsyncSession, request: LeaveCategory
+) -> LeaveCategory:
+    try:
     
-    leave_category = await find_by_name_and_branch_id(session=session, branch_id=branch_id, name=leave_category_create.name)
-    if leave_category:
-        raise BadRequestError(f"{branch_id}번 지점의 휴가 카테고리 이름 {leave_category_create.name}이(가) 이미 존재합니다.")
-    session.add(leave_category_create)
-    await session.commit()
-    await session.refresh(leave_category_create)
-    return leave_category_create.id
+        leave_category = await find_by_name_and_branch_id(session=session, branch_id=branch_id, name=request.name)
+        if leave_category:
+            raise HTTPException(status_code=400, detail=f"{branch_id}번 지점의 휴가 카테고리 이름 {request.name}이(가) 이미 존재합니다.")
+
+        session.add(request)
+        await session.commit()
+        await session.refresh(request)
+        return request
+    
+    except Exception as error:
+        if isinstance(error, HTTPException):
+            raise error
+
+        print(error)
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 async def find_by_name_and_branch_id(
     *, session: AsyncSession, branch_id: int, name: str
@@ -77,8 +88,8 @@ async def count_all(*, session: AsyncSession, branch_id: int) -> int:
     return result.scalar_one_or_none()
 
 async def update(
-    *, session: AsyncSession, branch_id: int, leave_category_id: int, leave_category_update: LeaveCategory
-) -> None:
+    *, session: AsyncSession, branch_id: int, leave_category_id: int, request: LeaveCategory
+) -> bool:
         
     # 기존 정책 조회
     leave_category = await find_by_id_and_branch_id(
@@ -92,7 +103,7 @@ async def update(
     changed_fields = {}
     for column in LeaveCategory.__table__.columns:
         if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
-            new_value = getattr(leave_category_update, column.name)
+            new_value = getattr(request, column.name)
             if new_value is not None and getattr(leave_category, column.name) != new_value:
                 changed_fields[column.name] = new_value
 
@@ -106,7 +117,7 @@ async def update(
     else:
         pass
 
-    return 
+    return True
 
 
 async def delete(

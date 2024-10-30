@@ -7,20 +7,19 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
-    Index,
     Integer,
     String,
     Table,
+    Numeric
 )
-from sqlalchemy.orm import relationship
 
 from app.core.database import Base
 from datetime import date
 from typing import Optional
-
+from sqlalchemy import text
 from pydantic import BaseModel
 
-from app.enums.users import Role, Gender, MenuPermissions
+from app.enums.users import Role, Gender, MenuPermissions, EmploymentStatus
 
 # Users와 Parts의 다대다 관계를 위한 연결 테이블
 user_parts = Table('user_parts', Base.metadata,
@@ -31,7 +30,10 @@ user_parts = Table('user_parts', Base.metadata,
 user_menus = Table('user_menus', Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id'), nullable=False),
     Column('part_id', Integer, ForeignKey('parts.id'), nullable=False),
-    Column('menu_name', Enum(MenuPermissions), nullable=False),
+    Column('menu_name', Enum(
+                       MenuPermissions,
+                       values_callable=lambda obj: [e.value for e in obj]
+                   ), nullable=False),
     Column('is_permitted', Boolean, default=False),
 )
 
@@ -48,21 +50,28 @@ class Users(Base):
     birth_date = Column(Date, nullable=True)
     hire_date = Column(Date, nullable=True)
     resignation_date = Column(Date, nullable=True)
+    total_leave_days = Column(Numeric(10, 2), nullable=True) # 총 연차 일수
     gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)
     part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-
+    remaining_annual_leave = Column(Integer, nullable=True, default=0, server_default=text("0"))
     last_company = Column(String(255), nullable=True)
     last_position = Column(String(255), nullable=True)
     last_career_start_date = Column(Date, nullable=True)
     last_career_end_date = Column(Date, nullable=True)
     role = Column(Enum(*[e.value for e in Role], name="user_role"), nullable=False, default=Role.EMPLOYEE)
-
+    employment_status = Column(
+        Enum(
+            *[e.value for e in EmploymentStatus],
+            name="employment_status"
+        ),
+        nullable=False,
+        default=EmploymentStatus.PERMANENT
+    )
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
 
 # 유저 정보 추가를 위한 Pydantic 모델
 class UserCreate(BaseModel):
@@ -82,6 +91,65 @@ class UserCreate(BaseModel):
     last_position: Optional[str] = None
     last_career_start_date: Optional[date] = None
     last_career_end_date: Optional[date] = None
+
+
+class AdminUserDto(BaseModel):
+    id: int
+    name: str
+    phone_number: str
+    part_id: int
+    email: str
+    role: str
+    part_list: list[int] = []
+
+    @classmethod
+    async def build(cls, user: Users):
+        return cls(
+            id=user.id,
+            name=user.name,
+            phone_number=user.phone_number,
+            part_id=user.part_id,
+            email=user.email,
+            role=user.role
+        )
+
+class AdminUsersDto(BaseModel):
+    admin_users: list[AdminUserDto]
+
+    @classmethod
+    async def build(cls, users: list[Users]):
+        return cls(
+            admin_users=[await AdminUserDto.build(user=user) for user in users]
+        )
+
+
+class CreatedUserDto(BaseModel):
+    id: int
+    name: str
+    email: str
+    phone_number: Optional[str] = None
+    address: Optional[str] = None
+    education: Optional[str] = None
+    birth_date: Optional[date] = None
+    hire_date: Optional[date] = None
+    resignation_date: Optional[date] = None
+
+    class Config:
+        from_attributes = True  # ORM 모드 사용
+
+    @classmethod
+    async def build(cls, user: Users):
+        return cls(
+            id=user.id,
+            name=user.name,
+            email=user.email,
+            phone_number=user.phone_number,
+            address=user.address,
+            education=user.education,
+            birth_date=user.birth_date,
+            hire_date=user.hire_date,
+            resignation_date=user.resignation_date
+        )
 
 # 유저 정보 업데이트를 위한 Pydantic 모델
 class UserUpdate(BaseModel):

@@ -11,7 +11,7 @@ class LeaveResetOption(str, Enum):
     """
     기본-연차 세팅 시, 연차 이월 정책 구분을 위한 Enum
     """
-    RESET = "초기화", 
+    RESET = "초기화"
     ROLLOVER = "다음해로 이월"
 
 class LeaveGrantOption(str, Enum):
@@ -21,7 +21,7 @@ class LeaveGrantOption(str, Enum):
     SAME_YEAR_GRANT = "당해년도 일괄 부여"
     ONE_PER_MONTH = "매 월 1개씩 부여"
 
-class DecimalRoundingPolicy(Enum):
+class DecimalRoundingPolicy(str, Enum):
     """
     기본-연차 세팅 시, 연차의 소숫점 관리 정책 구분을 위한 Enum
     """
@@ -38,3 +38,10 @@ class TimeUnit(str, Enum):
     
     MONTH = "월"
     DAY = "일"
+
+class BranchHistoryType(str, Enum):
+    """
+    브랜치 히스토리 타입 구분을 위한 Enum
+    """
+    AUTO_ANNUAL_LEAVE_GRANT = "AUTO_ANNUAL_LEAVE_GRANT"
+

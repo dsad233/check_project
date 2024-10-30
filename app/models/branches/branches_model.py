@@ -3,17 +3,11 @@ from typing import List, Optional
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import (
-    Boolean,
     Column,
-    Date,
     DateTime,
-    Enum,
-    ForeignKey,
-    Index,
     Integer,
     String,
 )
-from sqlalchemy.orm import relationship
 
 from app.common.dto.pagination_dto import PaginationDto
 from app.core.database import Base
@@ -36,7 +30,6 @@ class Branches(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
 
 class BranchCreate(BaseModel):
     code: str = Field(description="지점 코드")
@@ -74,8 +67,26 @@ class BranchResponse(BaseModel):
     class Config:
         from_attributes = True
 
+class BranchUpdate(BaseModel):
+    name: Optional[str] = Field(None, description="지점 이름")
+    representative_name: Optional[str] = Field(None, description="대표 원장 이름")
+    registration_number: Optional[str] = Field(None, description="사업자번호")
+    call_number: Optional[str] = Field(None, description="전화번호")
+    address: Optional[str] = Field(None, description="지점 주소")
+    corporate_seal: Optional[str] = Field(None, description="법인 도장")
+    nameplate: Optional[str] = Field(None, description="명판")
+    mail_address: Optional[str] = Field(None, description="메일 주소")
+
+    @field_validator("corporate_seal", "nameplate")
+    def validate_file_extension(cls, v):
+        if v == "":
+            return None
+        return v
+
+    class Config:
+        from_attributes = True
+
 
 class BranchListResponse(BaseModel):
     list: List[BranchResponse] = Field(description="지점 목록")
     pagination: PaginationDto = Field(description="페이지네이션")
-
