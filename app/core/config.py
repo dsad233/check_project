@@ -33,7 +33,6 @@ class DevSettings(BaseAppSettings):
     MYSQL_HOST: str
     MYSQL_PORT: int
     MYSQL_DATABASE: str
-    MYSQL_ROOT_PASSWORD: str
 
     @property
     def DATABASE_URL(self) -> str:

@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.dto.response_dto import ResponseDTO
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.cruds.user_management.user_management_contract_crud import find_user_by_id_with_contracts, add_contracts, \
     hard_delete_contract, find_contract_by_contract_id, add_contract_send_mail_history, \
     find_contract_send_mail_histories_by_user_id
@@ -12,18 +13,16 @@ from app.schemas.user_management_contract_schemas import ResponseUserContracts, 
     ResponseAddedContracts, RequestRemoveContract, RequestSendMailContract, ResponseSendMailContract
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
-
-
-
+# db = async_session()
 
 class UserManagementContract:
     router = router
 
     @router.get("", response_model=ResponseDTO[ResponseUserContracts])
     async def get_user_contracts(
-        user_id: int,
-        current_user: Users = Depends(get_current_user),
+            user_id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         user = await find_user_by_id_with_contracts(session=db, user_id=user_id)
         if not user:
@@ -39,8 +38,9 @@ class UserManagementContract:
 
     @router.post("", response_model=ResponseDTO[ResponseAddedContracts])
     async def add_user_contract(
-        request_add_contracts: RequestAddContracts,
-        current_user: Users = Depends(get_current_user),
+            request_add_contracts: RequestAddContracts,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         contracts = [
             {
@@ -66,6 +66,7 @@ class UserManagementContract:
     @router.delete("", response_model=ResponseDTO)
     async def delete_user_contract(
             request_remove_contract: RequestRemoveContract,
+            db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user),
     ):
         try:
@@ -84,8 +85,9 @@ class UserManagementContract:
 
     @router.get("/send_mail/{user_id}", response_model=ResponseDTO[ResponseSendMailContract])
     async def get_send_mail_history(
-        user_id: int,
-        current_user: Users = Depends(get_current_user),
+            user_id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         contract_send_mail_histories = await find_contract_send_mail_histories_by_user_id(
             session=db,
@@ -103,8 +105,9 @@ class UserManagementContract:
 
     @router.post("/send_mail", response_model=ResponseDTO)
     async def send_mail_contract(
-        request_send_mail_contract: RequestSendMailContract,
-        current_user: Users = Depends(get_current_user),
+            request_send_mail_contract: RequestSendMailContract,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         # 계약서 정보 가져오기
         contract = await find_contract_by_contract_id(

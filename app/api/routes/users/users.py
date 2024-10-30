@@ -3,6 +3,7 @@ from datetime import UTC, datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only
 
 from app.api.routes.auth.auth import hashPassword
@@ -13,12 +14,16 @@ from app.models.branches.branches_model import Branches
 from typing import Annotated
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 ##
 # 유저 전체 조회
 @router.get("")
-async def get_users(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=100)):
+async def get_users(
+        skip: int = Query(0, ge=0),
+        limit: int = Query(10, ge=1, le=100),
+        db: AsyncSession = Depends(get_db)
+):
     try:
         # 전체 사용자 수 조회
         count_query = (
@@ -83,7 +88,10 @@ async def get_users(skip: int = Query(0, ge=0), limit: int = Query(10, ge=1, le=
 
 # 현재 로그인한 사용자 조회
 @router.get("/me")
-async def get_current_me_user(current_user_id: int = Depends(get_current_user_id)):
+async def get_current_me_user(
+        db: AsyncSession = Depends(get_db),
+        current_user_id: int = Depends(get_current_user_id)
+):
     try:
         # password를 제외한 모든 컬럼 선택
         stmt = (
@@ -140,7 +148,10 @@ async def get_current_me_user(current_user_id: int = Depends(get_current_user_id
 
 # 유저 상세 조회
 @router.get("/{id}")
-async def get_user_detail(id: int):
+async def get_user_detail(
+        id: int,
+        db: AsyncSession = Depends(get_db)
+):
     try:
         # password를 제외한 모든 컬럼 선택
         stmt = (
@@ -196,7 +207,11 @@ async def get_user_detail(id: int):
 
 # 유저 정보 수정
 @router.patch("/{id}")
-async def update_user(id: int, user_update: UserUpdate):
+async def update_user(
+        id: int,
+        user_update: UserUpdate,
+        db: AsyncSession = Depends(get_db)
+):
     try:
         # 업데이트할 필드만 선택
         update_data = user_update.model_dump(exclude_unset=True)
@@ -236,7 +251,10 @@ async def update_user(id: int, user_update: UserUpdate):
 
 # 유저 삭제 (soft delete)
 @router.delete("/{id}")
-async def delete_user(id: int):
+async def delete_user(
+        id: int,
+        db: AsyncSession = Depends(get_db)
+):
     try:
         # 유저 존재 여부 확인
         stmt = select(Users).where(Users.id == id)

@@ -1,10 +1,10 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 # 공통 컴포넌트
 class SigningMethod(BaseModel):
-    type: str = Field(..., description="서명 방법 타입 (EMAIL)")
-    value: str = Field(..., description="이메일 주소")
+    type: Optional[str] = Field(None, description="서명 방법 타입 (EMAIL)")
+    value: Optional[str] = Field(None, description="이메일 주소")
 
 class Metadata(BaseModel):
     key: str = Field(..., description="메타데이터 키")
@@ -40,11 +40,18 @@ class DocumentContent(BaseModel):
     title: str = Field(..., description="문서 제목")
     metadatas: List[Metadata] = Field(default_factory=list, description="메타데이터 목록")
     participantMappings: List[ParticipantMapping] = Field(..., description="참가자 매핑 목록")
-    requesterInputMappings: List[RequesterInputMapping] = Field(..., description="요청자 입력 매핑 목록")
+    requesterInputMappings: List[RequesterInputMapping] = Field(default_factory=list, description="요청자 입력 매핑 목록")
 
 class CreateDocumentRequest(BaseModel):
     templateId: str = Field(..., description="템플릿 ID")
     document: DocumentContent = Field(..., description="문서 내용")
+
+class CreateDocumentFormRequest(BaseModel):
+    title: str
+    participants: List[dict]
+
+    class Config:
+        from_attributes = True
 
 class Document(BaseModel):
     id: str
@@ -73,10 +80,6 @@ class FileInfo(BaseModel):
     name: Optional[str] = None
     size: Optional[int] = None
     contentType: Optional[str] = None
-
-class SigningMethod(BaseModel):
-    type: str
-    value: str
 
 class Participant(BaseModel):
     role: str
@@ -133,3 +136,35 @@ class RequesterInputField(BaseModel):
 
 class RequesterInput(BaseModel):
     fields: List[RequesterInputField]
+
+class TemplateMetadataUpdate(BaseModel):
+    metadatas: List[Metadata]
+
+    @model_validator(mode='after')
+    def validate_metadata(self):
+        # 중복 키 체크
+        keys = [item.key for item in self.metadatas]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Duplicate keys are not allowed in metadata")
+        
+        # 최대 10개 체크
+        if len(self.metadatas) > 10:
+            raise ValueError("Maximum 10 metadata items are allowed")
+            
+        return self
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "metadatas": [
+                    {
+                        "key": "company_name",
+                        "value": "회사명"
+                    },
+                    {
+                        "key": "start_date",
+                        "value": "계약시작일"
+                    }
+                ]
+            }
+        }
