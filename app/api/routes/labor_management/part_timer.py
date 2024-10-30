@@ -44,17 +44,17 @@ async def get_part_timers(
 
     if branch_id and part_id:
         summaries = await repo.get_all_part_timers_by_branch_id_and_part_id(branch_id, part_id, year, month, page_num, page_size)
-        total = await repo.get_total_count_part_timers_by_branch_id_and_part_id(branch_id, part_id, year, month)
+        total = await repo.get_total_count_part_timers_by_branch_id_and_part_id(branch_id, part_id, year, month) or 0
         return PartTimersSummariesWithPageInfoDTO.toDTO(summaries, total, page_num, page_size)
     elif branch_id:
         summaries = await repo.get_all_part_timers_by_branch_id(branch_id, year, month, page_num, page_size)
-        total = await repo.get_total_count_part_timers_by_branch_id(branch_id, year, month)
+        total = await repo.get_total_count_part_timers_by_branch_id(branch_id, year, month) or 0
         return PartTimersSummariesWithPageInfoDTO.toDTO(summaries, total, page_num, page_size)
     else:
         if request.state.user.role != Role.MSO:
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
         summaries = await repo.get_all_part_timers(year, month, page_num, page_size)
-        total = await repo.get_total_count_part_timers(year, month)
+        total = await repo.get_total_count_part_timers(year, month) or 0
         return PartTimersSummariesWithPageInfoDTO.toDTO(summaries, total, page_num, page_size)
 
 @router.get("/part-timer", summary="이름과 전화번호로 특정 or 다수 파트타이머 검색", description="특정 지점과 파트에 대한 이름과 전화번호로 특정 직원을 검색할 수 있는 API")

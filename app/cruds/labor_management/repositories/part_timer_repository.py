@@ -10,37 +10,32 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.enums.users import EmploymentStatus
 from app.models.users.users_model import Users
-from sqlalchemy import Select, and_, case, extract, func, select, or_, update
+from sqlalchemy import Select, Time, and_, case, extract, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users.users_model import Users
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
 from app.models.commutes.commutes_model import Commutes
-from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
-from app.models.branches.rest_days_model import RestDays
+from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract
 
 # TODO: 실제 DB 레포지토리 구현
 class PartTimerRepository(IPartTimerRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
     
-    async def get_all_part_timers(self, year: int, month: int, page_num: int, page_size: int) -> List[PartTimerSummaryResponseDTO]:
-        # 첫 번째 쿼리: 파트 타이머의 user_id를 조회하는 서브 쿼리 생성
-        part_timer_find_subquery = (
-            select(Users.id)
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
-                .join(Branches, Branches.id == Users.branch_id)
-                .join(Parts, Parts.id == Users.part_id)
-                .join(Commutes, Commutes.user_id == Users.id)
-            .group_by(
-                Users.id, Users.gender, Branches.name, Users.name, Parts.name, Users.phone_number, Branches.id
-            )
-            .offset((page_num - 1) * page_size)
-            .limit(page_size)
-        ).subquery()
+    async def calculate_hours_and_wage(self, year: int, month: int, user_id_subquery: Select) -> List[PartTimerSummaryResponseDTO]:
+        '''
+        주어진 연도와 월에 해당하는 파트 타이머들의 근무 시간과 임금을 계산합니다.
 
-        # 두 번째 쿼리: 서브 쿼리의 결과를 사용하여 필터링
+        Args:
+            year (int): 연도
+            month (int): 월
+            user_id_subquery (Select): 파트 타이머의 user_id를 갖고 있는 서브쿼리(컬럼명 : id)
+
+        Returns:
+            List[PartTimerSummaryResponseDTO]: 파트 타이머들의 근무 시간과 임금 정보를 담은 DTO 리스트
+        '''
         work_hours = func.TIME_TO_SEC(
             func.TIMEDIFF(
                 PartTimerAdditionalInfo.work_set_end_time,
@@ -81,7 +76,7 @@ class PartTimerRepository(IPartTimerRepository):
             .join(Commutes, Commutes.user_id == Users.id)
                 .filter(
                     and_(
-                        Users.id.in_(select(part_timer_find_subquery.columns.id)),
+                        Users.id.in_(select(user_id_subquery.columns.id)),
                         extract('year', Commutes.clock_in) == year,
                         extract('month', Commutes.clock_in) == month
                     )
@@ -101,19 +96,45 @@ class PartTimerRepository(IPartTimerRepository):
 
         return [PartTimerSummaryResponseDTO(**record._asdict()) for record in result.all()]
 
+    async def get_all_part_timers(self, year: int, month: int, page_num: int, page_size: int) -> List[PartTimerSummaryResponseDTO]:
+        part_timer_find_subquery = (
+            select(Users.id)
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+            .group_by(Users.id)
+            .offset((page_num - 1) * page_size)
+            .limit(page_size)
+        ).subquery()
+
+        return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
+
     '''
-    출퇴근 기반 근무 내역 조회
+    특정 직원의 근무 내역 조회
     '''
     async def get_part_timer_work_histories(self, user_id: int, year: int, month: int) -> List[PartTimerWorkHistoryDTO]:
         query = (self.get_part_timer_work_history_summary_select_query()
-            .join(Parts, Parts.id == Commutes.part_id)
-                .filter(Commutes.user_id == user_id)
-                .filter(extract('year', Commutes.clock_in) == year)
-                .filter(extract('month', Commutes.clock_in) == month)
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Commutes.user_id)
-                .filter(extract('dow', Commutes.clock_in) == PartTimerWorkContract.weekly_work_days)
-            .join(PartTimerWorkingTime, PartTimerWorkingTime.part_timer_work_contract_id == PartTimerWorkContract.id)
+            .select_from(Users)
+            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            .join(Branches, Branches.id == Users.branch_id)
+            .join(Parts, Parts.id == Users.part_id)
+            .join(Commutes, Commutes.user_id == Users.id)
+                .filter(
+                    and_(
+                        Commutes.user_id == user_id,
+                        extract('year', Commutes.clock_in) == year,
+                        extract('month', Commutes.clock_in) == month
+                    )
+                )
+            .join(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
             .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
+                .filter(
+                    and_(
+                        PartTimerAdditionalInfo.work_set_start_time >= PartTimerHourlyWage.calculate_start_time,
+                        PartTimerAdditionalInfo.work_set_start_time <= PartTimerHourlyWage.calculate_end_time
+                    )
+                )
         )
 
         result = await self.session.execute(query)
@@ -121,44 +142,109 @@ class PartTimerRepository(IPartTimerRepository):
 
         return [PartTimerWorkHistoryDTO(**record._asdict()) for record in records]
     
-    '''
-    계약서 기반 근무 내역 조회
-    '''
-    async def get_part_timer_work_histories_by_contract(self, user_id: int, year: int, month: int) -> List[PartTimerWorkHistoryDTO]:
-        query = (self.get_part_timer_work_history_summary_select_query_by_contract()
-            .join(Parts, Parts.id == Commutes.part_id)
-                .filter(Commutes.user_id == user_id)
-                .filter(extract('year', Commutes.clock_in) == year)
-                .filter(extract('month', Commutes.clock_in) == month)
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Commutes.user_id)
-                .filter(extract('dow', Commutes.clock_in) == PartTimerWorkContract.weekly_work_days)
-            .join(PartTimerWorkingTime, PartTimerWorkingTime.part_timer_work_contract_id == PartTimerWorkContract.id)
-            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
-            .outerjoin(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
-        )
+    async def get_all_part_timers_by_branch_id(self, branch_id: int, year: int, month: int, page_num: int, page_size: int) -> List[PartTimerSummaryResponseDTO]:
+        part_timer_find_subquery = (
+            select(Users.id)
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                    .filter(Branches.id == branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+            .group_by(Users.id)
+                .offset((page_num - 1) * page_size)
+                .limit(page_size)
+        ).subquery()
 
-        result = await self.session.execute(query)
-        records = result.all()
+        return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
+    
+    async def get_all_part_timers_by_branch_id_and_part_id(self, branch_id: int, part_id: int, year: int, month: int, page_num: int, page_size: int) -> List[PartTimerSummaryResponseDTO]:
+        part_timer_find_subquery = (
+            select(Users.id)
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                    .filter(Branches.id == branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                    .filter(Parts.id == part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+            .group_by(Users.id)
+                .offset((page_num - 1) * page_size)
+                .limit(page_size)
+        ).subquery()
 
-        return [PartTimerWorkHistoryDTO(**record._asdict()) for record in records]
-    
-    async def get_all_part_timers_by_branch_id(self, branch_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
-        summary = await self.get_part_timer_summaries_by_branch_id(branch_id, year, month)
-        work_hour_and_total_wage = await self.get_part_timer_work_hours_and_total_wage_by_branch_id(branch_id, year, month)
-        return PartTimerSummaryResponseDTO.get_part_timer_list_response(summary, work_hour_and_total_wage)
-    
-    async def get_all_part_timers_by_branch_id_and_part_id(self, branch_id: int, part_id: int, year: int, month: int) -> List[PartTimerSummaryResponseDTO]:
-        summary = await self.get_part_timer_summaries_by_branch_id_and_part_id(branch_id, part_id, year, month)
-        work_hour_and_total_wage = await self.get_part_timer_work_hours_and_total_wage_by_branch_id_and_part_id(branch_id, part_id, year, month)
-        return PartTimerSummaryResponseDTO.get_part_timer_list_response(summary, work_hour_and_total_wage)
+        return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
     
     async def get_part_timer_work_history_summary_by_user_id(self, user_id: int, year: int, month: int) -> PartTimerWorkHistorySummaryDTO:
-        raise NotImplementedError
+        work_hours = func.TIME_TO_SEC(
+            func.TIMEDIFF(
+                PartTimerAdditionalInfo.work_set_end_time,
+                PartTimerAdditionalInfo.work_set_start_time
+            )
+        ) / 3600
+        rest_hours = PartTimerAdditionalInfo.rest_minutes / 60
+
+        query = (
+            select(
+                func.count(Commutes.user_id).label('total_work_days'),
+                func.sum(
+                    case(
+                        (PartTimerAdditionalInfo.work_type == 'HOSPITAL', work_hours - rest_hours),
+                        else_=0
+                    )
+                ).label('total_hospital_work_hours'),
+                func.sum(
+                    case(
+                        (PartTimerAdditionalInfo.work_type == 'HOLIDAY', work_hours - rest_hours),
+                        else_=0
+                    )
+                ).label('total_holiday_work_hours'),
+                func.sum(work_hours - rest_hours).label('total_work_hours'),
+                func.sum((work_hours - rest_hours) * PartTimerHourlyWage.hourly_wage).label('total_wage'),
+            )
+            .select_from(Users)
+            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .filter(PartTimerWorkContract.user_id == user_id)
+            .join(Commutes, Commutes.user_id == Users.id)
+                .filter(
+                    and_(
+                        Users.id == user_id,
+                        extract('year', Commutes.clock_in) == year,
+                        extract('month', Commutes.clock_in) == month
+                    )
+                )
+            .join(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
+            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
+                .filter(
+                    and_(
+                        PartTimerAdditionalInfo.work_set_start_time >= PartTimerHourlyWage.calculate_start_time,
+                        PartTimerAdditionalInfo.work_set_start_time <= PartTimerHourlyWage.calculate_end_time
+                    )
+                )
+        )
+
+        result = await self.session.execute(query)
+
+        return PartTimerWorkHistorySummaryDTO(**result.first()._asdict())
     
     async def get_part_timer_by_user_info(self, year: int, month: int, user_name: str | None, phone_number: str | None, branch_id: int, part_id: int) -> List[PartTimerSummaryResponseDTO]:
-        summary = await self.get_part_timer_summaries_by_user_info(year, month, user_name, phone_number, branch_id, part_id)
-        work_hour_and_total_wage = await self.get_part_timer_work_hours_and_total_wage_by_branch_id_and_part_id_and_user_info(branch_id, part_id, year, month, user_name, phone_number)
-        return PartTimerSummaryResponseDTO.get_part_timer_list_response(summary, work_hour_and_total_wage)  
+        condition = []
+        if user_name:
+            condition.append(Users.name.ilike(f'%{user_name}%'))
+        if phone_number:
+            condition.append(Users.phone_number.ilike(f'%{phone_number}%'))
+
+        part_timer_find_subquery = (
+            select(Users.id)
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                    .filter(and_(*condition))
+                .join(Branches, Branches.id == Users.branch_id)
+                    .filter(Branches.id == branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                    .filter(Parts.id == part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+            .group_by(Users.id)
+        ).subquery()
+        
+        return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
 
     async def update_part_timer_work_history(self, commute_id: int, correction_data: PartTimerCommuteHistoryCorrectionRequestDTO) -> PartTimerCommuteHistoryCorrectionResponseDTO:       
         response = PartTimerCommuteHistoryCorrectionResponseDTO()
@@ -218,13 +304,47 @@ class PartTimerRepository(IPartTimerRepository):
 
         result = await self.session.execute(query)
         return result.scalar()
-        raise NotImplementedError
     
     async def get_total_count_part_timers_by_branch_id(self, branch_id: int, year: int, month: int) -> int:
-        raise NotImplementedError
+        query = (
+            select(func.count(Users.id))
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                    .filter(Branches.id == branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+                    .filter(
+                        and_(
+                            func.extract('year', Commutes.clock_in) == year,
+                            func.extract('month', Commutes.clock_in) == month
+                        )
+                    )
+            .group_by(Users.id)
+        )
+
+        result = await self.session.execute(query)
+        return result.scalar()
     
     async def get_total_count_part_timers_by_branch_id_and_part_id(self, branch_id: int, part_id: int, year: int, month: int) -> int:
-        raise NotImplementedError
+        query = (
+            select(func.count(Users.id))
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                    .filter(Branches.id == branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                    .filter(Parts.id == part_id)    
+                .join(Commutes, Commutes.user_id == Users.id)
+                    .filter(
+                        and_(
+                            func.extract('year', Commutes.clock_in) == year,
+                            func.extract('month', Commutes.clock_in) == month
+                        )
+                    )
+            .group_by(Users.id)
+        )
+
+        result = await self.session.execute(query)
+        return result.scalar()
     
     # ----------------------------------------------------------------------------------------------------------------------------
 
@@ -241,60 +361,29 @@ class PartTimerRepository(IPartTimerRepository):
             Parts.id.label('part_id')
         )
     
-    def get_work_hours_and_total_wage_select_query(self) -> Select:
-        return select(
-            Users.id.label('user_id'),
-            func.coalesce(func.sum(case((RestDays.id == None, Commutes.work_hours), else_=0)), 0).label('hospital_work_hours'),
-            func.coalesce(func.sum(case((RestDays.is_paid == True, Commutes.work_hours), else_=0)), 0).label('holiday_work_hours'),
-            func.coalesce(func.sum(Commutes.work_hours), 0).label('total_work_hours'),
-            func.coalesce(func.sum(case(
-                (RestDays.id == None, Commutes.work_hours * PartTimerHourlyWage.hourly_wage),
-                else_=case(
-                    (Commutes.work_hours >= 8, Commutes.work_hours * PartTimerHourlyWage.hourly_wage * 1.5 + (Commutes.work_hours - 8) * PartTimerHourlyWage.hourly_wage * 2),
-                    else_=Commutes.work_hours * PartTimerHourlyWage.hourly_wage * 1.5))), 0).label('total_wage')
-        )
-    
     '''
-    출퇴근 기반 근무 내역 조회 Select Query
+    근무 내역 조회 Select Query
     '''
     def get_part_timer_work_history_summary_select_query(self) -> Select:
-        # 휴게시간을 변경한 기록이 있다면 변경된 휴게시간을 사용하고, 없다면 계약서에 있는 휴게시간을 사용  
-        rest_minutes = case((PartTimerAdditionalInfo.rest_minutes != None, PartTimerAdditionalInfo.rest_minutes), else_=PartTimerWorkContract.rest_minutes)
-        work_start_set_time = case((PartTimerWorkingTime.work_start_time == None, Commutes.clock_in), else_=PartTimerWorkingTime.work_start_time)
-        work_end_set_time = case((PartTimerWorkingTime.work_end_time == None, Commutes.clock_out), else_=PartTimerWorkingTime.work_end_time)
+        work_hours = func.TIME_TO_SEC(
+            func.TIMEDIFF(
+                PartTimerAdditionalInfo.work_set_end_time,
+                PartTimerAdditionalInfo.work_set_start_time
+            )
+        ) / 3600
+        rest_hours = PartTimerAdditionalInfo.rest_minutes / 60
 
         return select(
             Commutes.id.label('commute_id'),
             Parts.name.label('part_name'),
-            Parts.task,
-            Commutes.clock_in.label('work_start_time'),
-            Commutes.clock_out.label('work_end_time'),
-            work_start_set_time.label('work_start_set_time'),
-            work_end_set_time.label('work_end_set_time'),
-            (work_end_set_time - work_start_set_time - rest_minutes).label('work_hours'),
-            rest_minutes.label('rest_minutes'),
-            (PartTimerHourlyWage.hourly_wage * (work_end_set_time - work_start_set_time - rest_minutes)).label('total_wage'),
-            Commutes.created_at
-        )
-    
-    '''
-    계약서 기반 근무 내역 조회 Select Query
-    '''
-    def get_part_timer_work_history_summary_select_query_by_contract(self) -> Select:
-        # 휴게시간을 변경한 기록이 있다면 변경된 휴게시간을 사용하고, 없다면 계약서에 있는 휴게시간을 사용  
-        rest_minutes = case((PartTimerAdditionalInfo.rest_minutes != None, PartTimerAdditionalInfo.rest_minutes), else_=PartTimerWorkContract.rest_minutes)
-        work_start_set_time = case((PartTimerWorkingTime.work_start_time == None, Commutes.clock_in), else_=PartTimerWorkingTime.work_start_time)
-        work_end_set_time = case((PartTimerWorkingTime.work_end_time == None, Commutes.clock_out), else_=PartTimerWorkingTime.work_end_time)
-        return select(
-            Commutes.id.label('commute_id'),
-            Parts.name.label('part_name'),
-            Parts.task,
-            Commutes.clock_in.label('work_start_time'),
-            Commutes.clock_out.label('work_end_time'),
-            work_end_set_time.label('work_end_set_time'),
-            (work_end_set_time - work_start_set_time - rest_minutes).label('work_hours'),
-            rest_minutes.label('rest_minutes'),
-            (PartTimerHourlyWage.hourly_wage * (work_end_set_time - work_start_set_time - rest_minutes)).label('total_wage'),
+            PartTimerAdditionalInfo.work_type,
+            func.cast(Commutes.clock_in, Time).label('work_start_time'),
+            func.cast(Commutes.clock_out, Time).label('work_end_time'),
+            PartTimerAdditionalInfo.work_set_start_time.label('work_start_set_time'),
+            PartTimerAdditionalInfo.work_set_end_time.label('work_end_set_time'),
+            (work_hours - rest_hours).label('work_hours'),
+            PartTimerAdditionalInfo.rest_minutes,
+            (PartTimerHourlyWage.hourly_wage * (work_hours - rest_hours)).label('total_wage'),
             Commutes.created_at
         )
     
@@ -363,108 +452,5 @@ class PartTimerRepository(IPartTimerRepository):
                 .filter(func.extract('month', Commutes.clock_in) == month) \
         
         result = await self.session.execute(part_timer_summary_query)
-        return result.all()
-    
-    '''
-    이름과 전화번호로 특정 파트타이머 요약 정보 조회
-    '''
-    async def get_part_timer_summaries_by_user_info(self, year: int, month: int, user_name: str | None, phone_number: str | None, branch_id: int, part_id: int):
-        if user_name and phone_number:
-            query_condition = or_(Users.name == user_name, Users.phone_number == phone_number)
-        elif user_name:
-            query_condition = Users.name == user_name
-        elif phone_number:
-            query_condition = Users.phone_number == phone_number
-
-        part_timer_summary_query = self.get_summary_select_query() \
-            .join(Branches, Branches.id == Users.branch_id) \
-                .filter(Branches.id == branch_id) \
-                .filter(Users.employment_status == EmploymentStatus.TEMPORARY) \
-                .filter(query_condition) \
-            .join(Parts, Parts.id == Users.part_id) \
-                .filter(Parts.id == part_id) \
-            .join(Commutes, Commutes.user_id == Users.id) \
-                .filter(func.extract('year', Commutes.clock_in) == year) \
-                .filter(func.extract('month', Commutes.clock_in) == month) \
-            .group_by(Users.id, Users.name, Branches.name, Parts.name)
-        
-        result = await self.session.execute(part_timer_summary_query)
-        return result.all()
-
-    '''
-    특정 월에 대한 모든 파트 타이머의 근무 시간 및 총 급여 조회
-    '''
-    async def get_part_timer_work_hours_and_total_wage(self, year: int, month: int):
-        query = self.get_work_hours_and_total_wage_select_query() \
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id) \
-            .join(PartTimerHourlyWage, (PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)) \
-            .join(Commutes, Commutes.user_id == Users.id) \
-                .filter(func.extract('year', Commutes.clock_in) == year) \
-                .filter(func.extract('month', Commutes.clock_in) == month) \
-            .outerjoin(RestDays, (RestDays.date == func.date(Commutes.clock_in))) \
-            .group_by(Users.id)
-        
-        result = await self.session.execute(query)
-        return result.all()
-
-    '''
-    지점별 유저 근무 시간 및 총 급여 조회
-    '''
-    async def get_part_timer_work_hours_and_total_wage_by_branch_id(self, branch_id: int, year: int, month: int):
-        query = self.get_work_hours_and_total_wage_select_query() \
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id) \
-                .filter(Users.branch_id == branch_id) \
-            .join(PartTimerHourlyWage, (PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)) \
-            .join(Commutes, Commutes.user_id == Users.id) \
-                .filter(func.extract('year', Commutes.clock_in) == year) \
-                .filter(func.extract('month', Commutes.clock_in) == month) \
-            .outerjoin(RestDays, (RestDays.date == func.date(Commutes.clock_in)) & (RestDays.branch_id == branch_id)) \
-            .group_by(Users.id)
-
-        result = await self.session.execute(query)
-        return result.all()
-
-    '''
-    지점별 및 파트별 유저 근무 시간 및 총 급여 조회
-    '''
-    async def get_part_timer_work_hours_and_total_wage_by_branch_id_and_part_id(self, branch_id: int, part_id: int, year: int, month: int):
-        query = self.get_work_hours_and_total_wage_select_query() \
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id) \
-                .filter(Users.branch_id == branch_id) \
-                .filter(Users.part_id == part_id) \
-            .join(PartTimerHourlyWage, (PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)) \
-            .join(Commutes, Commutes.user_id == Users.id) \
-                .filter(func.extract('year', Commutes.clock_in) == year) \
-                .filter(func.extract('month', Commutes.clock_in) == month) \
-            .outerjoin(RestDays, (RestDays.date == func.date(Commutes.clock_in)) & (RestDays.branch_id == branch_id)) \
-            .group_by(Users.id)
-
-        result = await self.session.execute(query)
-        return result.all()
-    
-    '''
-    특정 직원의 근무 시간 및 총 급여 조회
-    '''
-    async def get_part_timer_work_hours_and_total_wage_by_branch_id_and_part_id_and_user_info(self, branch_id: int, part_id: int, year: int, month: int, user_name: str | None, phone_number: str | None):
-        if user_name and phone_number:
-            query_condition = or_(Users.name == user_name, Users.phone_number == phone_number)
-        elif user_name:
-            query_condition = Users.name == user_name
-        elif phone_number:
-            query_condition = Users.phone_number == phone_number
-
-        query = self.get_work_hours_and_total_wage_select_query() \
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id) \
-                .filter(Users.branch_id == branch_id) \
-                .filter(Users.part_id == part_id) \
-                .filter(query_condition) \
-            .join(PartTimerHourlyWage, (PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)) \
-            .join(Commutes, Commutes.user_id == Users.id) \
-                .filter(func.extract('year', Commutes.clock_in) == year) \
-                .filter(func.extract('month', Commutes.clock_in) == month) \
-            .outerjoin(RestDays, (RestDays.date == func.date(Commutes.clock_in)) & (RestDays.branch_id == branch_id)) \
-            .group_by(Users.id)
-
-        result = await self.session.execute(query)
         return result.all()
 
