@@ -101,6 +101,21 @@ async def create_work_contract_with_rest_days(
         await session.rollback()
         raise e
 
+async def add_work_contract(
+    *,
+    session: AsyncSession,
+    work_contract: WorkContract
+) -> int:
+    try:
+        session.add(work_contract)
+        await session.commit()
+        await session.refresh(work_contract)
+        return work_contract.id
+    except Exception as e:
+        await session.rollback()
+        raise e
+
+
 async def update_work_contract_with_rest_days(
    *,
    session: AsyncSession,

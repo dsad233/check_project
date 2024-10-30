@@ -87,7 +87,7 @@ class Users(Base):
             name="user_position"
         ),
         nullable=False,
-        default=Role.EMPLOYEE
+        default=Role.TEMPORARY
     )  # 직위
     employment_status = Column(
         Enum(
@@ -108,12 +108,12 @@ class UserCreate(BaseModel):
     email: str
     password: str
     phone_number: str
+    gender: str = None
     address: Optional[str] = None
     education: Optional[str] = None
     birth_date: Optional[date] = None
     hire_date: Optional[date] = None
     resignation_date: Optional[date] = None
-    gender: Optional[str] = None
     part_id: Optional[int] = None
     branch_id: Optional[int] = None
     last_company: Optional[str] = None
