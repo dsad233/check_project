@@ -8,14 +8,17 @@ from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
-from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OvertimeUpdate, OverTime_History
+from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OvertimeUpdate, OverTime_History, ManagerMemoResponseDto
 from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.models.users.users_model import Users
 from sqlalchemy.orm import load_only
 from app.enums.users import OverTimeHours
+from app.common.dto.response_dto import ResponseDTO
+
+
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 
 # 오버타임 초과 근무 생성(신청)
@@ -52,18 +55,23 @@ async def create_overtime(overtime: OvertimeCreate,
 
 
 # 오버타임 관리자 메모 상세 조회
-@router.get('/manager/{id}', summary="오버타임 관리자 메모 상세 조회")
+@router.get('/manager/{id}', response_model=ResponseDTO[ManagerMemoResponseDto], summary="오버타임 관리자 메모 상세 조회")
 async def get_manager(
     id : int,
     db: AsyncSession = Depends(get_db)
-    ):
+):
     try:
         find_manager_data = await db.execute(select(Overtimes).options(load_only(Overtimes.manager_memo)).where(Overtimes.id == id, Overtimes.deleted_yn == "N"))
+        find_manager_data_result = find_manager_data.scalar_one()
 
-        return {
-            "message": "관리자 메모 조회가 완료 되었습니다.",
-            "data": find_manager_data,
-        }
+        return ResponseDTO(
+            status = "SUCCESS",
+            message = "관리자 메모 조회가 완료되었습니다.",
+            data = ManagerMemoResponseDto(
+                id = find_manager_data_result.id,
+                manager_memo = find_manager_data_result.manager_memo
+            )
+        )
     except Exception as err:
         print(err)
         raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. Error : {str(err)}")
