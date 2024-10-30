@@ -28,7 +28,7 @@ class DocumentService:
             "accept": "application/json",
             "content-type": "application/json",
             "authorization": f"Basic {encoded_auth}"
-        }
+        } 
         logger.info("ModuSign service initialized")
 
     async def _make_request(self, method: str, url: str, **kwargs) -> Dict:
