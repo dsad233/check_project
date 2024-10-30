@@ -288,6 +288,7 @@ async def process_daily_record(
 
 
 @router.get("/commutes-manager", response_model=Dict[str, Any])
+@available_higher_than(Role.ADMIN)
 async def get_commutes_manager(
     request: Request,
     db: Annotated[AsyncSession, Depends(get_db)],
