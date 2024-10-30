@@ -256,7 +256,6 @@ async def reject_overtime(
 # 초과 근무 목록 조회
 @router.get("")
 async def get_overtimes(
-    current_user: Users = Depends(get_current_user), 
     date: Optional[date] = None,
     name: Optional[str] = None, 
     phone_number: Optional[str] = None, 
@@ -265,6 +264,7 @@ async def get_overtimes(
     status: Optional[str] = None,
     page: int = 1,
     size: int = 10,
+    current_user: Users = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
     ):
     try:

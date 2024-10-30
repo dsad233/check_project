@@ -6,14 +6,15 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.future import select
 
 from app.api.routes.auth.schema.authSchema import Login, Register
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.middleware.jwt.jwtService import JWTDecoder, JWTEncoder, JWTService
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
 from app.enums.users import Role
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter()
-users = async_session()
+# users = async_session()
 
 
 # 패스워드 hash 함수
@@ -66,7 +67,7 @@ def verifyPassword(password: str, hashed_password: str) -> bool:
 
 # 로그인
 @router.post("/login")
-async def login(login: Login, res : Response):
+async def login(login: Login, res : Response, users: AsyncSession = Depends(get_db)):
     try:
         stmt = select(Users).where(Users.email == login.email).where(Users.deleted_yn == "N")
         result = await users.execute(stmt)

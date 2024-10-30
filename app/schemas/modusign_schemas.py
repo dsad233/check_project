@@ -168,3 +168,23 @@ class TemplateMetadataUpdate(BaseModel):
                 ]
             }
         }
+
+class WebhookCreate(BaseModel):
+    events: List[str] = Field(..., description="이벤트 목록")
+    name: str = Field(..., description="웹훅 이름")
+    description: Optional[str] = Field(None, description="웹훅 설명")
+    enabled: bool = Field(True, description="활성화 여부")
+
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "events": [
+                    "document.created",
+                    "document.completed",
+                    "document.expired"
+                ],
+                "name": "문서 상태 알림",
+                "description": "문서 생성/완료/만료 시 알림",
+                "enabled": True
+            }
+        }

@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.middleware.tokenVerify import validate_token, get_current_user
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.models.users.users_model import Users
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
@@ -8,16 +8,17 @@ from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.branches.overtime_policies_model import OverTimePolicies
 from sqlalchemy import select
 from sqlalchemy.orm import load_only
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-overtime_history = async_session()
+# overtime_history = async_session()
 
 
 # O.T 승인 내역 전체 조회
 @router.get("/overtime-history")
-async def get_all_overtime_history(skip: int = 0, limit: int = 10, page: int = 1):
+async def get_all_overtime_history(skip: int = 0, limit: int = 10, page: int = 1, overtime_history: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
