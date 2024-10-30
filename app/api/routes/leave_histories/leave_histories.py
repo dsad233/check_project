@@ -7,16 +7,15 @@ from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
 from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
-from app.models.branches.user_leaves_days_model import UserLeavesDays, UserLeavesDaysResponse
+from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
 from app.enums.users import Status
 from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.service import user_service
-from app.service.user_service import get_branch_users_leave
-from app.models.branches.user_leaves_days_model import UserLeavesDaysCreate
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 # db = async_session()
