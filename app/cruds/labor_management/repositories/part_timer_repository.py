@@ -24,11 +24,82 @@ from app.models.branches.rest_days_model import RestDays
 class PartTimerRepository(IPartTimerRepository):
     def __init__(self, session: AsyncSession):
         self.session = session
-
+    
     async def get_all_part_timers(self, year: int, month: int, page_num: int, page_size: int) -> List[PartTimerSummaryResponseDTO]:
-        part_timer_summary = await self.get_part_timer_summaries(year, month)
-        part_timer_work_hour_and_total_wage = await self.get_part_timer_work_hours_and_total_wage(year, month)
-        return PartTimerSummaryResponseDTO.get_part_timer_summaries_response(part_timer_summary, part_timer_work_hour_and_total_wage)
+        # 첫 번째 쿼리: 파트 타이머의 user_id를 조회하는 서브 쿼리 생성
+        part_timer_find_subquery = (
+            select(Users.id)
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+            .group_by(
+                Users.id, Users.gender, Branches.name, Users.name, Parts.name, Users.phone_number, Branches.id
+            )
+            .offset((page_num - 1) * page_size)
+            .limit(page_size)
+        ).subquery()
+
+        # 두 번째 쿼리: 서브 쿼리의 결과를 사용하여 필터링
+        work_hours = func.TIME_TO_SEC(
+            func.TIMEDIFF(
+                PartTimerAdditionalInfo.work_set_end_time,
+                PartTimerAdditionalInfo.work_set_start_time
+            )
+        ) / 3600
+        rest_hours = PartTimerAdditionalInfo.rest_minutes / 60
+
+        query = (
+            select(
+                Users.id.label('user_id'),
+                Users.gender.label('gender'),
+                Branches.name.label('branch_name'),
+                Users.name.label('user_name'),
+                Parts.name.label('part_name'),
+                func.count(Commutes.user_id).label('work_days'),
+                Users.phone_number,
+                Branches.id.label('branch_id'),
+                Parts.id.label('part_id'),
+                func.sum(
+                    case(
+                        (PartTimerAdditionalInfo.work_type == 'HOSPITAL', work_hours - rest_hours),
+                        else_=0
+                    )
+                ).label('hospital_work_hours'),
+                func.sum(
+                    case(
+                        (PartTimerAdditionalInfo.work_type == 'HOLIDAY', work_hours - rest_hours),
+                        else_=0
+                    )
+                ).label('holiday_work_hours'),
+                func.sum(work_hours - rest_hours).label('total_work_hours'),
+                func.sum((work_hours - rest_hours) * PartTimerHourlyWage.hourly_wage).label('total_wage'),
+            )
+            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            .join(Branches, Branches.id == Users.branch_id)
+            .join(Parts, Parts.id == Users.part_id)
+            .join(Commutes, Commutes.user_id == Users.id)
+                .filter(
+                    and_(
+                        Users.id.in_(select(part_timer_find_subquery.columns.id)),
+                        extract('year', Commutes.clock_in) == year,
+                        extract('month', Commutes.clock_in) == month
+                    )
+                )
+            .join(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
+            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
+                .filter(
+                    and_(
+                        PartTimerAdditionalInfo.work_set_start_time >= PartTimerHourlyWage.calculate_start_time,
+                        PartTimerAdditionalInfo.work_set_start_time <= PartTimerHourlyWage.calculate_end_time
+                    )
+                )
+            .group_by(Users.id)
+        )
+
+        result = await self.session.execute(query)
+
+        return [PartTimerSummaryResponseDTO(**record._asdict()) for record in result.all()]
 
     '''
     출퇴근 기반 근무 내역 조회
@@ -128,6 +199,34 @@ class PartTimerRepository(IPartTimerRepository):
         query = select(Commutes.id).filter(Commutes.id == commute_id).exists()
         result = await self.session.execute(query)
         return result.scalar()
+    
+    async def get_total_count_part_timers(self, year: int, month: int) -> int:
+        query = (
+            select(func.count(Users.id))
+                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .join(Branches, Branches.id == Users.branch_id)
+                .join(Parts, Parts.id == Users.part_id)
+                .join(Commutes, Commutes.user_id == Users.id)
+                    .filter(
+                        and_(
+                            func.extract('year', Commutes.clock_in) == year,
+                            func.extract('month', Commutes.clock_in) == month
+                        )
+                    )
+            .group_by(Users.id)
+        )
+
+        result = await self.session.execute(query)
+        return result.scalar()
+        raise NotImplementedError
+    
+    async def get_total_count_part_timers_by_branch_id(self, branch_id: int, year: int, month: int) -> int:
+        raise NotImplementedError
+    
+    async def get_total_count_part_timers_by_branch_id_and_part_id(self, branch_id: int, part_id: int, year: int, month: int) -> int:
+        raise NotImplementedError
+    
+    # ----------------------------------------------------------------------------------------------------------------------------
 
     def get_summary_select_query(self) -> Select:
         return select(
