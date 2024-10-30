@@ -55,13 +55,13 @@ async def create_overtime(
 
 
 # 오버타임 관리자 메모 상세 조회
-@router.get('/manager/{id}', summary="오버타임 관리자 메모 상세 조회")
+@router.get('/manager/{overtime_id}', summary="오버타임 관리자 메모 상세 조회")
 async def get_manager(
-    id : int,
+    overtime_id : int,
     db: AsyncSession = Depends(get_db)
     ):
     try:
-        find_manager_data = await db.execute(select(Overtimes).options(load_only(Overtimes.manager_memo)).where(Overtimes.id == id, Overtimes.deleted_yn == "N"))
+        find_manager_data = await db.execute(select(Overtimes).options(load_only(Overtimes.manager_memo)).where(Overtimes.id == overtime_id, Overtimes.deleted_yn == "N"))
 
         return {
             "message": "관리자 메모 조회가 완료 되었습니다.",
