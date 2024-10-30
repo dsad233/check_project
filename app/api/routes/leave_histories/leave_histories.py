@@ -3,16 +3,20 @@ from sqlalchemy import select, func
 from datetime import datetime, date, timedelta
 from typing import Optional
 
+from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
 from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
-from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
+from app.models.branches.user_leaves_days_model import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
 from app.enums.users import Status
 from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.service import user_service
+from app.service.user_service import get_branch_users_leave
+from app.models.branches.user_leaves_days_model import UserLeavesDaysCreate
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 # db = async_session()
@@ -155,6 +159,8 @@ async def get_leave_histories(
                 "part_id": part.id,
                 "part_name": part.name,
                 "application_date": leave_history.application_date,
+                "start_date": leave_history.start_date,
+                "end_date": leave_history.end_date,
                 "leave_category_id": leave_history.leave_category_id,
                 "decreased_days": float(leave_history.decreased_days) if leave_history.decreased_days is not None else 0.0,
                 "status": leave_history.status,
@@ -276,6 +282,8 @@ async def get_approve_leave(
                 "part_id": part.id,
                 "part_name": part.name,
                 "application_date": leave_history.application_date,
+                "start_date": leave_history.start_date,
+                "end_date": leave_history.end_date,
                 "leave_category_id": leave_history.leave_category_id,
                 "decreased_days": float(leave_history.decreased_days) if leave_history.decreased_days is not None else 0.0,
                 "status": leave_history.status,
@@ -327,57 +335,78 @@ async def create_leave_history(
         
         existing_query = select(LeaveHistories).where(
             LeaveHistories.user_id == current_user_id,
-            LeaveHistories.application_date == datetime.now(),
-            LeaveHistories.deleted_yn == 'N'
+            LeaveHistories.application_date == datetime.now().date(),
+            LeaveHistories.deleted_yn == 'N',
+            LeaveHistories.status != Status.REJECTED
         )
         existing_result = await db.execute(existing_query)
         if existing_result.scalar_one_or_none():
             raise HTTPException(status_code=400, detail="이미 오늘 연차를 신청하셨습니다. 다음날에 다시 신청해주세요.")
         
         # 현재 연도의 total_decreased_days 계산
-        current_year = datetime.now().year
-        total_query = select(func.sum(UserLeavesDays.decreased_days)).where(
-            UserLeavesDays.user_id == current_user.id,
-            UserLeavesDays.branch_id == branch_id,
-            UserLeavesDays.deleted_yn == 'N',
-            func.extract('year', UserLeavesDays.created_at) == current_year
-        )
-        total_result = await db.execute(total_query)
-        current_total = total_result.scalar() or 0.0
+        # current_year = datetime.now().year
+        # total_query = select(func.sum(UserLeavesDays.decreased_days)).where(
+        #     UserLeavesDays.user_id == current_user.id,
+        #     UserLeavesDays.branch_id == branch_id,
+        #     UserLeavesDays.deleted_yn == 'N',
+        #     func.extract('year', UserLeavesDays.created_at) == current_year
+        # )
+        # total_result = await db.execute(total_query)
+        # current_total = total_result.scalar() or 0.0
         
         # 새로운 total_decreased_days 계산
         # new_total_decreased = float(current_total) + decreased_days
-
-
-        create = LeaveHistories(
-            branch_id=branch_id,
-            user_id=current_user.id,
-            leave_category_id=leave_create.leave_category_id,
-            decreased_days=decreased_days,
-            start_date=start_date,
-            end_date=end_date,
-            application_date=datetime.now().date(),
-            applicant_description=leave_create.applicant_description or None,
-            status = Status.PENDING
-        )
-
-        db.add(create)
-        # await db.flush()
         
-        # user_leaves_days = UserLeavesDays(
-        #     user_id=current_user.id,
-        #     branch_id=branch_id,
-        #     leave_category_id=leave_create.leave_category_id,
-        #     increased_days=0.00,
-        #     decreased_days=decreased_days,
-        #     total_decreased_days=new_total_decreased,
-        #     description=leave_create.applicant_description or None,
-        #     is_paid=False,
-        #     is_approved=True,
-        #     leave_history_id=create.id
-        # )
+        # 사용 가능한 연차 일수 체크
+        user = await user_service.get_branch_users_leave(session=db, branch_id=branch_id, search=BaseSearchDto(record_size=1))
+        if not user:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
         
-        # db.add(user_leaves_days)
+        if user.data[0].total_leave_days < decreased_days:
+            raise HTTPException(status_code=400, detail="사용 가능한 연차 일수가 부족합니다.")
+        else:
+            create = LeaveHistories(
+                branch_id=branch_id,
+                user_id=current_user.id,
+                leave_category_id=leave_create.leave_category_id,
+                decreased_days=decreased_days,
+                start_date=start_date,
+                end_date=end_date,
+                application_date=datetime.now().date(),
+                applicant_description=leave_create.applicant_description or None,
+                status = Status.PENDING
+            )
+            db.add(create)
+            
+        
+        await db.flush()
+        leave_history = select(UserLeavesDays)\
+            .where(UserLeavesDays.user_id == current_user.id, UserLeavesDays.branch_id == branch_id, UserLeavesDays.deleted_yn == 'N')
+        
+        leave_history_result = await db.execute(leave_history)
+        user_leaves_days_record = leave_history_result.scalar_one_or_none()
+        
+        print(f"existing_record: {user_leaves_days_record}")
+
+        # 레코드가 없는 경우에만 새로 생성
+        if user_leaves_days_record is None:
+            user_leaves_days = UserLeavesDays(
+                user_id=current_user.id,
+                branch_id=branch_id,
+                leave_category_id=leave_create.leave_category_id,
+                leave_history_id=create.id,
+                increased_days=0.00,
+                total_increased_days=0.00,
+                decreased_days=0.00,
+                total_decreased_days=0.00,
+                total_leave_days=user.data[0].total_leave_days,
+                description=leave_create.applicant_description,
+                is_paid=True,
+                is_approved=False,
+                deleted_yn='N'
+            )
+            db.add(user_leaves_days)
+            print(f"user_leaves_days: {user_leaves_days.user_id}")
         
         await db.commit()
         return {"message": "연차 생성에 성공하였습니다."}
@@ -421,8 +450,51 @@ async def approve_leave(
             leave_history.admin_description = leave_approve.admin_description or None
             leave_history.approve_date = datetime.now()
             
+            if leave_approve.status == Status.APPROVED:
+                await user_service.minus_total_leave_days(
+                    session=db, 
+                    user_id=leave_history.user_id, 
+                    count=int(leave_history.decreased_days)
+                )
+            user = await user_service.get_branch_users_leave(session=db, branch_id=branch_id, search=BaseSearchDto(record_size=1))
+            if not user:
+                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+            
+        if leave_history.status == Status.APPROVED:
+            leave_days_query = select(UserLeavesDays).where(
+                UserLeavesDays.user_id == leave_history.user_id,
+                UserLeavesDays.branch_id == branch_id,
+                UserLeavesDays.deleted_yn == 'N'
+            ).order_by(UserLeavesDays.created_at.desc())
+            
+            result = await db.execute(leave_days_query)
+            latest_record = result.scalar_one_or_none()
+            
+            if latest_record:
+                # 새로운 레코드 생성
+                new_total_decreased = float(latest_record.total_decreased_days or 0) + float(leave_history.decreased_days)
+                new_total_leave = float(latest_record.total_leave_days or 0) - float(leave_history.decreased_days)
+                
+                new_record = UserLeavesDays(
+                    user_id=leave_history.user_id,
+                    branch_id=branch_id,
+                    leave_category_id=leave_history.leave_category_id,
+                    leave_history_id=leave_history.id,
+                    increased_days=0.00,
+                    total_increased_days=latest_record.total_increased_days,
+                    decreased_days=float(leave_history.decreased_days),
+                    total_decreased_days=new_total_decreased,
+                    total_leave_days=new_total_leave,
+                    description=leave_approve.admin_description,
+                    is_paid=True,
+                    is_approved=True,
+                    deleted_yn='N'
+                )
+                db.add(new_record)
+            
             await db.commit()
-            return {"message": "연차 승인/반려에 성공하였습니다."}
+            return {
+                "message": "연차 승인/반려에 성공하였습니다."}
         else:
             raise HTTPException(status_code=400, detail="날짜가 지났습니다.")
     except Exception as err:
