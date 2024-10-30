@@ -1,7 +1,7 @@
 from calendar import monthrange
 from datetime import datetime, date, timedelta
 from fastapi import APIRouter, HTTPException, Depends
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.models.users.overtimes_model import Overtimes
 from app.models.users.users_model import Users
 from app.models.parts.parts_model import Parts
@@ -9,15 +9,21 @@ from app.models.branches.branches_model import Branches
 from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.future import select
 from sqlalchemy.orm import load_only
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-overtime_manager = async_session()
+# overtime_manager = async_session()
 
 
 # 오버타임 관리 전체 조회 [최고 관리자]
 @router.get("/overtime-manager", summary= "오버타임 관리 전체 조회")
-async def get_all_overtime_manager(skip: int = 0, limit: int = 10, page: int = 1):
+async def get_all_overtime_manager(
+    skip: int = 0,
+    limit: int = 10,
+    page: int = 1,
+    overtime_manager: AsyncSession = Depends(get_db)
+    ):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -45,7 +51,16 @@ async def get_all_overtime_manager(skip: int = 0, limit: int = 10, page: int = 1
 
 # 오버타임 관리 필터 전체 조회 [최고 관리자]
 @router.get("/overtime-manager/filter", summary= "오버타임 관리 필터 전체 조회")
-async def get_filter_all_overtime_manager(skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_filter_all_overtime_manager(
+    skip: int = 0,
+    limit: int = 10,
+    page: int = 1,
+    name: str = None,
+    phone_number: str = None,
+    branch_name: str = None,
+    part_name: str = None,
+    status: str = None,
+    overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -88,7 +103,18 @@ async def get_filter_all_overtime_manager(skip: int = 0, limit: int = 10, page: 
     
 # 오버타임 관리 월간 전체 조회 [최고 관리자]
 @router.get("/overtime-manager/month", summary= "오버타임 관리 월간별 전체 조회")
-async def get_month_all_overtime_manager(date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_month_all_overtime_manager(
+    date : str,
+    skip: int = 0,
+    limit: int = 10,
+    page: int = 1,
+    name: str = None,
+    phone_number: str = None,
+    branch_name: str = None,
+    part_name: str = None,
+    status: str = None,
+    overtime_manager: AsyncSession = Depends(get_db)
+):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -122,7 +148,18 @@ async def get_month_all_overtime_manager(date : str, skip: int = 0, limit: int =
     
 # 오버타임 관리 월간 필터 전체 조회 [최고 관리자]
 @router.get("/overtime-manager/month/filter", summary= "오버타임 관리 월간별 필터 전체 조회")
-async def get_month_filter_all_overtime_manager(date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_month_filter_all_overtime_manager(
+    date : str,
+    skip: int = 0,
+    limit: int = 10,
+    page: int = 1,
+    name: str = None,
+    phone_number: str = None,
+    branch_name: str = None,
+    part_name: str = None,
+    status: str = None,
+    overtime_manager: AsyncSession = Depends(get_db)
+    ):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -171,7 +208,13 @@ async def get_month_filter_all_overtime_manager(date : str, skip: int = 0, limit
     
 # 오버타임 관리 주간 전체 조회 [최고 관리자]
 @router.get("/overtime-manager/week", summary= "오버타임 관리 주간별 전체 조회")
-async def get_week_all_overtime_manager(date : str, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_week_all_overtime_manager(
+    date : str,
+    skip: int = 0,
+    limit: int = 10,
+    page: int = 1,
+    overtime_manager: AsyncSession = Depends(get_db)
+):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -212,7 +255,7 @@ async def get_week_all_overtime_manager(date : str, skip: int = 0, limit: int = 
 
     # 오버타임 관리 주간 필터 전체 조회 [최고 관리자]
 @router.get("/overtime-manager/week/filter", summary= "오버타임 관리 주간별 필터 전체 조회")
-async def get_week_filter_all_overtime_manager(date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_week_filter_all_overtime_manager(date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None,overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -270,7 +313,7 @@ async def get_week_filter_all_overtime_manager(date : str, skip: int = 0, limit:
 
 # 지점별 오버타임 관리 전체 조회 [관리자]
 @router.get('/{branch_id}/overtime-manager', summary="오버타임 관리 지점별 전체 조회")
-async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit: int = 10, page: int = 1, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -297,7 +340,7 @@ async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit:
 
 # 지점별 오버타임 관리 필터 전체 조회 [관리자]
 @router.get('/{branch_id}/overtime-manager/filter', summary="오버타임 관리 지점별 필터 전체 조회")
-async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -340,7 +383,7 @@ async def get_branch_all_overtime_manager(branch_id : int, skip: int = 0, limit:
 
 # 지점별 오버타임 월간 전체 조회 [관리자]
 @router.get('/{branch_id}/overtime-manager/month', summary="오버타임 관리 지점별 월간 전체 조회")
-async def get_branch_month_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_branch_month_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -373,7 +416,7 @@ async def get_branch_month_all_overtime_manager(branch_id : int, date : str, ski
 
 # 지점별 오버타임 월간 필터 전체 조회 [관리자]
 @router.get('/{branch_id}/overtime-manager/month/filter', summary="오버타임 관리 지점별 월간 필터 전체 조회")
-async def get_branch_month_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_branch_month_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -422,7 +465,7 @@ async def get_branch_month_all_overtime_manager(branch_id : int, date : str, ski
 
 # 지점별 오버타임 주간 전체 조회 [관리자]
 @router.get('/{branch_id}/overtime-manager/week', summary="오버타임 관리 지점별 주간 전체 조회")
-async def get_branch_week_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_branch_week_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -462,7 +505,7 @@ async def get_branch_week_all_overtime_manager(branch_id : int, date : str, skip
 
 # 지점별 오버타임 주간 필터 전체 조회 [관리자]
 @router.get('/{branch_id}/overtime-manager/week/filter', summary="오버타임 관리 지점별 주간 필터 전체 조회")
-async def get_branch_week_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_branch_week_all_overtime_manager(branch_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -524,7 +567,7 @@ async def get_branch_week_all_overtime_manager(branch_id : int, date : str, skip
 
 # 파트별 오버타임 관리 전체 조회 [관리자]
 @router.get("/{branch_id}/parts/{part_id}/overtime-manager", summary= "오버타임 관리 파트별 전체 조회")
-async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: int = 0, limit: int = 10, page: int = 1, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -552,7 +595,7 @@ async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: in
 
 # 파트별 오버타임 관리 필터 전체 조회 [관리자]
 @router.get("/{branch_id}/parts/{part_id}/overtime-manager/filter", summary= "오버타임 관리 파트별 필터 전체 조회")
-async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -596,7 +639,7 @@ async def get_part_all_overtime_manager(branch_id : int, part_id : int, skip: in
 
 # 파트별 오버타임 관리 월간 전체 조회 [관리자]
 @router.get("/{branch_id}/parts/{part_id}/overtime-manager/month", summary= "오버타임 관리 파트별 월간 전체 조회")
-async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -630,7 +673,7 @@ async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, da
 
 # 파트별 오버타임 관리 월간 필터 전체 조회 [관리자]
 @router.get("/{branch_id}/parts/{part_id}/overtime-manager/month/filter", summary= "오버타임 관리 파트별 월간 필터 전체 조회")
-async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -680,7 +723,7 @@ async def get_part_month_all_overtime_manager(branch_id : int, part_id : int, da
     
 # 파트별 오버타임 관리 주간 전체 조회 [관리자]
 @router.get("/{branch_id}/parts/{part_id}/overtime-manager/week", summary= "오버타임 관리 파트별 주간 전체 조회")
-async def get_part_week_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1):
+async def get_part_week_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit
@@ -721,7 +764,7 @@ async def get_part_week_all_overtime_manager(branch_id : int, part_id : int, dat
 
 # 파트별 오버타임 관리 주간 필터 전체 조회 [관리자]
 @router.get("/{branch_id}/parts/{part_id}/overtime-manager/week/filter", summary= "오버타임 관리 파트별 주간 필터 전체 조회")
-async def get_part_week_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None):
+async def get_part_week_all_overtime_manager(branch_id : int, part_id : int, date : str, skip: int = 0, limit: int = 10, page: int = 1, name: str = None, phone_number: str = None, branch_name: str = None, part_name: str = None, status: str = None, overtime_manager: AsyncSession = Depends(get_db)):
     try:
         if skip == 0:
             skip = (page - 1) * limit

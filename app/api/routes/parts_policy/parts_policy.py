@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.routes.parts_policy.schema.parts_policy_schema import (
     PartSalaryPolicyCreate,
@@ -8,7 +9,7 @@ from app.api.routes.parts_policy.schema.parts_policy_schema import (
     PartWorkPolicyCreate,
     PartWorkPolicyResponse,
 )
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.models.parts.salary_policies_model import SalaryPolicies
@@ -16,12 +17,14 @@ from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 
 @router.get("/workpolicies")
 async def getPartWorkPolicies(
-    branch_id: int, current_user: Users = Depends(get_current_user)
+    branch_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -70,7 +73,10 @@ async def getPartWorkPolicies(
 
 @router.get("/{part_id}/workpolicies")
 async def getPartWorkPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
+    branch_id: int,
+    part_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -120,6 +126,7 @@ async def createPartWorkPolicy(
     part_id: int,
     data: PartWorkPolicyCreate,
     current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -182,6 +189,7 @@ async def updatePartWorkPolicy(
     part_id: int,
     data: PartWorkPolicyCreate,
     current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -234,7 +242,10 @@ async def updatePartWorkPolicy(
 
 @router.delete("/{part_id}/workpolicies")
 async def deletePartWorkPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
+    branch_id: int,
+    part_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -261,7 +272,9 @@ async def deletePartWorkPolicy(
 
 @router.get("/salarypolicies")
 async def getPartSalaryPolicies(
-    branch_id: int, current_user: Users = Depends(get_current_user)
+    branch_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -311,7 +324,10 @@ async def getPartSalaryPolicies(
 
 @router.get("/{part_id}/salarypolicies")
 async def getPartSalaryPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
+    branch_id: int,
+    part_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -361,6 +377,7 @@ async def createPartSalaryPolicy(
     part_id: int,
     data: PartSalaryPolicyCreate,
     current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -422,6 +439,7 @@ async def updatePartSalaryPolicy(
     part_id: int,
     data: PartSalaryPolicyCreate,
     current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (
@@ -474,7 +492,10 @@ async def updatePartSalaryPolicy(
 
 @router.delete("/{part_id}/salarypolicies")
 async def deletePartSalaryPolicy(
-    branch_id: int, part_id: int, current_user: Users = Depends(get_current_user)
+    branch_id: int,
+    part_id: int,
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         if current_user.role.strip() not in ["MSO 최고권한", "최고관리자", "통합관리자"] or (

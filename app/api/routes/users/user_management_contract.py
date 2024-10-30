@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.dto.response_dto import ResponseDTO
-from app.core.database import async_session, get_db
+from app.core.database import get_db
 from app.cruds.user_management.user_management_contract_crud import find_user_by_id_with_contracts, add_contracts, \
     hard_delete_contract, find_contract_by_contract_id, add_contract_send_mail_history, \
     find_contract_send_mail_histories_by_user_id
@@ -13,7 +13,6 @@ from app.schemas.user_management_contract_schemas import ResponseUserContracts, 
     ResponseAddedContracts, RequestRemoveContract, RequestSendMailContract, ResponseSendMailContract
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-# db = async_session()
 
 class UserManagementContract:
     router = router

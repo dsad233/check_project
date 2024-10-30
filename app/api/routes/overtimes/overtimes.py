@@ -1,23 +1,27 @@
 from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
 
-from app.core.database import get_db
+from sqlalchemy import func, select, update
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
-from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OverTime_History
+from app.models.users.overtimes_model import OvertimeSelect, OvertimeCreate, Overtimes, OvertimeUpdate, OverTime_History, ManagerMemoResponseDto
+
 from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.models.users.users_model import Users
 from sqlalchemy.orm import load_only
 from app.enums.users import OverTimeHours
+
+from app.common.dto.response_dto import ResponseDTO
+router = APIRouter(dependencies=[Depends(validate_token)])
+
 from typing import Optional
 from datetime import date
 from datetime import timedelta
-from sqlalchemy.ext.asyncio import AsyncSession
-
-router = APIRouter(dependencies=[Depends(validate_token)])
 # db = async_session()
 
 # 오버타임 초과 근무 생성(신청)
@@ -27,6 +31,7 @@ async def create_overtime(
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
     ):
+
     try:        
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -55,28 +60,33 @@ async def create_overtime(
 
 
 # 오버타임 관리자 메모 상세 조회
-@router.get('/manager/{overtime_id}', summary="오버타임 관리자 메모 상세 조회")
-async def get_manager(
-    overtime_id : int,
-    db: AsyncSession = Depends(get_db)
-    ):
-    try:
-        find_manager_data = await db.execute(select(Overtimes).options(load_only(Overtimes.manager_memo)).where(Overtimes.id == overtime_id, Overtimes.deleted_yn == "N"))
 
-        return {
-            "message": "관리자 메모 조회가 완료 되었습니다.",
-            "data": find_manager_data,
-        }
+@router.get('/manager/{id}', response_model=ResponseDTO[ManagerMemoResponseDto], summary="오버타임 관리자 메모 상세 조회")
+async def get_manager(
+    id : int,
+    db: AsyncSession = Depends(get_db)
+):
+    try:
+        find_manager_data = await db.execute(select(Overtimes).options(load_only(Overtimes.manager_memo)).where(Overtimes.id == id, Overtimes.deleted_yn == "N"))
+        find_manager_data_result = find_manager_data.scalar_one()
+
+        return ResponseDTO(
+            status = "SUCCESS",
+            message = "관리자 메모 조회가 완료되었습니다.",
+            data = ManagerMemoResponseDto(
+                id = find_manager_data_result.id,
+                manager_memo = find_manager_data_result.manager_memo
+            )
+        )
     except Exception as err:
         print(err)
         raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. Error : {str(err)}")
     
-
 # 오버타임 초과 근무 승인
 @router.patch("/approve/{overtime_id}", summary="오버타임 승인")
 async def approve_overtime(
-    overtime_id: int, 
-    overtime_select: OvertimeSelect, 
+    overtime_id: int,
+    overtime_select: OvertimeSelect,
     current_user: Users = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
     ):
@@ -206,7 +216,9 @@ async def approve_overtime(
 @router.patch("/reject/{overtime_id}", summary="오버타임 반려")
 async def reject_overtime(
     overtime_id: int,
-    overtime_select: OvertimeSelect, 
+
+    overtime_select: OvertimeSelect,
+
     current_user: Users = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
     ):
