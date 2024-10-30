@@ -3,8 +3,10 @@ from typing import Annotated, List
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.routes.labor_management.dto.page_info_dto import PageInfoDto
 from app.api.routes.labor_management.dto.part_timer_commute_history_correction_request import PartTimerCommuteHistoryCorrectionRequestDTO
 from app.api.routes.labor_management.dto.part_timer_commute_history_correction_response import PartTimerCommuteHistoryCorrectionResponseDTO
+from app.api.routes.labor_management.dto.part_timers_summaries_with_page import PartTimersSummariesWithPageInfoDTO
 from app.cruds.labor_management.dto.part_timers_response_dto import PartTimerSummaryResponseDTO
 from app.cruds.labor_management.dto.part_timer_work_history_response_dto import PartTimerWorkHistoryResponseDTO, PartTimerWorkHistorySummaryDTO
 
@@ -35,16 +37,25 @@ async def get_part_timers(
     year: int = Query(datetime.now().year),
     month: int = Query(datetime.now().month),
     branch_id: int = Query(None),
-    part_id: int = Query(None)) -> List[PartTimerSummaryResponseDTO]:
+    part_id: int = Query(None),
+    page_num: int = Query(1),
+    page_size: int = Query(10)
+    ) -> PartTimersSummariesWithPageInfoDTO:
 
     if branch_id and part_id:
-        return await repo.get_all_part_timers_by_branch_id_and_part_id(branch_id, part_id, year, month)
+        summaries = await repo.get_all_part_timers_by_branch_id_and_part_id(branch_id, part_id, year, month, page_num, page_size)
+        total = await repo.get_total_count_part_timers_by_branch_id_and_part_id(branch_id, part_id, year, month)
+        return PartTimersSummariesWithPageInfoDTO.toDTO(summaries, total, page_num, page_size)
     elif branch_id:
-        return await repo.get_all_part_timers_by_branch_id(branch_id, year, month)
+        summaries = await repo.get_all_part_timers_by_branch_id(branch_id, year, month, page_num, page_size)
+        total = await repo.get_total_count_part_timers_by_branch_id(branch_id, year, month)
+        return PartTimersSummariesWithPageInfoDTO.toDTO(summaries, total, page_num, page_size)
     else:
         if request.state.user.role != Role.MSO:
             raise HTTPException(status_code=403, detail="접근 권한이 없습니다.")
-        return await repo.get_all_part_timers(year, month)
+        summaries = await repo.get_all_part_timers(year, month, page_num, page_size)
+        total = await repo.get_total_count_part_timers(year, month)
+        return PartTimersSummariesWithPageInfoDTO.toDTO(summaries, total, page_num, page_size)
 
 @router.get("/part-timer", summary="이름과 전화번호로 특정 or 다수 파트타이머 검색", description="특정 지점과 파트에 대한 이름과 전화번호로 특정 직원을 검색할 수 있는 API")
 @available_higher_than(Role.ADMIN)
