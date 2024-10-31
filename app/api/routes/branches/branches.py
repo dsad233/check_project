@@ -25,8 +25,8 @@ async def read_branches(
     - **page**: 페이지 번호. 0을 입력하면 페이지네이션 없이 모든 결과를 반환합니다.
     - 기본적으로 페이지네이션이 적용되며, `search` 파라미터를 통해 offset과 record_size를 조정할 수 있습니다.
     """
-    if context.user.role != Role.MSO:
-        branch = await branch_service.get_branch_by_id(session=session, branch_id=context.user.branch_id)
+    if context.state.user.role != Role.MSO:
+        branch = await branch_service.get_branch_by_id(session=session, branch_id=context.state.user.branch_id)
         return BranchListResponse(data=[branch], pagination=PaginationDto(total_record=1))
 
     return await branch_service.get_branches(session=session, request=request)
