@@ -56,6 +56,8 @@ class CombinedPoliciesResponse(BaseModel):
     parttimer_policies: ParttimerPoliciesDto | None = None
     salary_templates_policies: list[SalaryTemplatesPoliciesDto] | None = None  # 리스트 타입으로 변경
     allowance_policies: AllowancePoliciesResponse | None = None
+    part_name: list[str] | None = None
+    
 
     class Config:
         from_attributes = True

@@ -1,28 +1,21 @@
 from datetime import UTC, datetime
-from pyexpat.errors import messages
-from typing import Optional, List, Union
+from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Body, Request
-from sqlalchemy import func, select, update, case, func, distinct, literal_column
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import select, case, func, distinct, literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, load_only, aliased
-from sqlalchemy.util import await_only
-from starlette import status
+from sqlalchemy.orm import joinedload, aliased
 
 from app.common.dto.response_dto import ResponseDTO
-from app.core.database import async_session, get_db
-from app.core.permissions.auth_utils import check_menu_permission, available_higher_than
-from app.cruds.users.users_crud import find_by_email, add_user, find_all_by_branch_id, find_all_by_branch_id_and_role
+from app.core.database import get_db
+from app.cruds.users.users_crud import find_all_by_branch_id_and_role
 from app.enums.users import Role
 from app.middleware.tokenVerify import validate_token, get_current_user
-from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto, AdminUserDto, \
-    AdminUsersDto
-from app.models.branches.branches_model import Branches
+from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto, AdminUsersDto
 from app.models.parts.parts_model import Parts, PartUpdate
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
-from app.middleware.permission import UserPermission
-from app.service.user_management import UserManagementService
+from app.service.user_management.service import UserManagementService
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 user_management_service = UserManagementService()
@@ -222,12 +215,11 @@ class UserManagement:
     @router.post("", response_model=ResponseDTO[CreatedUserDto])
     async def create_user(
             user_create: UserCreate,
-            current_user: Users = Depends(get_current_user)
+            current_user: Users = Depends(get_current_user),
+            session: AsyncSession = Depends(get_db)
     ):
         user = Users(**user_create.model_dump())
-        created_user = await user_management_service.register_user(
-            user=user
-        )
+        created_user = await user_management_service.add_user(session=session, user=user)
         data = await CreatedUserDto.build(user=created_user)
 
         return ResponseDTO(

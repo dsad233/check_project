@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import get_db
-from app.cruds.user_management.user_management_document_crud import find_by_id_with_documents, add_documents, \
+from app.cruds.user_management.document_crud import find_by_id_with_documents, add_documents, \
     hard_delete_document, add_send_document_history, find_send_document_history_by_request_user_id, \
     find_send_document_history_by_user_id, patch_document_send_history_status, delete_send_document_history
 from app.enums.user_management import DocumentSendStatus
@@ -188,5 +188,7 @@ class UserManagementDocument:
             status="SUCCESS",
             message="성공적으로 문서 전달을 취소했습니다.",
         )
+
+
 
 user_management_document = UserManagementDocument()

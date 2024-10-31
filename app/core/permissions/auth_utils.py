@@ -9,6 +9,35 @@ from sqlalchemy import select, and_
 from app.models.parts.parts_model import Parts
 from app.models.users.users_model import Users, user_menus, user_parts
 
+class RoleAuthority:
+    ROLE_LEVELS = {
+        Role.MSO: 0,
+        Role.SUPER_ADMIN: 1,
+        Role.INTEGRATED_ADMIN: 10,
+        Role.ADMIN: 20,
+        Role.EMPLOYEE: 30,
+        Role.ON_LEAVE: 40,
+        Role.RESIGNED: 50,
+    }
+
+    @classmethod
+    def check_role_level(cls, user_role: Role, minimum_role: Role) -> bool:
+        """사용자의 역할이 최소 요구 역할 이상인지 확인"""
+        return cls.ROLE_LEVELS[user_role] <= cls.ROLE_LEVELS[minimum_role]
+
+    @classmethod
+    def is_admin_or_higher(cls, role: Role) -> bool:
+        """관리자 이상의 권한인지 확인"""
+        return cls.ROLE_LEVELS[role] <= cls.ROLE_LEVELS[Role.ADMIN]
+
+    @classmethod
+    def can_access_branch(cls, user: Users, branch_id: int) -> bool:
+        """지점 접근 권한 확인"""
+        if cls.ROLE_LEVELS[user.role] <= cls.ROLE_LEVELS[Role.MSO]:
+            return True
+        return user.branch_id == branch_id
+
+
 ROLE_LEVELS = {
     Role.MSO: 0,
     Role.SUPER_ADMIN: 1,
@@ -18,6 +47,7 @@ ROLE_LEVELS = {
     Role.ON_LEAVE: 40,
     Role.RESIGNED: 50,
 }
+
 
 def available_higher_than(minimum_role: Role):
     def decorator(func):
