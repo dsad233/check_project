@@ -8,8 +8,8 @@ class PartTimerSummaryResponseDTO(BaseModel):
     user_name: str
     part_name: str
     work_days: int
-    hospital_work_hours: int
-    holiday_work_hours: int
+    hospital_work_hours: float
+    holiday_work_hours: float
     total_work_hours: float
     total_wage: float
     phone_number: str

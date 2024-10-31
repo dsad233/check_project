@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, time
 from typing import List
 
 from app.api.routes.labor_management.dto.part_timer_commute_history_correction_request import PartTimerCommuteHistoryCorrectionRequestDTO
@@ -373,53 +373,53 @@ class MockPartTimerRepository(IPartTimerRepository):
                     commute_id=1001,
                     part_name="피부과 의사",
                     work_type="병원",
-                    work_start_time=datetime(2024, 10, 1, 9, 0),
-                    work_end_time=datetime(2024, 10, 1, 18, 0),
-                    work_start_set_time=datetime.now(),
-                    work_end_set_time=datetime.now(),
+                    work_start_time=time(9, 0),
+                    work_end_time=time(18, 0),
+                    work_start_set_time=time(9, 0),
+                    work_end_set_time=time(18, 0),
                     work_hours=8.0,
                     rest_minutes=60,
                     total_wage=100000.0,
-                    created_at=datetime(2023, 5, 1, 18, 0)
+                    created_at=datetime(2024, 10, 1, 18, 0)
                 ),
                 PartTimerWorkHistoryDTO(
                     commute_id=1003,
                     part_name="피부과 의사",
                     work_type="병원",
-                    work_start_time=datetime(2024, 10, 3, 9, 0),
-                    work_end_time=datetime(2024, 10, 3, 18, 0),
-                    work_start_set_time=datetime.now(),
-                    work_end_set_time=datetime.now(),
+                    work_start_time=time(9, 0),
+                    work_end_time=time(18, 0),
+                    work_start_set_time=time(9, 0),
+                    work_end_set_time=time(18, 0),
                     work_hours=8.0,
                     rest_minutes=60,
                     total_wage=100000.0,
-                    created_at=datetime(2023, 5, 3, 18, 0)
+                    created_at=datetime(2024, 10, 3, 18, 0)
                 ),
                 PartTimerWorkHistoryDTO(
                     commute_id=1004,
                     part_name="피부과 의사",
                     work_type="병원",
-                    work_start_time=datetime(2024, 10, 4, 9, 0),
-                    work_end_time=datetime(2024, 10, 4, 18, 0),
-                    work_start_set_time=datetime.now(),
-                    work_end_set_time=datetime.now(),
+                    work_start_time=time(9, 0),
+                    work_end_time=time(18, 0),
+                    work_start_set_time=time(9, 0),
+                    work_end_set_time=time(18, 0),
                     work_hours=8.0,
                     rest_minutes=60,
                     total_wage=100000.0,
-                    created_at=datetime(2023, 5, 4, 18, 0)
+                    created_at=datetime(2024, 10, 4, 18, 0)
                 ),
                 PartTimerWorkHistoryDTO(
                     commute_id=1005,
                     part_name="피부과 의사",
                     work_type="휴일",
-                    work_start_time=datetime(2024, 10, 5, 9, 0),
-                    work_end_time=datetime(2024, 10, 5, 18, 0),
-                    work_start_set_time=datetime.now(),
-                    work_end_set_time=datetime.now(),
+                    work_start_time=time(9, 0),
+                    work_end_time=time(18, 0),
+                    work_start_set_time=time(9, 0),
+                    work_end_set_time=time(18, 0),
                     work_hours=8.0,
                     rest_minutes=60,
                     total_wage=100000.0,
-                    created_at=datetime(2023, 5, 5, 18, 0)
+                    created_at=datetime(2024, 11, 5, 18, 0)
                 )
             ],
             5002: [
@@ -427,10 +427,10 @@ class MockPartTimerRepository(IPartTimerRepository):
                     commute_id=1002,
                     part_name="간호사",
                     work_type="병원",
-                    work_start_time=datetime(2024, 10, 2, 9, 0),
-                    work_end_time=datetime(2024, 10, 2, 18, 0),
-                    work_start_set_time=datetime.now(),
-                    work_end_set_time=datetime.now(),
+                    work_start_time=time(9, 0),
+                    work_end_time=time(18, 0),
+                    work_start_set_time=time(9, 0),
+                    work_end_set_time=time(18, 0),
                     work_hours=8.0,
                     rest_minutes=60,
                     total_wage=80000.0,
@@ -451,7 +451,7 @@ class MockPartTimerRepository(IPartTimerRepository):
     async def get_part_timer_work_histories(self, user_id: int, year: int, month: int) -> List[PartTimerWorkHistoryDTO]:
         return [
             history for history in self.dummy_part_timer_work_histories[user_id]
-            if history.work_start_time.year == year and history.work_start_time.month == month
+            if history.created_at.year == year and history.created_at.month == month
         ]
     
     async def get_all_part_timers_by_branch_id(self, branch_id: int, year: int, month: int, page_num: int, page_size: int) -> List[PartTimerSummaryResponseDTO]:

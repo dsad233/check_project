@@ -1,26 +1,26 @@
 from typing import List
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, time
 
 class PartTimerWorkHistoryDTO(BaseModel):
-    commute_id: int
+    commute_id: int 
     part_name: str
     work_type: str
-    work_start_time: datetime
-    work_end_time: datetime
-    work_start_set_time: datetime
-    work_end_set_time: datetime
+    work_start_time: time
+    work_end_time: time
+    work_start_set_time: time
+    work_end_set_time: time
     work_hours: float
     rest_minutes: int
     total_wage: float
     created_at: datetime
 
 class PartTimerWorkHistorySummaryDTO(BaseModel):
-    total_work_days: int
-    total_work_hours: float
-    total_hospital_work_hours: float
-    total_holiday_work_hours: float
-    total_wage: float
+    total_work_days: int | None = 0
+    total_work_hours: float | None = 0
+    total_hospital_work_hours: float | None = 0
+    total_holiday_work_hours: float | None = 0
+    total_wage: float | None = 0
 
 class PartTimerWorkHistoryResponseDTO(BaseModel):
     part_timer_work_histories: List[PartTimerWorkHistoryDTO] | None
