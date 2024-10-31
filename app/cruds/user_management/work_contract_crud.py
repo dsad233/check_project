@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.users.users_model import Users
+from app.models.users.users_work_contract_history_model import WorkContractHistory
 from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
 
 

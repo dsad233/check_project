@@ -27,7 +27,8 @@ class BaseAppSettings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
-        extra = "allow"
+
+
 
 class DevSettings(BaseAppSettings):
     MYSQL_USER: str
