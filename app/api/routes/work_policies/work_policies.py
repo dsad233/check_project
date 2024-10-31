@@ -1,9 +1,8 @@
 import logging
-from typing import Any, List, Union, Optional, Annotated
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import delete, inspect
 from pydantic import BaseModel
 from app.exceptions.exceptions import (
     BadRequestError,
@@ -43,6 +42,7 @@ from app.models.branches.work_policies_model import (
     BreakTime,
     WorkPolicies,
     WorkPoliciesDto,
+    WorkPoliciesUpdateDto,
     WorkSchedule,
 )
 
@@ -53,6 +53,15 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 
 class CombinedPoliciesDto(BaseModel):
     work_policies: WorkPoliciesDto
+    auto_overtime_policies: AutoOvertimePoliciesDto
+    holiday_work_policies: HolidayWorkPoliciesDto
+    overtime_policies: OverTimePoliciesDto
+    default_allowance_policies: DefaultAllowancePoliciesDto
+    holiday_allowance_policies: HolidayAllowancePoliciesDto
+
+
+class CombinedPoliciesUpdateDto(BaseModel):
+    work_policies: WorkPoliciesUpdateDto
     auto_overtime_policies: AutoOvertimePoliciesDto
     holiday_work_policies: HolidayWorkPoliciesDto
     overtime_policies: OverTimePoliciesDto
@@ -121,7 +130,7 @@ async def update_work_policies(
     session: AsyncSession = Depends(get_db),
     user: Annotated[Users, Depends(get_current_user)],
     branch_id: int,
-    policies_in: CombinedPoliciesDto,
+    policies_in: CombinedPoliciesUpdateDto,
 ) -> str:
     try:
         if user.role.strip() == "MSO 최고권한":
@@ -137,7 +146,6 @@ async def update_work_policies(
             session=session, branch_id=branch_id
         )
         if work_policies is None:
-            # 새로운 정책 생성
             new_policy = WorkPolicies(
                 branch_id=branch_id,
                 weekly_work_days=policies_in.work_policies.weekly_work_days,
@@ -146,7 +154,6 @@ async def update_work_policies(
             session.add(new_policy)
             await session.flush()
 
-            # 스케줄과 휴게시간 추가
             for schedule_dto in policies_in.work_policies.work_schedules:
                 new_schedule = WorkSchedule(
                     work_policy_id=new_policy.id,
@@ -155,7 +162,7 @@ async def update_work_policies(
                     end_time=schedule_dto.end_time,
                     is_holiday=schedule_dto.is_holiday,
                 )
-                session.add(new_schedule)
+                new_policy.work_schedules.append(new_schedule)
 
             for break_dto in policies_in.work_policies.break_times:
                 new_break = BreakTime(
@@ -165,40 +172,36 @@ async def update_work_policies(
                     start_time=break_dto.start_time,
                     end_time=break_dto.end_time,
                 )
-                session.add(new_break)
+                new_policy.break_times.append(new_break)
         else:
-            # 기존 정책 업데이트
-            work_policies.weekly_work_days = policies_in.work_policies.weekly_work_days
-
-            # 기존 스케줄과 휴게시간 삭제 후 새로 추가
-            await session.execute(
-                delete(WorkSchedule).where(
-                    WorkSchedule.work_policy_id == work_policies.id
-                )
-            )
-            await session.execute(
-                delete(BreakTime).where(BreakTime.work_policy_id == work_policies.id)
+            update_policy = WorkPolicies(
+                branch_id=branch_id,
+                weekly_work_days=policies_in.work_policies.weekly_work_days,
             )
 
-            for schedule_dto in policies_in.work_policies.work_schedules:
-                new_schedule = WorkSchedule(
-                    work_policy_id=work_policies.id,
-                    day_of_week=schedule_dto.day_of_week,
-                    start_time=schedule_dto.start_time,
-                    end_time=schedule_dto.end_time,
-                    is_holiday=schedule_dto.is_holiday,
+            update_policy.work_schedules = [
+                WorkSchedule(
+                    day_of_week=s.day_of_week,
+                    start_time=s.start_time,
+                    end_time=s.end_time,
+                    is_holiday=s.is_holiday,
                 )
-                session.add(new_schedule)
+                for s in policies_in.work_policies.work_schedules
+            ]
 
-            for break_dto in policies_in.work_policies.break_times:
-                new_break = BreakTime(
-                    work_policy_id=work_policies.id,
-                    is_doctor=break_dto.is_doctor,
-                    break_type=break_dto.break_type,
-                    start_time=break_dto.start_time,
-                    end_time=break_dto.end_time,
+            update_policy.break_times = [
+                BreakTime(
+                    is_doctor=b.is_doctor,
+                    break_type=b.break_type,
+                    start_time=b.start_time,
+                    end_time=b.end_time,
                 )
-                session.add(new_break)
+                for b in policies_in.work_policies.break_times
+            ]
+
+            await work_crud.update(
+                session=session, branch_id=branch_id, work_policies_update=update_policy
+            )
 
         # AutoOvertimePolicies 업데이트
         auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(

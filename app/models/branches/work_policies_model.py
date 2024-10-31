@@ -1,4 +1,5 @@
 from datetime import datetime, time
+from typing import Optional
 from pydantic import BaseModel, Field
 from sqlalchemy import (
     Boolean,
@@ -211,6 +212,38 @@ class WorkPoliciesDto(BaseModel):
     weekly_work_days: int
     work_schedules: list[WorkScheduleDto] = []
     break_times: list[BreakTimeDto] = []
+
+    class Config:
+        from_attributes = True
+
+
+class WorkScheduleUpdateDto(BaseModel):
+    day_of_week: Optional[Weekday] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    is_holiday: Optional[bool] = None
+
+    class Config:
+        from_attributes = True
+        use_enum_values = True
+
+
+class BreakTimeUpdateDto(BaseModel):
+    is_doctor: Optional[bool] = None
+    break_type: Optional[str] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WorkPoliciesUpdateDto(BaseModel):
+    id: Optional[int] = None
+    branch_id: Optional[int] = None
+    weekly_work_days: Optional[int] = None
+    work_schedules: Optional[list[WorkScheduleUpdateDto]] = None
+    break_times: Optional[list[BreakTimeUpdateDto]] = None
 
     class Config:
         from_attributes = True
