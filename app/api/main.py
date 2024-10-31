@@ -55,9 +55,9 @@ app.include_router(user_management_contract.router, prefix='/user-management/con
 app.include_router(user_management_work_contract.router, prefix='/user-management/work-contract', tags=['User_Management_Work_Contract'])
 app.include_router(user_management.router, prefix='/user-management', tags=['User_Management'])
 
-app.include_router(attendance.router, prefix="/branches", tags=["Attendance"])
-app.include_router(commutes_manager.router, prefix="/branches", tags=["commutes_manager"])
-app.include_router(part_timer.router, prefix="/labor-management", tags=["Part_timer"])
+app.include_router(attendance.router, prefix="/branches", tags=["Attendance | Admin Only"])
+app.include_router(commutes_manager.router, prefix="/branches", tags=["commutes_manager | Admin Only"])
+app.include_router(part_timer.router, prefix="/labor-management", tags=["Part_timer | Admin Only"])
 
 app.include_router(leave_policies.router, prefix='/branches/{branch_id}/leave-policies', tags=['Leave_Policies'])
 app.include_router(menu_management.router, prefix='/menu-management', tags=['Menu_Management'])
