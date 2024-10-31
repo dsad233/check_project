@@ -1,4 +1,3 @@
-import logging
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -17,11 +16,11 @@ from app.enums.users import Role
 from app.models.users.users_model import Users
 from app.middleware.tokenVerify import get_current_user
 
-logger = logging.getLogger(__name__)
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
-@router.get("/get", response_model=AutoLeavePoliciesAndPartsDto)
+@router.get("/get", response_model=AutoLeavePoliciesAndPartsDto, summary="자동 휴무 정책 및 해당 파트 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_auto_leave_policies(
     *,
     branch_id: int,
@@ -31,7 +30,7 @@ async def get_auto_leave_policies(
     
     return await branch_service.get_auto_leave_policies_and_parts(session=session, branch_id=branch_id)
 
-@router.patch("/update", response_model=bool)
+@router.patch("/update", response_model=bool, summary="자동 휴무 정책 및 파트 정책 수정")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_auto_leave_policies(
     *,
@@ -45,7 +44,7 @@ async def update_auto_leave_policies(
     return await branch_service.update_auto_leave_policies_and_parts(session=session, branch_id=branch_id, request=request, current_user_id=user.id)
 
 
-@router.get("/histories", response_model=BranchHistoriesResponse)
+@router.get("/histories", response_model=BranchHistoriesResponse, summary="자동 휴무 정책 수정 이력 조회")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_branch_histories(
     *,

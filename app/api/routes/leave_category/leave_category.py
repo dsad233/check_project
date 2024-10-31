@@ -1,4 +1,3 @@
-import logging
 from typing import Any, List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -20,17 +19,41 @@ from app.models.branches.leave_categories_model import (
     LeaveCategory
 )
 
-logger = logging.getLogger(__name__)
-
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 
 class LeaveCategoryWithExcludedPartsDto(BaseModel):
     leave_category: LeaveCategoryDto
     excluded_parts: list[PartIdWithName] = []
 
+
+@router.get("/filtered/list", response_model=list[LeaveCategoryDto], summary="제외파트 필터된 휴무 카테고리 목록 조회")
+@available_higher_than(Role.EMPLOYEE)
+async def read_filtered_leave_categories(
+    *,
+    branch_id: int,
+    context: Request,
+    session: AsyncSession = Depends(get_db)
+) -> list[LeaveCategoryDto]:
+
+    if context.user.role == Role.EMPLOYEE:
+        leave_categories = await leave_categories_crud.find_all_with_excluded_parts(
+            session=session, branch_id=branch_id)
+        result = []
+        for leave_category in leave_categories:
+            if context.user.part_id in [excluded_part.part_id for excluded_part in leave_category.excluded_parts]:
+                continue
+            result.append(LeaveCategoryDto.model_validate(leave_category))
+        return result
+
+    leave_categories = await leave_categories_crud.find_all_by_branch_id(
+        session=session, branch_id=branch_id
+    )
+    return leave_categories
+
     
-@router.get("/list", response_model=list[LeaveCategoryWithExcludedPartsDto])
+@router.get("/list", response_model=list[LeaveCategoryWithExcludedPartsDto], summary="제외파트 정보 포함 휴무 카테고리 목록 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def read_leave_categories(
     *,
     context: Request,
@@ -61,7 +84,7 @@ async def read_leave_categories(
     return result
 
 
-@router.post("/create", response_model=LeaveCategoryWithExcludedPartsDto, status_code=201)
+@router.post("/create", response_model=LeaveCategoryWithExcludedPartsDto, status_code=201, summary="휴무 카테고리 생성")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def create_leave_category(
     *,
@@ -83,7 +106,7 @@ async def create_leave_category(
     return request
     
 
-@router.patch("/{leave_category_id}/update", response_model=bool)
+@router.patch("/{leave_category_id}/update", response_model=bool, summary="휴무 카테고리 수정")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_leave_category(
     *,
@@ -128,7 +151,7 @@ async def update_leave_category(
 
 
 
-@router.delete("/{leave_category_id}/delete", response_model=bool)
+@router.delete("/{leave_category_id}/delete", response_model=bool, summary="휴무 카테고리 삭제")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def delete_leave_category(
     *,

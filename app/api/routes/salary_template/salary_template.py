@@ -1,4 +1,3 @@
-import logging
 from typing import Any, List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -18,9 +17,11 @@ from app.enums.users import Role
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
-@router.get("/list", response_model=SalaryTemplatesResponse)
+@router.get("/list", response_model=SalaryTemplatesResponse, summary="급여 템플릿 목록 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_salary_templates(
     *,
+    context: Request,
     branch_id: int,
     session: AsyncSession = Depends(get_db),
     request: BaseSearchDto = Depends(BaseSearchDto)
@@ -28,7 +29,7 @@ async def get_salary_templates(
     return await branch_service.get_all_salary_template_and_allowance_policy(session=session, branch_id=branch_id, request=request)
 
 
-@router.post("/create", response_model=SalaryTemplateResponse)
+@router.post("/create", response_model=SalaryTemplateResponse, summary="급여 템플릿 생성")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def create_salary_template(
     *,
@@ -45,7 +46,7 @@ async def create_salary_template(
     return salary_template
     
     
-@router.patch("/{salary_template_id}/update", response_model=bool)
+@router.patch("/{salary_template_id}/update", response_model=bool, summary="급여 템플릿 수정")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_salary_template(
     *,
@@ -63,7 +64,7 @@ async def update_salary_template(
     return await salary_template_crud.update(session=session, branch_id=branch_id, request=SalaryTemplate(branch_id=branch_id, **request.model_dump(exclude_none=True)), id=salary_template_id)
 
 
-@router.delete("/{salary_template_id}/delete", response_model=bool)
+@router.delete("/{salary_template_id}/delete", response_model=bool, summary="급여 템플릿 삭제")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def delete_salary_template(
     *,

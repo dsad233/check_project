@@ -1,4 +1,3 @@
-import logging
 from typing import Any, List, Union, Optional, Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
@@ -28,7 +27,6 @@ from app.models.branches.work_policies_model import (
     WorkPolicies,WorkPoliciesDto
 )
 
-logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
@@ -41,9 +39,11 @@ class CombinedPoliciesDto(BaseModel):
     holiday_allowance_policies: HolidayAllowancePoliciesDto
 
 
-@router.get("/get", response_model=CombinedPoliciesDto) 
+@router.get("/get", response_model=CombinedPoliciesDto, summary="근무 정책 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_work_policies(*,
     session: AsyncSession = Depends(get_db),
+    context: Request,
     branch_id: int
 ) -> CombinedPoliciesDto:
         
@@ -61,7 +61,7 @@ async def get_work_policies(*,
                                 holiday_allowance_policies=HolidayAllowancePoliciesDto.model_validate(allowance_policies or {}))
     
     
-@router.patch("/update", response_model=bool)
+@router.patch("/update", response_model=bool, summary="근무 정책 수정")
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_work_policies(*,
     session: AsyncSession = Depends(get_db),
