@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.service import user_service
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # db = async_session()
 
 # 현재 사용자의 연차 일수 정보 조회

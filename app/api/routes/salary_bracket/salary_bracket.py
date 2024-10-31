@@ -13,7 +13,7 @@ from app.models.salary.salary_bracket_model import (
 )
 from app.models.users.users_model import Users
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # db = async_session()
 
 

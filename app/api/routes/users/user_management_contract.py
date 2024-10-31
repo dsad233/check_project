@@ -14,7 +14,7 @@ from app.schemas.user_management_contract_schemas import ResponseUserContracts, 
 from app.service.user_management.contract_service import UserManagementContractService
 from app.service.user_management.work_contract_service import UserManagementWorkContractService
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 user_management_contract_service = UserManagementContractService()
 user_management_work_contract_service = UserManagementWorkContractService()
 

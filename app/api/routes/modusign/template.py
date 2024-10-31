@@ -5,7 +5,7 @@ from app.schemas.modusign_schemas import TemplateResponse, TemplateListResponse,
 from app.service.template_service import TemplateService
 from typing import List
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/templates", dependencies=[Depends(validate_token)])
+router = APIRouter(prefix="/templates", )
 template_service = TemplateService()
 
 @router.get("", response_model=TemplateListResponse)

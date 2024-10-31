@@ -16,7 +16,7 @@ from app.exceptions.exceptions import NotFoundError
 from app.middleware.tokenVerify import validate_token
 from app.core.database import get_db
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 # 리포지토리 의존성 함수 정의
 def get_part_timer_repository(db: AsyncSession = Depends(get_db)) -> IPartTimerRepository:
