@@ -21,9 +21,9 @@ async def read_filtered_leave_categories(
     session: AsyncSession = Depends(get_db)
 ) -> list[LeaveCategoryDto]:
 
-    if context.user.role == Role.EMPLOYEE:
+    if context.state.user.role == Role.EMPLOYEE:
         return await leave_category_service.get_filtered_leave_categories(
-            session=session, branch_id=branch_id, user_id=context.user.id
+            session=session, branch_id=branch_id, user_id=context.state.user.id
         )
     
     return await leave_category_service.get_all_leave_categories(
