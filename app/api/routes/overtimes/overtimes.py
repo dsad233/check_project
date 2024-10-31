@@ -35,17 +35,17 @@ async def create_overtime(
     ):
 
     try:        
-        existing_overtime = await db.execute(
-            select(Overtimes)
-            .where(
-                Overtimes.applicant_id == current_user_id,
-                Overtimes.application_date == overtime.application_date,
-                Overtimes.deleted_yn == "N"
-            )
-            .limit(1)
-        )
-        if existing_overtime.scalar_one_or_none() is not None:
-            raise HTTPException(status_code=400, detail="이미 해당 날짜에 초과근무 신청을 했습니다.")
+        # existing_overtime = await db.execute(
+        #     select(Overtimes)
+        #     .where(
+        #         Overtimes.applicant_id == current_user_id,
+        #         Overtimes.application_date == overtime.application_date,
+        #         Overtimes.deleted_yn == "N"
+        #     )
+        #     .limit(1)
+        # )
+        # if existing_overtime.scalar_one_or_none() is not None:
+        #     raise HTTPException(status_code=400, detail="이미 해당 날짜에 초과근무 신청을 했습니다.")
             
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -55,7 +55,7 @@ async def create_overtime(
         )
 
         db.add(new_overtime)
-        await db.flush()
+        await db.commit()
         await db.refresh(new_overtime)
 
         return {
@@ -150,9 +150,8 @@ async def approve_overtime(
             if result_part is None:
                 raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
             
-
             # 정책 조회
-            find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.id == result_user.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+            find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
             result_overtime_policies = find_overtime_policies.first()
 
             if result_overtime_policies is None:
@@ -179,7 +178,7 @@ async def approve_overtime(
                 raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
 
             # 정책 조회
-            find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(Branches.id == result_user.branch_id, result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+            find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
             result_overtime_policies = find_overtime_policies.first()
 
             if result_overtime_policies is None:
@@ -265,7 +264,7 @@ async def reject_overtime(
             raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
         
         # 정책 조회
-        find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.id == result_user.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+        find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
         result_overtime_policies = find_overtime_policies.first()
         if result_overtime_policies is None:
             raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
