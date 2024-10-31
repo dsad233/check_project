@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>DB Connection Monitor</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-bottom: 20px;
+        }
+        .stat-box {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            text-align: center;
+        }
+        .chart-container {
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Database Connection Monitor</h1>
+        </div>
+        <div class="stats">
+            <div class="stat-box">
+                <h3>Current Connections</h3>
+                <div id="currentConnections">-</div>
+            </div>
+            <div class="stat-box">
+                <h3>Max Connections</h3>
+                <div id="maxConnections">-</div>
+            </div>
+            <div class="stat-box">
+                <h3>Last Update</h3>
+                <div id="lastUpdate">-</div>
+            </div>
+        </div>
+        <div class="chart-container">
+            <canvas id="connectionChart"></canvas>
+        </div>
+    </div>
+
+    <script>
+    let chart;
+    const maxDataPoints = 864;  // 3일 * 24시간 * 60분 = 4320 데이터 포인트
+    const data = {
+        labels: [],
+        datasets: [{
+            label: 'Active Connections',
+            data: [],
+            borderColor: 'rgb(75, 192, 192)',
+            tension: 0.1
+        }]
+    };
+
+    const config = {
+        type: 'line',
+        data: data,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
+                }
+            },
+            animation: {
+                duration: 0
+            }
+        }
+    };
+
+    function initChart() {
+        const ctx = document.getElementById('connectionChart').getContext('2d');
+        chart = new Chart(ctx, config);
+    }
+
+    function updateChart(timestamp, connections) {
+        const dateTime = new Date(timestamp);
+        const label = `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`;
+        
+        data.labels.push(label);
+        data.datasets[0].data.push(connections);
+
+        // 데이터 포인트가 너무 많아지면 가장 오래된 데이터 제거
+        if (data.labels.length > maxDataPoints) {
+            data.labels.shift();
+            data.datasets[0].data.shift();
+        }
+
+        document.getElementById('currentConnections').textContent = connections;
+        document.getElementById('lastUpdate').textContent = label;
+        
+        chart.update();
+    }
+
+    async function loadHistoricalData() {
+        try {
+            const response = await fetch('/metrics/connection-history');
+            const historyData = await response.json();
+            if (!historyData || historyData.length === 0) {
+                console.log("No historical data available");
+                return;
+            }
+            
+            // 차트 데이터 초기화
+            data.labels = [];
+            data.datasets[0].data = [];
+            
+            // 히스토리 데이터로 차트 채우기
+            historyData.forEach(item => {
+                const dateTime = new Date(item.timestamp);
+                // 날짜와 시간을 함께 표시
+                const label = `${dateTime.toLocaleDateString()} ${dateTime.toLocaleTimeString()}`;
+                data.labels.push(label);
+                data.datasets[0].data.push(item.connection_count);
+            });
+            
+            chart.update();
+        } catch (error) {
+            console.error('Error loading historical data:', error);
+        }
+    }
+
+    async function fetchConnections() {
+        try {
+            // 현재 연결 수만 조회
+            const response = await fetch('/metrics/connections');
+            const data = await response.json();
+            if (data && data.length > 0) {
+                updateChart(data[0].timestamp, data[0].connection_count);
+            }
+        } catch (error) {
+            console.error('Error fetching connections:', error);
+        }
+    }
+
+    async function fetchMaxConnections() {
+        try {
+            // 최대 연결 수 조회
+            const maxResponse = await fetch('/metrics/max-connections');
+            const maxData = await maxResponse.json();
+            document.getElementById('maxConnections').textContent = maxData.max_connections;
+        } catch (error) {
+            console.error('Error fetching max connections:', error);
+        }
+    }
+
+    // Initialize
+initChart();
+loadHistoricalData();  // 먼저 히스토리 데이터 로드
+fetchMaxConnections();
+
+// 현재 연결 수는 5분마다 업데이트
+setInterval(fetchConnections, 300000);  // 5분 = 300000ms
+
+// 최대 연결 수는 1시간마다 업데이트
+setInterval(fetchMaxConnections, 3600000);
+</script>
+</body>
+</html>

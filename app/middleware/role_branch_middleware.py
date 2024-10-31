@@ -22,7 +22,11 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
             "/docs",
             "/openapi.json",
             "/redoc",
-            "/favicon.ico"
+            "/favicon.ico",
+            "/monitor",
+            "/metrics/connections",
+            "/metrics/max-connections",
+            "/metrics/connection-history"   
         ]
 
         # 일반 사원 이상 접근 가능 경로

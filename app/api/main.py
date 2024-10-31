@@ -29,6 +29,8 @@ from app.api.routes.salary_template import salary_template
 from app.api.routes.salary_policies import salary_policies
 from app.api.routes.modusign import document, template, webhook
 from app.api.routes.salary_policies import salary_policies
+from app.api.routes.db_monitor.db_connections_monitor import router as monitor_router
+
 
 app = APIRouter()
 
@@ -69,6 +71,8 @@ app.include_router(document.router, prefix='/modusign-document', tags=['Modusign
 app.include_router(template.router, prefix='/modusign-template', tags=['Modusign_Template'])
 app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-policies', tags=['Salary_Policies'])
 app.include_router(personnel_record_category.router, prefix='/branches/{branch_id}/personnel-record-categories', tags=['Personnel_Record_Categories'])
+
+app.include_router(monitor_router, tags=["monitoring"])
 
 @app.get("/healthcheck", summary="healthcheck")
 def health_check():
