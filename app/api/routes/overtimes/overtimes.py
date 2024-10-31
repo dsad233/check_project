@@ -45,7 +45,6 @@ async def create_overtime(
         if existing_overtime.scalar_one_or_none() is not None:
             raise HTTPException(status_code=400, detail="이미 해당 날짜에 초과근무 신청을 했습니다.")
             
-
         new_overtime = Overtimes(
             applicant_id=current_user_id,
             application_date = overtime.application_date,
@@ -58,10 +57,11 @@ async def create_overtime(
             select(OverTime_History).where(
                 OverTime_History.user_id == current_user_id
             )
+            .order_by(OverTime_History.created_at.desc())
+            .limit(1)
         )
         history = existing_history.scalar_one_or_none()
-        print(f"history : {history}")
-        
+
         if history is None:
             history = OverTime_History(
                 user_id = current_user_id,
@@ -80,7 +80,6 @@ async def create_overtime(
 
         return {
             "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
-            "data": new_overtime,
         }
         
     except HTTPException as http_err:
@@ -92,9 +91,7 @@ async def create_overtime(
         print(err)
         raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. Error : {str(err)}")
 
-
 # 오버타임 관리자 메모 상세 조회
-
 @router.get('/manager/{id}', response_model=ResponseDTO[ManagerMemoResponseDto], summary="오버타임 관리자 메모 상세 조회")
 async def get_manager(
     id : int,
@@ -406,8 +403,8 @@ async def get_overtimes_approved_list(
     name: Optional[str] = None, 
     phone_number: Optional[str] = None, 
     branch_id: Optional[int] = None, 
-    part_id: Optional[int] = None, 
-    deleted_yn: Optional[str] = None,
+    part_id: Optional[int] = None,
+    user_deleted_yn: Optional[str] = None,
     page: int = 1,
     size: int = 10,
     db: AsyncSession = Depends(get_db)
@@ -427,100 +424,61 @@ async def get_overtimes_approved_list(
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
-        base_query = select(Overtimes).where(
-            Overtimes.deleted_yn == "N",
-            Overtimes.application_date >= date_start_day,
-            Overtimes.application_date <= date_end_day
+        base_query = select(OverTime_History, Users, Branches, Parts).join(
+            Users, OverTime_History.user_id == Users.id
+        ).join(
+            Branches, Users.branch_id == Branches.id
+        ).join(
+            Parts, Users.part_id == Parts.id
+        ).where(
+            OverTime_History.deleted_at == "N",
+            Users.deleted_yn == "N"
         )
-        
-        stmt = None
-
-        # 사원인 경우 자신의 기록만 조회
-        if current_user.role == "사원":
-            base_query = base_query.where(Overtimes.applicant_id == current_user.id)
-
-        # Users 테이블과 JOIN (검색 조건이 있는 경우)
-        if name or phone_number or branch_id or part_id:
-            base_query = base_query.join(Users, Overtimes.applicant_id == Users.id)
-
+  
         # 이름 검색 조건
         if name:
             base_query = base_query.where(Users.name.like(f"%{name}%"))
         # 전화번호 검색 조건
-        elif phone_number:
+        if phone_number:
             base_query = base_query.where(Users.phone_number.like(f"%{phone_number}%"))
         # 지점 검색 조건
         if branch_id:
-            base_query = base_query.join(Branches, Users.branch_id == Branches.id)\
-                .where(Branches.id == branch_id)
+            base_query = base_query.where(Branches.id == branch_id)
         # 파트 검색 조건
         if part_id:
-            base_query = base_query.join(Parts, Users.part_id == Parts.id)\
-                .where(Parts.id == part_id)
-        # 상태 검색 조건
-        if deleted_yn == "Y":
-            base_query = base_query.where(Overtimes.deleted_yn == "Y")
+            base_query = base_query.where(Parts.id == part_id)
+        # 사용자 삭제 여부 검색 조건
+        if user_deleted_yn:
+            base_query = base_query.where(Users.deleted_yn == user_deleted_yn)
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
-        stmt = base_query.order_by(Overtimes.created_at.desc())\
-            .offset(skip)\
+        result = await db.execute(
+            base_query.order_by(OverTime_History.created_at.desc())
+            .offset(skip)
             .limit(size)
-            
-        result = await db.execute(stmt)
-        overtimes = result.scalars().all()
-            
-        formatted_data = []
-        for overtime in overtimes:
-            # Users, Branches, Parts 테이블 조인 쿼리
-            user_query = select(Users, Branches, Parts).join(
-                Branches, Users.branch_id == Branches.id
-            ).join(
-                Parts, Users.part_id == Parts.id
-            ).where(Users.id == overtime.applicant_id)
-            
-            user_result = await db.execute(user_query)
-            user, branch, part = user_result.first()
-            
-            history_query = select(OverTime_History).where(
-                OverTime_History.user_id == overtime.applicant_id,
-                OverTime_History.deleted_at == "N"
-            )
-            history_result = await db.execute(history_query)
-            history = history_result.scalar_one_or_none()
-
-            overtime_data = {
-                "id": overtime.id,
-                "user_id": user.id,
-                "user_name": user.name,
-                "user_phone_number": user.phone_number,
-                "user_gender": user.gender,
-                "branch_id": branch.id,
-                "branch_name": branch.name,
-                "part_id": part.id,
-                "part_name": part.name,
-                "application_date": overtime.application_date,
-                "overtime_hours": overtime.overtime_hours,
-                "application_memo": overtime.application_memo,
-                "manager_memo": overtime.manager_memo,
-                "status": overtime.status,
-                "manager_id": overtime.manager_id,
-                "manager_name": overtime.manager_name,
-                "processed_date": overtime.processed_date,
-                "is_approved": overtime.is_approved,
-                "overtime_history": {
-                    "ot_30_total": history.ot_30_total,
-                    "ot_60_total": history.ot_60_total,
-                    "ot_90_total": history.ot_90_total,
-                    "ot_30_money": history.ot_30_money,
-                    "ot_60_money": history.ot_60_money,
-                    "ot_90_money": history.ot_90_money,
-                    "total_count": history.ot_30_total + history.ot_60_total + history.ot_90_total,
-                    "total_time": history.ot_30_total * 0.5 + history.ot_60_total * 1 + history.ot_90_total * 1.5,
-                    "total_money": history.ot_30_money + history.ot_60_money + history.ot_90_money
-                }
-            }
-            formatted_data.append(overtime_data)
+        )
+        records = result.all()
+   
+        formatted_data = [{
+            "id": history.id,
+            "user_id": user.id,
+            "user_name": user.name,
+            "user_phone_number": user.phone_number,
+            "branch_id": branch.id,
+            "branch_name": branch.name,
+            "part_id": part.id,
+            "part_name": part.name,
+            "ot_30_total": history.ot_30_total,
+            "ot_30_money": history.ot_30_money,
+            "ot_60_total": history.ot_60_total,
+            "ot_60_money": history.ot_60_money,
+            "ot_90_total": history.ot_90_total,
+            "ot_90_money": history.ot_90_money,
+            "total_count": history.ot_30_total + history.ot_60_total + history.ot_90_total,
+            "total_time": history.ot_30_total * 0.5 + history.ot_60_total * 1 + history.ot_90_total * 1.5,
+            "total_money": history.ot_30_money + history.ot_60_money + history.ot_90_money
+        } for history, user, branch, part in records]
 
         # 전체 레코드 수 조회
         count_query = select(func.count()).select_from(base_query.subquery())
