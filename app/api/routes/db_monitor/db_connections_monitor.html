@@ -173,13 +173,14 @@
         }
     }
 
-    // Initialize
+// Initialize
 initChart();
-loadHistoricalData();  // 먼저 히스토리 데이터 로드
+fetchConnections();      // 현재 상태 바로 조회
+loadHistoricalData();    // 히스토리 데이터 로드
 fetchMaxConnections();
 
-// 현재 연결 수는 5분마다 업데이트
-setInterval(fetchConnections, 300000);  // 5분 = 300000ms
+// 차트 데이터 5분마다 업데이트
+setInterval(loadHistoricalData, 300000);  // 5분 = 300000ms
 
 // 최대 연결 수는 1시간마다 업데이트
 setInterval(fetchMaxConnections, 3600000);
