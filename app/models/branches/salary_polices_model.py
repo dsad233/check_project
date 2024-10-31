@@ -10,8 +10,7 @@ from sqlalchemy import (
 )
 from app.core.database import Base
 from pydantic import BaseModel, Field
-
-from app.models.branches.allowance_policies_model import AllowancePoliciesResponse
+from app.schemas.branches_schemas import AllowancePoliciesResponse
 from app.models.branches.parttimer_policies_model import ParttimerPoliciesDto
 
 

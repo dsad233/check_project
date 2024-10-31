@@ -2,8 +2,7 @@ import logging
 from datetime import datetime, time
 from typing import Optional
 from fastapi import HTTPException
-from sqlalchemy import func, select, update
-from sqlalchemy import update as sa_update
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 from app.models.branches.work_policies_model import (

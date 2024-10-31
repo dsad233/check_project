@@ -30,9 +30,3 @@ class HolidayWorkPolicies(Base):  # 휴무일 근무 여부 설정
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
-class HolidayWorkPoliciesDto(BaseModel):
-    do_holiday_work: bool = Field(description="휴무일 근무 여부", default=False)
-
-    class Config:
-        from_attributes = True

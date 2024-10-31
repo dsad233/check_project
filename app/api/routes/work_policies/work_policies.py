@@ -2,6 +2,9 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Request
+from app.core.permissions.auth_utils import available_higher_than
+from app.enums.users import Role
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from app.exceptions.exceptions import (
@@ -58,6 +61,11 @@ class CombinedPoliciesDto(BaseModel):
     overtime_policies: OverTimePoliciesDto
     default_allowance_policies: DefaultAllowancePoliciesDto
     holiday_allowance_policies: HolidayAllowancePoliciesDto
+from app.schemas.branches_schemas import CombinedPoliciesDto
+from app.service import branch_service
+
+
+router = APIRouter()
 
 
 class CombinedPoliciesUpdateDto(BaseModel):

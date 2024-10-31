@@ -1,5 +1,4 @@
-from typing import Any, Optional
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from pydantic import BaseModel
 from app.common.dto.pagination_dto import PaginationDto
@@ -10,13 +9,8 @@ from app.schemas.users_schemas import UserLeaveResponse, UsersLeaveResponse
 from app.cruds.branches.policies.salary_polices_crud import create_parttimer_policies
 from app.schemas.users_schemas import UserLeaveResponse
 from app.service import user_service
-from app.cruds.branches import branches_crud
-from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
-from app.exceptions.exceptions import ForbiddenError, NotFoundError, BadRequestError
-from app.models.users.users_model import Users
 from app.enums.users import Role
 from app.service import branch_service
-from app.models.branches.branches_model import Branches
 from app.schemas.branches_schemas import BranchRequest, BranchListResponse, BranchResponse, ManualGrantRequest
 from app.core.permissions.auth_utils import available_higher_than
 
@@ -26,7 +20,7 @@ router = APIRouter()
 @router.get("/get", response_model=BranchListResponse, summary="지점 목록 조회")
 @available_higher_than(Role.EMPLOYEE)
 async def read_branches(
-    *, context: Request, session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto), user: int = Depends(get_current_user)
+    *, context: Request, session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto)
 ) -> BranchListResponse:
     """
     지점 목록을 조회합니다.
@@ -34,10 +28,8 @@ async def read_branches(
     - **page**: 페이지 번호. 0을 입력하면 페이지네이션 없이 모든 결과를 반환합니다.
     - 기본적으로 페이지네이션이 적용되며, `search` 파라미터를 통해 offset과 record_size를 조정할 수 있습니다.
     """
-    if user.role != Role.MSO:
-        branch = await branches_crud.find_by_id(session=session, branch_id=user.branch_id)
-        if branch is None:
-            raise NotFoundError(detail=f"{user.branch_id}번 지점이 없습니다.")
+    if context.user.role != Role.MSO:
+        branch = await branch_service.get_branch_by_id(session=session, branch_id=context.user.branch_id)
         return BranchListResponse(data=[branch], pagination=PaginationDto(total_record=1))
 
     return await branch_service.get_branches(session=session, request=request)
