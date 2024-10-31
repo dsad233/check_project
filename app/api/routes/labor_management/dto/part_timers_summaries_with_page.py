@@ -12,3 +12,10 @@ class PartTimersSummariesWithPageInfoDTO(BaseModel):
     @classmethod
     def toDTO(cls, summaries: List[PartTimerSummaryResponseDTO], total: int, page_num: int, page_size: int) -> 'PartTimersSummariesWithPageInfoDTO':
         return cls(part_timer_summaries=summaries, page_info=PageInfoDto.toDTO(total, page_num, page_size))
+
+class PartTimersSummariesDTO(BaseModel):
+    part_timer_summaries: List[PartTimerSummaryResponseDTO]
+
+    @classmethod
+    def toDTO(cls, summaries: List[PartTimerSummaryResponseDTO]) -> 'PartTimersSummariesDTO':
+        return cls(part_timer_summaries=summaries)
