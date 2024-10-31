@@ -149,14 +149,14 @@ class WorkPolicies(Base):
     deleted_yn = Column(String(1), default="N")
 
     work_schedules = relationship(
-        "WorkSchedule", back_populates="work_policy", lazy="selectin"
+        "BranchWorkSchedule", back_populates="work_policy", lazy="selectin"  # WorkSchedule -> BranchWorkSchedule
     )
     break_times = relationship(
-        "BreakTime", back_populates="work_policy", lazy="selectin"
-    )
+        "BranchBreakTime", back_populates="work_policy", lazy="selectin"  # BreakTime -> BranchBreakTime
+    ) 
 
 
-class WorkSchedule(Base):
+class BranchWorkSchedule(Base):
     __tablename__ = "work_schedules"
     id = Column(Integer, primary_key=True, autoincrement=True)
     work_policy_id = Column(Integer, ForeignKey("work_policies.id"), nullable=False)
@@ -170,7 +170,7 @@ class WorkSchedule(Base):
     work_policy = relationship("WorkPolicies", back_populates="work_schedules")
 
 
-class BreakTime(Base):
+class BranchBreakTime(Base):
     __tablename__ = "break_times"
     id = Column(Integer, primary_key=True, autoincrement=True)
     work_policy_id = Column(Integer, ForeignKey("work_policies.id"), nullable=False)
@@ -184,98 +184,66 @@ class BreakTime(Base):
     work_policy = relationship("WorkPolicies", back_populates="break_times")
 
 
-# DTOs
-class WorkScheduleDto(BaseModel):
-    day_of_week: Weekday
-    start_time: time
-    end_time: time
-    is_holiday: bool
+# # DTOs
+# class BranchWorkScheduleDto(BaseModel):
+#     day_of_week: Weekday
+#     start_time: time
+#     end_time: time
+#     is_holiday: bool
 
-    class Config:
-        from_attributes = True
-        use_enum_values = True
-
-
-class BreakTimeDto(BaseModel):
-    is_doctor: bool
-    break_type: str
-    start_time: time
-    end_time: time
-
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
+#         use_enum_values = True
 
 
-class WorkPoliciesDto(BaseModel):
-    id: int
-    branch_id: int
-    weekly_work_days: int
-    work_schedules: list[WorkScheduleDto] = []
-    break_times: list[BreakTimeDto] = []
+# class BranchBreakTimeDto(BaseModel):
+#     is_doctor: bool
+#     break_type: str
+#     start_time: time
+#     end_time: time
 
-    class Config:
-        from_attributes = True
-
-
-class WorkScheduleUpdateDto(BaseModel):
-    day_of_week: Optional[Weekday] = None
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
-    is_holiday: Optional[bool] = None
-
-    class Config:
-        from_attributes = True
-        use_enum_values = True
+#     class Config:
+#         from_attributes = True
 
 
-class BreakTimeUpdateDto(BaseModel):
-    is_doctor: Optional[bool] = None
-    break_type: Optional[str] = None
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
+# class WorkPoliciesDto(BaseModel):
+#     id: int
+#     branch_id: int
+#     weekly_work_days: int
+#     work_schedules: list[BranchWorkScheduleDto] = []
+#     break_times: list[BranchBreakTimeDto] = []
 
-    class Config:
-        from_attributes = True
-
-
-class WorkPoliciesUpdateDto(BaseModel):
-    id: Optional[int] = None
-    branch_id: Optional[int] = None
-    weekly_work_days: Optional[int] = None
-    work_schedules: Optional[list[WorkScheduleUpdateDto]] = None
-    break_times: Optional[list[BreakTimeUpdateDto]] = None
-
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
 
 
-class WorkScheduleUpdateDto(BaseModel):
-    day_of_week: Optional[Weekday] = None
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
-    is_holiday: Optional[bool] = None
+# class BranchWorkScheduleUpdateDto(BaseModel):
+#     day_of_week: Optional[Weekday] = None
+#     start_time: Optional[time] = None
+#     end_time: Optional[time] = None
+#     is_holiday: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
-        use_enum_values = True
-
-
-class BreakTimeUpdateDto(BaseModel):
-    is_doctor: Optional[bool] = None
-    break_type: Optional[str] = None
-    start_time: Optional[time] = None
-    end_time: Optional[time] = None
-
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
+#         use_enum_values = True
 
 
-class WorkPoliciesUpdateDto(BaseModel):
-    id: Optional[int] = None
-    branch_id: Optional[int] = None
-    weekly_work_days: Optional[int] = None
-    work_schedules: Optional[list[WorkScheduleUpdateDto]] = None
-    break_times: Optional[list[BreakTimeUpdateDto]] = None
+# class BranchBreakTimeUpdateDto(BaseModel):
+#     is_doctor: Optional[bool] = None
+#     break_type: Optional[str] = None
+#     start_time: Optional[time] = None
+#     end_time: Optional[time] = None
 
-    class Config:
-        from_attributes = True
+#     class Config:
+#         from_attributes = True
+
+
+# class WorkPoliciesUpdateDto(BaseModel):
+#     id: Optional[int] = None
+#     branch_id: Optional[int] = None
+#     weekly_work_days: Optional[int] = None
+#     work_schedules: Optional[list[BranchWorkScheduleUpdateDto]] = None
+#     break_times: Optional[list[BranchBreakTimeUpdateDto]] = None
+
+#     class Config:
+#         from_attributes = True

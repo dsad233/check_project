@@ -20,8 +20,7 @@ async def validate_token(
         auth: str = Security(auth_header),
         users: AsyncSession = Depends(get_db)
         ):
-    print(auth)
-    print(req.headers.get("Authorization"))
+    
     try:
         
         # 스웨거를 위한 처리

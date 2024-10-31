@@ -14,7 +14,6 @@ from app.service import branch_service
 from app.schemas.branches_schemas import BranchRequest, BranchListResponse, BranchResponse, ManualGrantRequest
 from app.core.permissions.auth_utils import available_higher_than
 
-
 router = APIRouter()
 
 @router.get("/get", response_model=BranchListResponse, summary="지점 목록 조회")
