@@ -50,6 +50,11 @@ async def update_salary_template(*, session: AsyncSession, branch_id: int, salar
     if not salary_template:
         raise NotFoundError(detail=f"{salary_template_id}번 급여 템플릿이 존재하지 않습니다.")
     
+    if salary_template.name != request.name:
+        duplicate_salary_template = await salary_template_crud.find_by_branch_id_and_name(session=session, branch_id=branch_id, name=request.name)
+        if duplicate_salary_template is not None:
+            raise BadRequestError(detail=f"{request.name}은(는) 이미 존재하는 급여 템플릿입니다.")
+    
     return await salary_template_crud.update(session=session, branch_id=branch_id, request=SalaryTemplate(branch_id=branch_id, **request.model_dump(exclude_none=True)), id=salary_template_id, old=salary_template)
 
 

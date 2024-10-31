@@ -30,6 +30,11 @@ async def update_hour_wage_template(*, session: AsyncSession, branch_id: int, ho
     if hour_wage_template is None:
         raise NotFoundError(f"{branch_id}번 지점의 {hour_wage_template_id}번 시간 임금 템플릿이 존재하지 않습니다.")
     
+    if hour_wage_template.name != request.name:
+        duplicate_hour_wage_template = await hour_wage_template_crud.find_by_name_and_branch_id(session=session, branch_id=branch_id, name=request.name)
+        if duplicate_hour_wage_template is not None:
+            raise BadRequestError(detail=f"{request.name}은(는) 이미 존재하는 시간 임금 템플릿입니다.")
+    
     return await hour_wage_template_crud.update(branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, request=HourWageTemplate(branch_id=branch_id, **request.model_dump(exclude_unset=True)), session=session, old=hour_wage_template)
 
 

@@ -27,7 +27,7 @@ async def find_by_id(
     *, branch_id: int, hour_wage_template_id: int, session: AsyncSession
 ) -> Optional[HourWageTemplate]:
         
-    stmt = select(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.id == hour_wage_template_id)
+    stmt = select(HourWageTemplate).where(HourWageTemplate.branch_id == branch_id).where(HourWageTemplate.id == hour_wage_template_id).where(HourWageTemplate.deleted_yn == 'N')
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 

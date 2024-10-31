@@ -13,17 +13,17 @@ from app.models.branches.work_policies_model import WorkPolicies
 logger = logging.getLogger(__name__)
 
 
+async def find_by_name(
+    *, session: AsyncSession, name: str
+) -> Optional[Branches]:
+    stmt = select(Branches).where(Branches.name == name).where(Branches.deleted_yn == 'N')
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
 async def create(
     *, session: AsyncSession, request: Branches
 ) -> Branches:
-            
-    # 이름 중복 확인
-    stmt = select(Branches).where(Branches.name == request.name)
-    result = await session.execute(stmt)
-    existing_branch = result.scalar_one_or_none()
-
-    if existing_branch:
-        raise BadRequestError(f"지점 이름 '{request.name}'은(는) 이미 존재합니다.")
 
     session.add(request)
     await session.commit()
@@ -75,7 +75,7 @@ async def find_by_id(
     *, session: AsyncSession, branch_id: int
 ) -> Optional[Branches]:
     
-    statement = select(Branches).filter(Branches.id == branch_id)
+    statement = select(Branches).filter(Branches.id == branch_id).where(Branches.deleted_yn == 'N')
     result = await session.execute(statement)
     return result.scalar_one_or_none()
 
