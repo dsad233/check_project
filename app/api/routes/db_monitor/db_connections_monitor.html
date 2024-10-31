@@ -179,8 +179,11 @@ fetchConnections();      // 현재 상태 바로 조회
 loadHistoricalData();    // 히스토리 데이터 로드
 fetchMaxConnections();
 
-// 차트 데이터 5분마다 업데이트
-setInterval(loadHistoricalData, 300000);  // 5분 = 300000ms
+// 차트 데이터와 현재 연결 수 5분마다 업데이트
+setInterval(() => {
+    loadHistoricalData();  // 차트 데이터 업데이트
+    fetchConnections();    // 현재 연결 수 업데이트
+}, 300000);  // 5분 = 300000ms
 
 // 최대 연결 수는 1시간마다 업데이트
 setInterval(fetchMaxConnections, 3600000);
