@@ -14,7 +14,7 @@ from app.schemas.user_management_document_schemas import ResponseUserDocuments, 
     ResponseAddedDocuments, RequestSendDocument, ResponseSendDocumentHistoryDto, ResponseDocumentSendHistoryRequestsDto, \
     RequestApproveSendDocument, RequestRejectSendDocument, RequestCancelSendDocument
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 
 class UserManagementDocument:

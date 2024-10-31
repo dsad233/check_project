@@ -18,7 +18,7 @@ from app.models.branches.salary_polices_model import SalaryTemplatesPolicies
 
 from app.common.dto.response_dto import ResponseDTO
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # db = async_session()
 
 

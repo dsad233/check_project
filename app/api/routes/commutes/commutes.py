@@ -13,7 +13,7 @@ from app.models.commutes.commutes_model import Commutes, CommuteUpdate, Commutes
 from app.models.users.users_model import Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # db = async_session()
 
 

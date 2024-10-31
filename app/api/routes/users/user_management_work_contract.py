@@ -13,7 +13,7 @@ from app.schemas.user_work_contract_schemas import RequestPatchWorkContract, Req
 from app.enums.users import EmploymentStatus
 from app.service.user_management.work_contract_service import UserManagementWorkContractService
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 user_management_work_contract_service = UserManagementWorkContractService()
 

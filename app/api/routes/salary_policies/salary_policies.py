@@ -9,7 +9,7 @@ from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.future import select
 from app.core.database import async_session, get_db
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # salay_policies = async_session()
 
 # # 연봉 정책 생성

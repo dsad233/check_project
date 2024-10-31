@@ -16,7 +16,7 @@ from app.enums.users import Role
 from app.exceptions.exceptions import BranchNotFoundException
 
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 @router.get("/list", response_model=SalaryTemplatesResponse, summary="급여 템플릿 목록 조회")
 @available_higher_than(Role.INTEGRATED_ADMIN)
