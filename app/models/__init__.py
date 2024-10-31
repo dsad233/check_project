@@ -45,6 +45,7 @@ from .branches.salary_polices_model import SalaryTemplatesPolicies
 from .branches.parttimer_policies_model import ParttimerPolicies
 
 from .branches.personnel_record_categories_model import PersonnelRecordCategory
+from .users.users_work_contract_history_model import WorkContractHistory
 
 # Users.salary = relationship("UserSalary", back_populates="user")
 
@@ -210,3 +211,13 @@ Commutes.part_timer_additional_infos = relationship("PartTimerAdditionalInfo", b
 
 Branches.personnel_record_categories = relationship("PersonnelRecordCategory", back_populates="branch")
 PersonnelRecordCategory.branch = relationship("Branches", back_populates="personnel_record_categories")
+
+
+WorkContractHistory.user = relationship("Users", back_populates="work_contract_histories")
+WorkContractHistory.work_contract = relationship("WorkContract", back_populates="work_contract_history")
+
+Users.work_contract_histories = relationship("WorkContractHistory", back_populates="user")
+WorkContract.work_contract_history = relationship("WorkContractHistory", back_populates="work_contract")
+
+WorkContract.contract = relationship("Contract", back_populates="work_contract")
+Contract.work_contract = relationship("WorkContract", back_populates="contract")

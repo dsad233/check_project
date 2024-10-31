@@ -16,6 +16,7 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
 
         # public paths는 TokenMiddleware와 동일하게 유지
         self.PUBLIC_PATHS = [
+            "/callback",
             "/auth/login",
             "/health",
             "/docs",

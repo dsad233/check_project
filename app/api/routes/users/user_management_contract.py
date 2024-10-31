@@ -12,15 +12,35 @@ from app.models.users.users_model import Users
 from app.schemas.user_management_contract_schemas import ResponseUserContracts, RequestAddContracts, \
     ResponseAddedContracts, RequestRemoveContract, RequestSendMailContract, ResponseSendMailContract
 from app.service.user_management.contract_service import UserManagementContractService
+from app.service.user_management.work_contract_service import UserManagementWorkContractService
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 user_management_contract_service = UserManagementContractService()
+user_management_work_contract_service = UserManagementWorkContractService()
 
 class UserManagementContract:
     router = router
 
     @router.get("", response_model=ResponseDTO[ResponseUserContracts])
     async def get_user_contracts(
+            user_id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
+    ):
+        user = await find_user_by_id_with_contracts(session=db, user_id=user_id)
+        if not user:
+            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+
+        data = ResponseUserContracts.build(user.contracts_user_id)
+
+        return ResponseDTO(
+            status="SUCCESS",
+            message="성공적으로 계약서를 가져왔습니다.",
+            data=data,
+        )
+
+    @router.get("/history")
+    async def get_user_contract_histories(
             user_id: int,
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user),
@@ -91,14 +111,16 @@ class UserManagementContract:
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user),
     ):
-        await user_management_contract_service.request_modusign_signature(user_id=user_id, session=db)
+        await user_management_contract_service.create_contract(
+            user_id=user_id,
+            # work_contract_history_id=work_contract_history_id,
+            session=db
+        )
 
         return ResponseDTO(
             status="SUCCESS",
             message="성공적으로 계약서를 요청했습니다."
         )
-
-
 
     @router.get("/send_mail/{user_id}", response_model=ResponseDTO[ResponseSendMailContract])
     async def get_send_mail_history(

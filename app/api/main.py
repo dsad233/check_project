@@ -2,6 +2,7 @@ from fastapi import APIRouter
 
 from app.api.routes.auth import auth
 from app.api.routes.branches import branches
+from app.api.routes.callback.webhook_callback import webhook_callback
 from app.api.routes.commutes import commutes
 from app.api.routes.labor_management import part_timer
 from app.api.routes.leave_category import leave_category
@@ -45,6 +46,8 @@ app.include_router(leave_histories.router, prefix='/leave-histories', tags=['lea
 app.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['work_policies'])
 app.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour-wage-templates', tags=['hour_wage_templates'])
 app.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-policies", tags=["Parts_policies"])
+
+app.include_router(webhook_callback.router, prefix="/callback", tags=["Callback"])
 
 app.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket'])
 app.include_router(user_management_document.router, prefix='/user-management/document', tags=['User_Management_Document'])
