@@ -332,16 +332,15 @@ async def get_overtimes(
     ):
     try:
         if date is None:
-            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
-            current_weekday = date_obj.weekday()
-            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            # weekday()가 0(월요일)~6(일요일)을 반환하므로, 
+            # 일요일부터 시작하려면 현재 요일에 1을 더한 후 7로 나눈 나머지를 사용
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
-            # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
         else:
             date_obj = date
-            current_weekday = date_obj.weekday()
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
@@ -463,18 +462,19 @@ async def get_overtimes_approved_list(
     ):
     try:
         if date is None:
-            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
-            current_weekday = date_obj.weekday()
-            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            # weekday()가 0(월요일)~6(일요일)을 반환하므로, 
+            # 일요일부터 시작하려면 현재 요일에 1을 더한 후 7로 나눈 나머지를 사용
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
-            # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
         else:
             date_obj = date
-            current_weekday = date_obj.weekday()
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
+            
+        print(f"date_start_day: {date_start_day}, date_end_day: {date_end_day}")
 
         base_query = select(OverTime_History, Users, Branches, Parts).join(
             Users, OverTime_History.user_id == Users.id
@@ -484,7 +484,9 @@ async def get_overtimes_approved_list(
             Parts, Users.part_id == Parts.id
         ).where(
             OverTime_History.deleted_at == "N",
-            Users.deleted_yn == "N"
+            Users.deleted_yn == "N",
+            OverTime_History.created_at >= date_start_day,
+            OverTime_History.created_at <= date_end_day
         )
   
         # 이름 검색 조건
