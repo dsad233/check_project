@@ -26,7 +26,7 @@ class TokenMiddleware(BaseHTTPMiddleware):
                 public_paths = [
                     "/callback",
                     "/auth/login",
-                    "/health",
+                    "/healthcheck",
                     "/docs",
                     "/openapi.json",
                     "/redoc",

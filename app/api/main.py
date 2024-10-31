@@ -70,6 +70,6 @@ app.include_router(template.router, prefix='/modusign-template', tags=['Modusign
 app.include_router(salary_policies.router, prefix='/branches/{branch_id}/salary-policies', tags=['Salary_Policies'])
 app.include_router(personnel_record_category.router, prefix='/branches/{branch_id}/personnel-record-categories', tags=['Personnel_Record_Categories'])
 
-@app.get("/health")
+@app.get("/healthcheck", summary="healthcheck")
 def health_check():
     return {"status": "healthy"}

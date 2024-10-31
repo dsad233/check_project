@@ -18,7 +18,7 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
         self.PUBLIC_PATHS = [
             "/callback",
             "/auth/login",
-            "/health",
+            "/healthcheck",
             "/docs",
             "/openapi.json",
             "/redoc",
