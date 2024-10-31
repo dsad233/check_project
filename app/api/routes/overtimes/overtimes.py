@@ -56,9 +56,8 @@ async def create_overtime(
         )
 
         db.add(new_overtime)
-        await db.flush()
-        await db.refresh(new_overtime)
-
+        await db.commit()
+        
         return {
             "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
         }
@@ -181,6 +180,7 @@ async def approve_overtime(
 
             # 정책 조회
             find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(Branches.id == result_user.branch_id, result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+            print(f"find_overtime_policies: {find_overtime_policies.first()}")
             result_overtime_policies = find_overtime_policies.first()
 
             if result_overtime_policies is None:

@@ -52,8 +52,8 @@ async def get_current_user_leaves(
         latest_info = leave_info[0]
 
         # 모든 increased_days 합산
-        total_increased = float(latest_info.total_increased_days) if latest_info.total_increased_days is not None else 0.0
-        total_decreased = float(latest_info.total_decreased_days) if latest_info.total_decreased_days is not None else 0.0
+        total_increased = float(latest_info.increased_days) if latest_info.increased_days is not None else 0.0
+        total_decreased = float(latest_info.decreased_days) if latest_info.decreased_days is not None else 0.0
 
         return UserLeavesDaysResponse(
             user_id=current_user_id,
@@ -140,15 +140,20 @@ async def get_leave_histories(
         
         formatted_data = []
         for leave_history in leave_histories:
-            
             user_query = select(Users, Branches, Parts).join(
-                Branches, Users.branch_id == Branches.id
+            Branches, Users.branch_id == Branches.id
             ).join(
                 Parts, Users.part_id == Parts.id
             ).where(Users.id == leave_history.user_id)
             
             user_result = await db.execute(user_query)
             user, branch, part = user_result.first()
+
+            category_query = select(LeaveCategory).where(
+                LeaveCategory.id == leave_history.leave_category_id
+            )
+            category_result = await db.execute(category_query)
+            leave_category = category_result.scalar_one_or_none()
             
             leave_history_data = {
                 "id": leave_history.id,
@@ -162,9 +167,12 @@ async def get_leave_histories(
                 "start_date": leave_history.start_date,
                 "end_date": leave_history.end_date,
                 "leave_category_id": leave_history.leave_category_id,
+                "leave_category_name": leave_category.name,
                 "decreased_days": float(leave_history.decreased_days) if leave_history.decreased_days is not None else 0.0,
                 "status": leave_history.status,
                 "applicant_description": leave_history.applicant_description,
+                "manager_id": leave_history.manager_id,
+                "manager_name": leave_history.manager_name,
                 "admin_description": leave_history.admin_description,
                 "approve_date": leave_history.approve_date
             }
@@ -203,6 +211,7 @@ async def get_approve_leave(
     page: int = Query(1, gt=0, description="페이지 번호를 입력합니다. 기본값은 1입니다."),
     size: int = Query(10, gt=0, description="페이지당 레코드 수를 입력합니다. 기본값은 10입니다."),
     current_user: Users = Depends(get_current_user),
+    current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     try:
@@ -277,23 +286,40 @@ async def get_approve_leave(
             user_result = await db.execute(user_query)
             user, branch, part = user_result.first()
             
+            leave_days_query = select(UserLeavesDays).where(
+                UserLeavesDays.user_id == leave_history.user_id,
+                UserLeavesDays.branch_id == branch.id,
+                UserLeavesDays.deleted_yn == 'N'
+            ).order_by(UserLeavesDays.created_at.desc())
+            
+            leave_days_result = await db.execute(leave_days_query)
+            leave_days = leave_days_result.scalar_one_or_none()
+            
             leave_history_data = {
                 "id": leave_history.id,
                 "branch_id": branch.id,
                 "branch_name": branch.name,
                 "user_id": user.id,
                 "user_name": user.name,
+                "user_hire_date": user.hire_date,
+                "user_resignation_date": user.resignation_date,
                 "part_id": part.id,
                 "part_name": part.name,
                 "application_date": leave_history.application_date,
                 "start_date": leave_history.start_date,
                 "end_date": leave_history.end_date,
-                "leave_category_id": leave_history.leave_category_id,
-                "decreased_days": float(leave_history.decreased_days) if leave_history.decreased_days is not None else 0.0,
                 "status": leave_history.status,
                 "applicant_description": leave_history.applicant_description,
+                "manager_id": leave_history.manager_id,
+                "manager_name": leave_history.manager_name,
                 "admin_description": leave_history.admin_description,
-                "approve_date": leave_history.approve_date
+                "approve_date": leave_history.approve_date,
+                "leave_days": {
+                    "increased_days": float(leave_days.increased_days) if leave_days.increased_days is not None else 0.0, # 지급받은 연차
+                    "decreased_days": float(leave_days.decreased_days) if leave_days.decreased_days is not None else 0.0, # 사용한 연차
+                    "total_leave_days": float(leave_days.total_leave_days) if leave_days.total_leave_days is not None else 0.0, # 총 연차 일수
+                    "remaining_annual_leave": float(leave_days.total_leave_days) - float(leave_days.decreased_days) if leave_days.total_leave_days is not None and leave_days.decreased_days is not None else 0.0 # 남은 연차
+                }
             }
             formatted_data.append(leave_history_data)
             
@@ -319,6 +345,7 @@ async def get_approve_leave(
 
 @router.post("/leave-histories", summary="연차 신청", description="연차를 신청합니다.")
 async def create_leave_history(
+    context: Request,
     leave_create: LeaveHistoriesCreate,
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     decreased_days: float = Query(..., description="사용할 연차 일수를 입력합니다. 타입은 float입니다. 예) 1.0"),
@@ -362,7 +389,7 @@ async def create_leave_history(
         # new_total_decreased = float(current_total) + decreased_days
         
         # 사용 가능한 연차 일수 체크
-        user = await user_service.get_branch_users_leave(session=db, branch_id=branch_id, search=BaseSearchDto(record_size=1))
+        user = await user_service.get_branch_users_leave(request=BaseSearchDto(record_size=1), session=db, branch_id=branch_id)
         if not user:
             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
         
@@ -371,7 +398,7 @@ async def create_leave_history(
         else:
             create = LeaveHistories(
                 branch_id=branch_id,
-                user_id=current_user.id,
+                user_id=current_user_id,
                 leave_category_id=leave_create.leave_category_id,
                 decreased_days=decreased_days,
                 start_date=start_date,
@@ -381,23 +408,19 @@ async def create_leave_history(
                 status = Status.PENDING
             )
             db.add(create)
-            
-        
-        await db.flush()
-        await db.refresh(create)
+            await db.flush()
+            await db.refresh(create)
         
         leave_history = select(UserLeavesDays)\
             .where(UserLeavesDays.user_id == current_user.id, UserLeavesDays.branch_id == branch_id, UserLeavesDays.deleted_yn == 'N')
         
         leave_history_result = await db.execute(leave_history)
         user_leaves_days_record = leave_history_result.scalar_one_or_none()
-        
-        print(f"existing_record: {user_leaves_days_record}")
 
         # 레코드가 없는 경우에만 새로 생성
         if user_leaves_days_record is None:
             user_leaves_days = UserLeavesDays(
-                user_id=current_user.id,
+                user_id=current_user_id,
                 branch_id=branch_id,
                 leave_category_id=leave_create.leave_category_id,
                 leave_history_id=create.id,
@@ -412,10 +435,9 @@ async def create_leave_history(
                 deleted_yn='N'
             )
             db.add(user_leaves_days)
-            print(f"user_leaves_days: {user_leaves_days.user_id}")
-        
-        await db.flush()
-        await db.refresh(user_leaves_days)
+            await db.flush()
+            await db.refresh(user_leaves_days)  
+            
         return {"message": "연차 생성에 성공하였습니다."}
     except Exception as err:
         await db.rollback()
@@ -424,9 +446,9 @@ async def create_leave_history(
 
 
 @router.patch('/{branch_id}/leave-histories/{leave_id}/approve', summary="연차 승인/반려", description="연차를 승인/반려합니다.")
-@available_higher_than(Role.ADMIN)
+# @available_higher_than(Role.ADMIN)
 async def approve_leave(
-    context: Request,
+    # context: Request,
     leave_approve: LeaveHistoriesApprove,
     leave_id: int = Path(..., description="승인/반려 결정을 할 연차 ID를 입력합니다."),
     branch_id: int = Path(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
