@@ -4,7 +4,11 @@ from app.models.branches.entry_date_based_annual_leave_grant_model import EntryD
 from app.models.branches.condition_based_annual_leave_grant_model import ConditionBasedAnnualLeaveGrant
 from app.models.histories.branch_histories_model import BranchHistories
 from app.models.branches.branches_model import Branches
-from app.models.parts.hour_wage_template_model import HourWageTemplate
+from app.models.branches.work_policies_model import WorkPolicies
+from app.models.branches.auto_overtime_policies_model import AutoOvertimePolicies
+from app.models.branches.holiday_work_policies_model import HolidayWorkPolicies
+from app.models.branches.overtime_policies_model import OverTimePolicies
+from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.common.dto.search_dto import BaseSearchDto
 from app.common.dto.pagination_dto import PaginationDto
 from app.schemas.branches_schemas import (AutoLeavePoliciesAndPartsDto, 
@@ -15,20 +19,22 @@ from app.schemas.branches_schemas import (AutoLeavePoliciesAndPartsDto,
                                           AccountBasedGrantDto, 
                                           EntryDateBasedGrantDto, 
                                           ConditionBasedGrantDto, 
-                                          PartIdWithName, 
-                                          SalaryTemplateResponse,
-                                          SalaryTemplatesResponse,
+                                          PartIdWithName,
                                           BranchHistoryResponse,
                                           BranchHistoriesResponse,
                                           BranchListResponse,
                                           BranchResponse,
                                           BranchRequest,
-                                          HourWageTemplateResponse,
-                                          HourWageTemplateRequest)
+                                          CombinedPoliciesDto,
+                                          WorkPoliciesDto,
+                                          AutoOvertimePoliciesDto,
+                                          HolidayWorkPoliciesDto,
+                                          OverTimePoliciesDto,
+                                          DefaultAllowancePoliciesDto,
+                                          HolidayAllowancePoliciesDto
+                                          )
 from app.cruds.leave_policies import auto_annual_leave_approval_crud, account_based_annual_leave_grant_crud, entry_date_based_annual_leave_grant_crud, condition_based_annual_leave_grant_crud
 from app.cruds.branches.policies import allowance_crud, holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud
-from app.cruds.salary_template import salary_template_crud
-from app.cruds.hour_wage_template import hour_wage_template_crud
 from app.cruds.parts import parts_crud
 from app.cruds.branches import branches_crud, branch_histories_crud
 from app.enums.parts import PartAutoAnnualLeaveGrant
@@ -39,8 +45,7 @@ from app.exceptions.exceptions import NotFoundError, BadRequestError
 
 
 async def get_auto_leave_policies_and_parts(*, session: AsyncSession, branch_id: int) -> AutoLeavePoliciesAndPartsDto:
-    
-    # 자동 연차 부여 및 승인 정책 조회
+    """자동 연차 부여 및 승인 정책 조회"""
     auto_annual_leave_approval_policies: AutoAnnualLeaveApproval = await auto_annual_leave_approval_crud.find_by_branch_id(session=session, branch_id=branch_id)
     account_based_grant_policies: AccountBasedAnnualLeaveGrant = await account_based_annual_leave_grant_crud.find_by_branch_id(session=session, branch_id=branch_id)
     entry_date_based_grant_policies: EntryDateBasedAnnualLeaveGrant = await entry_date_based_annual_leave_grant_crud.find_by_branch_id(session=session, branch_id=branch_id)
@@ -77,7 +82,7 @@ async def update_auto_leave_policies_and_parts(
         request: AutoLeavePoliciesAndPartsDto, 
         current_user_id: int
 ) -> bool:
-
+    """자동 연차 부여 및 승인 정책 수정, 히스토리 생성"""
     auto_annual_leave_approval_policies: AutoAnnualLeaveApproval = await auto_annual_leave_approval_crud.find_by_branch_id(session=session, branch_id=branch_id)
     account_based_grant_policies: AccountBasedAnnualLeaveGrant = await account_based_annual_leave_grant_crud.find_by_branch_id(session=session, branch_id=branch_id)
     entry_date_based_grant_policies: EntryDateBasedAnnualLeaveGrant = await entry_date_based_annual_leave_grant_crud.find_by_branch_id(session=session, branch_id=branch_id)
@@ -158,36 +163,15 @@ async def update_auto_leave_policies_and_parts(
     return True
 
 
-async def get_all_salary_template_and_allowance_policy(
-        *, 
-        session: AsyncSession, 
-        branch_id: int, 
-        request: BaseSearchDto
-) -> SalaryTemplatesResponse:
-    salary_templates = await salary_template_crud.find_salary_templates(session=session, branch_id=branch_id, request=request)
-    if not salary_templates:
-        return SalaryTemplatesResponse(data=[], pagination=PaginationDto(total_record=0))
-    total_count = await salary_template_crud.count_all_by_branch_id(session=session, branch_id=branch_id)
-    branch = await branches_crud.find_by_id_with_policies(session=session, branch_id=branch_id)
-
-    data = [SalaryTemplateResponse(
-        **SalaryTemplateResponse.model_validate(salary_template).model_dump(exclude_none=True),
-        part_name=salary_template.part.name,
-        job_allowance=branch.allowance_policies.job_allowance,
-        meal_allowance=branch.allowance_policies.meal_allowance, 
-        holiday_allowance=branch.allowance_policies.doctor_holiday_work_pay if salary_template.part.is_doctor else branch.allowance_policies.common_holiday_work_pay
-        ) for salary_template in salary_templates]
-
-    return SalaryTemplatesResponse(data=data, pagination=PaginationDto(total_record=total_count))
-
-
 async def get_branch_histories(*, session: AsyncSession, branch_id: int, request: BaseSearchDto, history_type: BranchHistoryType) -> BranchHistoriesResponse:
+    """지점 히스토리 조회"""
     branch_histories = await branch_histories_crud.get_branch_histories(session=session, branch_id=branch_id, request=request, history_type=history_type)
     total_count = await branch_histories_crud.get_total_cnt(session=session, branch_id=branch_id, history_type=history_type)
     return BranchHistoriesResponse(data=branch_histories, pagination=PaginationDto(total_record=total_count))
 
 
 async def get_branches(*, session: AsyncSession, request: BaseSearchDto) -> BranchListResponse:
+    """지점 조회"""
     count = await branches_crud.count_all(session=session)
     if request.page == 0:
         branches = await branches_crud.find_all(session=session)
@@ -205,7 +189,7 @@ async def create_branch(
         session: AsyncSession, 
         request: BranchRequest
 ) -> BranchResponse:
-
+    """지점 + 정책 생성"""
     branch = await branches_crud.create(session=session, request=Branches(**request.model_dump()))
     branch_id = branch.id
     # 정책 생성
@@ -224,6 +208,7 @@ async def create_branch(
 
 
 async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:
+    """삭제된 지점 복구"""
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
@@ -231,6 +216,7 @@ async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:
 
 
 async def get_deleted_branches(*, session: AsyncSession, request: BaseSearchDto) -> BranchListResponse:
+    """삭제된 지점 조회"""
     count = await branches_crud.count_deleted_all(session=session)
     pagination = PaginationDto(total_record=count)
     branches = await branches_crud.find_deleted_all(
@@ -242,6 +228,7 @@ async def get_deleted_branches(*, session: AsyncSession, request: BaseSearchDto)
 
 
 async def delete_branch(*, session: AsyncSession, branch_id: int) -> bool:
+    """지점 삭제"""
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
@@ -249,6 +236,7 @@ async def delete_branch(*, session: AsyncSession, branch_id: int) -> bool:
 
 
 async def update_branch(*, session: AsyncSession, branch_id: int, request: BranchRequest) -> bool:
+    """지점 수정"""
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
@@ -257,51 +245,81 @@ async def update_branch(*, session: AsyncSession, branch_id: int, request: Branc
 
 
 async def get_branch_by_id(*, session: AsyncSession, branch_id: int) -> Branches:
+    """지점 조회"""
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     return branch
 
+async def get_branch_policies(*, session: AsyncSession, branch_id: int) -> CombinedPoliciesDto:
+    """지점 정책 조회"""
+    work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    holiday_work_policies = await holiday_work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    overtime_policies = await overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    allowance_policies = await allowance_crud.find_by_branch_id(session=session, branch_id=branch_id)
 
-async def get_hour_wage_templates(*, session: AsyncSession, branch_id: int) -> list[HourWageTemplateResponse]:
-    hour_wage_templates = await hour_wage_template_crud.find_all_by_branch_id(branch_id=branch_id, session=session)
-    if not hour_wage_templates:
-        return []
-    return hour_wage_templates
-
-
-async def create_hour_wage_template(*, session: AsyncSession, branch_id: int, request: HourWageTemplateRequest) -> HourWageTemplateResponse:
-    hour_wage_template = await hour_wage_template_crud.find_by_name_and_branch_id(session=session, branch_id=branch_id, name=request.name)
-    if hour_wage_template:
-        raise BadRequestError(f"{branch_id}번 지점의 시간 임금 템플릿 이름 {request.name}이 이미 존재합니다.")
-    
-    branch = await branches_crud.find_by_id_with_parts(session=session, branch_id=branch_id)
-    if branch is None:
-        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
-    if request.part_id not in [part.id for part in branch.parts]:
-        raise BadRequestError(f"{branch_id}번 지점의 파트에 {request.part_id}번 파트가 존재하지 않습니다.")
-    
-    return await hour_wage_template_crud.create(branch_id=branch_id, request=HourWageTemplate(branch_id=branch_id, **request.model_dump()), session=session)
+    return CombinedPoliciesDto(
+        work_policies=WorkPoliciesDto.model_validate(work_policies or {}),
+        auto_overtime_policies=AutoOvertimePoliciesDto.model_validate(auto_overtime_policies or {}),
+        holiday_work_policies=HolidayWorkPoliciesDto.model_validate(holiday_work_policies or {}),
+        overtime_policies=OverTimePoliciesDto.model_validate(overtime_policies or {}),
+        default_allowance_policies=DefaultAllowancePoliciesDto.model_validate(allowance_policies or {}),
+        holiday_allowance_policies=HolidayAllowancePoliciesDto.model_validate(allowance_policies or {})
+    )
 
 
-async def update_hour_wage_template(*, session: AsyncSession, branch_id: int, hour_wage_template_id: int, request: HourWageTemplateRequest) -> bool:
-    # 기존 정책 조회
-    hour_wage_template = await hour_wage_template_crud.find_by_id(branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, session=session)
+async def update_branch_policies(*, session: AsyncSession, branch_id: int, request: CombinedPoliciesDto) -> bool:
+    """지점 정책 수정"""
+    # WorkPolicies 업데이트
+    work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    if work_policies is None:
+        await work_crud.create(session=session, branch_id=branch_id, request=WorkPolicies(branch_id=branch_id, **request.work_policies.model_dump()))
+    else:
+        await work_crud.update(session=session, branch_id=branch_id, request=WorkPolicies(branch_id=branch_id, **request.work_policies.model_dump(exclude_unset=True)), old=work_policies)
 
-    if hour_wage_template is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {hour_wage_template_id}번 시간 임금 템플릿이 존재하지 않습니다.")
-    
-    branch = await branches_crud.find_by_id_with_parts(session=session, branch_id=branch_id)
-    if branch is None:
-        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
-    if request.part_id not in [part.id for part in branch.parts]:
-        raise BadRequestError(f"{branch_id}번 지점의 파트에 {request.part_id}번 파트가 존재하지 않습니다.")
-    
-    return await hour_wage_template_crud.update(branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, request=HourWageTemplate(branch_id=branch_id, **request.model_dump(exclude_unset=True)), session=session, old=hour_wage_template)
+    # AutoOvertimePolicies 업데이트
+    auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    if auto_overtime_policies is None:
+        await auto_overtime_crud.create(session=session, branch_id=branch_id, request=AutoOvertimePolicies(branch_id=branch_id, **request.auto_overtime_policies.model_dump()))
+    else:
+        await auto_overtime_crud.update(session=session, branch_id=branch_id, request=AutoOvertimePolicies(branch_id=branch_id, **request.auto_overtime_policies.model_dump(exclude_unset=True)))
 
+    # HolidayWorkPolicies 업데이트
+    holiday_work_policies = await holiday_work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    if holiday_work_policies is None:
+        await holiday_work_crud.create(session=session, branch_id=branch_id, request=HolidayWorkPolicies(branch_id=branch_id, **request.holiday_work_policies.model_dump()))
+    else:
+        await holiday_work_crud.update(session=session, branch_id=branch_id, request=HolidayWorkPolicies(branch_id=branch_id, **request.holiday_work_policies.model_dump(exclude_unset=True)))
 
-async def delete_hour_wage_template(*, session: AsyncSession, branch_id: int, hour_wage_template_id: int) -> bool:
-    hour_wage_template = await hour_wage_template_crud.find_by_id(branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, session=session)
-    if hour_wage_template is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {hour_wage_template_id}번 시간 임금 템플릿을 찾을 수 없습니다.")
-    return await hour_wage_template_crud.delete(branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, session=session)
+    # OverTimePolicies 업데이트
+    overtime_policies = await overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    if overtime_policies is None:
+        await overtime_crud.create(session=session, branch_id=branch_id, request=OverTimePolicies(branch_id=branch_id, **request.overtime_policies.model_dump()))
+    else:
+        await overtime_crud.update(session=session, branch_id=branch_id, request=OverTimePolicies(branch_id=branch_id, **request.overtime_policies.model_dump(exclude_unset=True)))
+
+    # AllowancePolicies 업데이트
+    allowance_policies = await allowance_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    if allowance_policies is None:
+        await allowance_crud.create(
+            session=session, 
+            branch_id=branch_id, 
+            request=AllowancePolicies(
+                branch_id=branch_id,
+                **request.default_allowance_policies.model_dump(),
+                **request.holiday_allowance_policies.model_dump()
+            )
+        )
+    else:
+        await allowance_crud.update(
+            session=session, 
+            branch_id=branch_id, 
+            request=AllowancePolicies(
+                branch_id=branch_id,
+                **request.default_allowance_policies.model_dump(exclude_unset=True),
+                **request.holiday_allowance_policies.model_dump(exclude_unset=True)
+            ),
+            old=allowance_policies
+        )
+    return True
