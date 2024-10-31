@@ -5,7 +5,7 @@ from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.branches.salary_template_model import SalaryTemplate
-from app.exceptions.exceptions import BadRequestError, NotFoundError
+from app.exceptions.exceptions import BadRequestError, NotFoundError, BranchNotFoundException
 
 
 async def get_all_salary_template_and_allowance_policy(
@@ -20,6 +20,9 @@ async def get_all_salary_template_and_allowance_policy(
         return SalaryTemplatesResponse(data=[], pagination=PaginationDto(total_record=0))
     total_count = await salary_template_crud.count_all_by_branch_id(session=session, branch_id=branch_id)
     branch = await branches_crud.find_by_id_with_policies(session=session, branch_id=branch_id)
+
+    if branch is None:
+        raise BranchNotFoundException(branch_id)
 
     data = [SalaryTemplateResponse(
         **SalaryTemplateResponse.model_validate(salary_template).model_dump(exclude_none=True),

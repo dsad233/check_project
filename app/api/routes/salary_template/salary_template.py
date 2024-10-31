@@ -13,6 +13,7 @@ from app.middleware.tokenVerify import validate_token, get_current_user_id
 from app.models.branches.salary_template_model import SalaryTemplate
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
+from app.exceptions.exceptions import BranchNotFoundException
 
 
 router = APIRouter(dependencies=[Depends(validate_token)])
@@ -26,7 +27,18 @@ async def get_salary_templates(
     session: AsyncSession = Depends(get_db),
     request: BaseSearchDto = Depends(BaseSearchDto)
 ) -> SalaryTemplatesResponse:
-    return await salary_template_service.get_all_salary_template_and_allowance_policy(session=session, branch_id=branch_id, request=request)
+    try:
+        return await salary_template_service.get_all_salary_template_and_allowance_policy(
+            session=session,
+            branch_id=branch_id,
+            request=request)
+    
+    except Exception as error:
+        if isinstance(error, BranchNotFoundException):
+            raise HTTPException(status_code=404, detail=str(error))
+        
+        print(f"An error occurred: {error}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 
 @router.post("/create", response_model=SalaryTemplateResponse, summary="급여 템플릿 생성")
