@@ -26,8 +26,8 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 # 리포지토리 의존성 함수 정의
 def get_part_timer_repository(db: AsyncSession = Depends(get_db)) -> IPartTimerRepository:
     # TODO: 실제 DB 레포지토리 구현
-    # return PartTimerRepository(db)
-    return MockPartTimerRepository.get_instance()
+    return PartTimerRepository(db)
+    # return MockPartTimerRepository.get_instance()
 
 @router.get("/part-timers", summary="파트타이머 월간 근로 관리 조회", description="지점 및 파트별 대한 파트타이머 근로 관리 조회 API")
 @available_higher_than(Role.ADMIN)

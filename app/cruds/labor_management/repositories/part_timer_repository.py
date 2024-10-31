@@ -10,7 +10,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.enums.users import EmploymentStatus
 from app.models.users.users_model import Users
-from sqlalchemy import Select, Time, and_, case, extract, func, select, update
+from sqlalchemy import Select, Time, and_, case, exists, extract, func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users.users_model import Users
@@ -247,42 +247,29 @@ class PartTimerRepository(IPartTimerRepository):
         return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
 
     async def update_part_timer_work_history(self, commute_id: int, correction_data: PartTimerCommuteHistoryCorrectionRequestDTO) -> PartTimerCommuteHistoryCorrectionResponseDTO:       
-        response = PartTimerCommuteHistoryCorrectionResponseDTO()
-        response.commute_id = commute_id
-        query = (
-            update(Commutes)
-            .where(Commutes.id == commute_id)
-            .values(
-                clock_in=correction_data.work_start_set_time,
-                clock_out=correction_data.work_end_set_time
-            )
-        )
-
-        await self.session.execute(query)
-        await self.session.commit()
-
-        response.work_start_set_time = correction_data.work_start_set_time
-        response.work_end_set_time = correction_data.work_end_set_time
-        response.work_hours = correction_data.work_end_set_time - correction_data.work_start_set_time - correction_data.rest_minutes
+        response = PartTimerCommuteHistoryCorrectionResponseDTO.Builder(commute_id, correction_data) \
+            .set_work_time(correction_data.work_start_set_time, correction_data.work_end_set_time) \
+            .set_rest_minutes(correction_data.rest_minutes) \
+            .build()
         
         query = (
             update(PartTimerAdditionalInfo)
             .where(PartTimerAdditionalInfo.commute_id == commute_id)
             .values(
+                work_type=correction_data.work_type,
                 rest_minutes=correction_data.rest_minutes,
-                part_detail=correction_data.part_detail
+                work_set_start_time=correction_data.work_start_set_time,
+                work_set_end_time=correction_data.work_end_set_time
             )
         )
-        
-        response.part_detail = correction_data.part_detail
-        response.rest_minutes = correction_data.rest_minutes
 
         await self.session.execute(query)
         await self.session.commit()
+
         return response
     
     async def exist_part_timer_work_history(self, commute_id: int) -> bool:
-        query = select(Commutes.id).filter(Commutes.id == commute_id).exists()
+        query = select(exists().where(PartTimerAdditionalInfo.commute_id == commute_id))
         result = await self.session.execute(query)
         return result.scalar()
     
