@@ -45,17 +45,17 @@ class UserManagementContract:
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user),
     ):
-        user = await find_user_by_id_with_contracts(session=db, user_id=user_id)
-        if not user:
-            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        raise NotImplementedError("아직 구현되지 않았습니다.")
 
-        data = ResponseUserContracts.build(user.contracts_user_id)
-
-        return ResponseDTO(
-            status="SUCCESS",
-            message="성공적으로 계약서를 가져왔습니다.",
-            data=data,
-        )
+        # user = await find_user_by_id_with_contracts(session=db, user_id=user_id)
+        # if not user:
+        #     raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        #
+        # return ResponseDTO(
+        #     status="SUCCESS",
+        #     message="성공적으로 근로 계약 기록을 조회하였습니다.",
+        #     data=data,
+        # )
 
     @router.post("", response_model=ResponseDTO[ResponseAddedContracts])
     async def add_user_contract(

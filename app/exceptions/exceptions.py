@@ -33,6 +33,12 @@ class ForbiddenError(CustomHTTPException):
     def __init__(self, detail: str):
         super().__init__(status_code=403, detail=detail, error_code="FORBIDDEN")
 
+class BranchNotFoundException(Exception):
+    def __init__(self, branch_id: int):
+        self.branch_id = branch_id
+        self.message = f'Branch not found with id: {branch_id}'
+        super().__init__(self.message)
+
 def add_exception_handlers(app: FastAPI):
     @app.exception_handler(CustomHTTPException)
     async def custom_exception_handler(request: Request, exc: CustomHTTPException):

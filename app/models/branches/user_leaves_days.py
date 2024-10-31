@@ -20,23 +20,20 @@ class UserLeavesDays(Base):
         Index("idx_user_leaves_days_user_id", "user_id"),
     )
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
-    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)
-    leave_category_id = Column(Integer, ForeignKey("leave_categories.id"), nullable=False)
-    leave_history_id = Column(Integer, ForeignKey("leave_histories.id"), nullable=False)
-    increased_days = Column(Numeric(10, 2), default=0.00, nullable=False)
-    total_increased_days = Column(Numeric(10, 2), default=0.00, nullable=False)
-    decreased_days = Column(Numeric(10, 2), default=0.00, nullable=False)
-    total_decreased_days = Column(Numeric(10, 2), default=0.00, nullable=False)
-    description = Column(String(255), nullable=True)
-    is_paid = Column(Boolean, default=True)
-    is_approved = Column(Boolean, default=False)
-    total_leave_days = Column(Numeric(10, 2), default=0.00, nullable=False)
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    deleted_yn = Column(String(1), default="N")
+    id = Column(Integer, primary_key=True, autoincrement=True)  # 고유 식별자
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)  # 사용자 ID
+    branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)  # 지점 ID
+    approver_id = Column(Integer, ForeignKey("users.id"), nullable=True)  # 승인자 ID
+    leave_category_id = Column(Integer, ForeignKey("leave_categories.id"), nullable=False)  # 휴가 카테고리 ID
+    leave_history_id = Column(Integer, ForeignKey("leave_histories.id"), nullable=False)  # 휴가 이력 ID
+    increased_days = Column(Numeric(10, 2), default=0.00, nullable=False)  # 증가된 휴가 일수
+    decreased_days = Column(Numeric(10, 2), default=0.00, nullable=False)  # 감소된 휴가 일수
+    is_paid = Column(Boolean, default=True)  # 유급 휴가 여부
+    is_approved = Column(Boolean, default=False)  # 승인 여부
+    total_leave_days = Column(Numeric(10, 2), default=0.00, nullable=False)  # 총 휴가 일수
+    created_at = Column(DateTime, default=datetime.now)  # 생성 일시
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)  # 수정 일시
+    deleted_yn = Column(String(1), default="N")  # 삭제 여부 (Y/N)
 
     
     

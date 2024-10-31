@@ -92,11 +92,13 @@ class RequestPatchWorkContract(BaseModel):
 
 class ResponseCreatedWorkContractDto(BaseModel):
     work_contract_id: int
+    work_contract_history_id: int
 
     @classmethod
-    def build(cls, work_contract_id: int):
+    def build(cls, work_contract_id: int, work_contract_history_id: int):
         return cls(
-            work_contract_id=work_contract_id
+            work_contract_id=work_contract_id,
+            work_contract_history_id=work_contract_history_id
         )
 
 class UserDto(BaseModel):

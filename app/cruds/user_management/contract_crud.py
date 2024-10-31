@@ -58,7 +58,7 @@ async def find_contract_by_modusign_id(
         .options(joinedload(Contract.user))
         .options(joinedload(Contract.manager))
         .options(joinedload(Contract.work_contract))
-        .options(joinedload(Contract.work_contract_history))
+        # .options(joinedload(Contract.work_contract_histories))
         .where(
             Contract.modusign_id == modusign_id,
             Contract.deleted_yn == "N"

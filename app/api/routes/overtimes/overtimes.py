@@ -39,13 +39,14 @@ async def create_overtime(
         #     select(Overtimes)
         #     .where(
         #         Overtimes.applicant_id == current_user_id,
-        #         Overtimes.application_date == overtime.application_date,
+        #         Overtimes.application_date == datetime.now(UTC).date(),
+        #         Overtimes.overtime_hours == overtime.overtime_hours,
         #         Overtimes.deleted_yn == "N"
         #     )
         #     .limit(1)
         # )
         # if existing_overtime.scalar_one_or_none() is not None:
-        #     raise HTTPException(status_code=400, detail="이미 해당 날짜에 초과근무 신청을 했습니다.")
+        #     raise HTTPException(status_code=400, detail=f"이미 오늘 {overtime.overtime_hours}분 초과근무 신청을 했습니다.")
             
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -56,8 +57,7 @@ async def create_overtime(
 
         db.add(new_overtime)
         await db.commit()
-        await db.refresh(new_overtime)
-
+        
         return {
             "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
         }
@@ -179,6 +179,8 @@ async def approve_overtime(
 
             # 정책 조회
             find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+            find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(Branches.id == result_user.branch_id, result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+            print(f"find_overtime_policies: {find_overtime_policies.first()}")
             result_overtime_policies = find_overtime_policies.first()
 
             if result_overtime_policies is None:
@@ -330,16 +332,15 @@ async def get_overtimes(
     ):
     try:
         if date is None:
-            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
-            current_weekday = date_obj.weekday()
-            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            # weekday()가 0(월요일)~6(일요일)을 반환하므로, 
+            # 일요일부터 시작하려면 현재 요일에 1을 더한 후 7로 나눈 나머지를 사용
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
-            # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
         else:
             date_obj = date
-            current_weekday = date_obj.weekday()
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
@@ -454,23 +455,22 @@ async def get_overtimes_approved_list(
     phone_number: Optional[str] = None, 
     branch_id: Optional[int] = None, 
     part_id: Optional[int] = None,
-    user_deleted_yn: Optional[str] = None,
+    is_deleted: Optional[str] = None,
     page: int = 1,
     size: int = 10,
     db: AsyncSession = Depends(get_db)
     ):
     try:
         if date is None:
-            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
-            current_weekday = date_obj.weekday()
-            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            # weekday()가 0(월요일)~6(일요일)을 반환하므로, 
+            # 일요일부터 시작하려면 현재 요일에 1을 더한 후 7로 나눈 나머지를 사용
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
-            # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
         else:
             date_obj = date
-            current_weekday = date_obj.weekday()
+            current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
@@ -482,7 +482,9 @@ async def get_overtimes_approved_list(
             Parts, Users.part_id == Parts.id
         ).where(
             OverTime_History.deleted_at == "N",
-            Users.deleted_yn == "N"
+            Users.deleted_yn == "N",
+            OverTime_History.created_at >= date_start_day,
+            OverTime_History.created_at <= date_end_day
         )
   
         # 이름 검색 조건
@@ -498,8 +500,8 @@ async def get_overtimes_approved_list(
         if part_id:
             base_query = base_query.where(Parts.id == part_id)
         # 사용자 삭제 여부 검색 조건
-        if user_deleted_yn:
-            base_query = base_query.where(Users.deleted_yn == user_deleted_yn)
+        if is_deleted == "Y":
+            base_query = base_query.where(Users.resignation_date != None)
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
@@ -514,6 +516,8 @@ async def get_overtimes_approved_list(
             "id": history.id,
             "user_id": user.id,
             "user_name": user.name,
+            "user_hire_date": user.hire_date,
+            "user_resignation_date": user.resignation_date,
             "user_phone_number": user.phone_number,
             "branch_id": branch.id,
             "branch_name": branch.name,
