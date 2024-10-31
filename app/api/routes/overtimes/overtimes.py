@@ -455,7 +455,7 @@ async def get_overtimes_approved_list(
     phone_number: Optional[str] = None, 
     branch_id: Optional[int] = None, 
     part_id: Optional[int] = None,
-    user_deleted_yn: Optional[str] = None,
+    is_deleted: Optional[str] = None,
     page: int = 1,
     size: int = 10,
     db: AsyncSession = Depends(get_db)
@@ -473,8 +473,6 @@ async def get_overtimes_approved_list(
             current_weekday = (date_obj.weekday() + 1) % 7
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
-            
-        print(f"date_start_day: {date_start_day}, date_end_day: {date_end_day}")
 
         base_query = select(OverTime_History, Users, Branches, Parts).join(
             Users, OverTime_History.user_id == Users.id
@@ -502,8 +500,8 @@ async def get_overtimes_approved_list(
         if part_id:
             base_query = base_query.where(Parts.id == part_id)
         # 사용자 삭제 여부 검색 조건
-        if user_deleted_yn:
-            base_query = base_query.where(Users.deleted_yn == user_deleted_yn)
+        if is_deleted == "Y":
+            base_query = base_query.where(Users.resignation_date != None)
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
@@ -518,6 +516,8 @@ async def get_overtimes_approved_list(
             "id": history.id,
             "user_id": user.id,
             "user_name": user.name,
+            "user_hire_date": user.hire_date,
+            "user_resignation_date": user.resignation_date,
             "user_phone_number": user.phone_number,
             "branch_id": branch.id,
             "branch_name": branch.name,
