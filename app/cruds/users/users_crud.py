@@ -2,7 +2,7 @@ from datetime import datetime
 import logging
 from typing import Optional
 from fastapi import Depends
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
@@ -62,15 +62,18 @@ async def add_user(
         raise e
 
 async def plus_total_leave_days(
-    *, session: AsyncSession, user: Users, count: int
-) -> Users:
-    user.total_leave_days += count
-    await session.flush()
+    *, session: AsyncSession, user_id: int, count: int
+) -> bool:
+    await session.execute(
+        sa_update(Users)
+        .where(Users.id == user_id)
+        .values(
+            total_leave_days=Users.total_leave_days + count,
+            updated_at=datetime.now()
+        )
+    )
     await session.commit()
-    await session.refresh(user)
-    findUser = await find_by_id(session=session, user_id=user.id)
-    print(findUser.total_leave_days)
-    return user
+    return True
 
 # async def minus_remaining_annual_leave(
 #     *, session: AsyncSession, user: Users, count: int
@@ -84,15 +87,21 @@ async def plus_total_leave_days(
 #     return user
 
 async def minus_total_leave_days(
-    *, session: AsyncSession, user: Users, count: int
-) -> Users:
-    if user.total_leave_days < count:
-        raise BadRequestError(detail="잔여 연차가부족합니다.")
-    user.total_leave_days -= count
-    await session.flush()
+    *, session: AsyncSession, user_id: int, count: int
+) -> bool:
+    # 연차 차감
+    await session.execute(
+        sa_update(Users)
+        .where(Users.id == user_id)
+        .values(
+            total_leave_days=Users.total_leave_days - count,
+            updated_at=datetime.now()
+        )
+        .returning(Users)
+    )
+    # 변경사항 저장
     await session.commit()
-    await session.refresh(user)
-    return user
+    return True
 
 async def get_users_count(
     *, session: AsyncSession, branch_id: int

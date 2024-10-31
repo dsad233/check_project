@@ -31,6 +31,8 @@ from app.enums.parts import PartAutoAnnualLeaveGrant
 from app.enums.branches import BranchHistoryType
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime
+from app.exceptions.exceptions import NotFoundError
+
 
 async def get_auto_leave_policies_and_parts(*, session: AsyncSession, branch_id: int) -> AutoLeavePoliciesAndPartsDto:
     
@@ -215,3 +217,43 @@ async def create_branch(
         await condition_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
 
     return True
+
+
+async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:
+    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    if branch is None:
+        raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
+    return await branches_crud.revive(session=session, branch_id=branch_id)
+
+
+async def get_deleted_branches(*, session: AsyncSession, request: BaseSearchDto) -> BranchListResponse:
+    count = await branches_crud.count_deleted_all(session=session)
+    pagination = PaginationDto(total_record=count)
+    branches = await branches_crud.find_deleted_all(
+        session=session, request=request
+    )
+    if branches is None:
+        branches = []
+    return BranchListResponse(data=branches, pagination=pagination)
+
+
+async def delete_branch(*, session: AsyncSession, branch_id: int) -> bool:
+    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    if branch is None:
+        raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
+    return await branches_crud.delete(session=session, branch_id=branch_id)
+
+
+async def update_branch(*, session: AsyncSession, branch_id: int, request: BranchRequest) -> bool:
+    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    if branch is None:
+        raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
+    
+    return await branches_crud.update(session=session, branch_id=branch_id, request=Branches(**request.model_dump()), old=branch)
+
+
+async def get_branch_by_id(*, session: AsyncSession, branch_id: int) -> Branches:
+    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    if branch is None:
+        raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
+    return branch

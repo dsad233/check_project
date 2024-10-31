@@ -1,7 +1,8 @@
 from app.cruds.users import users_crud
 from app.schemas.users_schemas import UserLeaveResponse, UsersLeaveResponse
+from app.schemas.branches_schemas import ManualGrantRequest
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.exceptions.exceptions import NotFoundError
+from app.exceptions.exceptions import NotFoundError, BadRequestError
 from app.common.dto.pagination_dto import PaginationDto
 from app.common.dto.search_dto import BaseSearchDto
 from app.models.users.users_model import Users
@@ -26,22 +27,30 @@ async def get_branch_users_leave(
 
 # 잔여 연차 수 증가
 async def plus_total_leave_days(
-    *, session: AsyncSession, user_id: int, count: int
+    *, session: AsyncSession, request: ManualGrantRequest
 ) -> bool:
-    user = await users_crud.find_by_id(session=session, user_id=user_id)
-    if not user:
-        raise NotFoundError(detail="유저를 찾을 수 없습니다.")
-    await users_crud.plus_total_leave_days(session=session, user=user, count=count)
+    if request.user_ids:
+        for user_id in request.user_ids:
+            user = await users_crud.find_by_id(session=session, user_id=user_id)
+            if not user:
+                raise NotFoundError(detail=f"{user_id}번 유저를 찾을 수 없습니다.")
+            if user.total_leave_days + request.count > 25:
+                raise BadRequestError(detail="연차를 초과해서 부여할 수 없습니다.")
+            await users_crud.plus_total_leave_days(session=session, user_id=user_id, count=request.count)
     return True
 
 # 잔여 연차 수 감소
 async def minus_total_leave_days(
-    *, session: AsyncSession, user_id: int, count: int
+    *, session: AsyncSession, request: ManualGrantRequest
 ) -> bool:
-    user = await users_crud.find_by_id(session=session, user_id=user_id)
-    if not user:
-        raise NotFoundError(detail="유저를 찾을 수 없습니다.")
-    await users_crud.minus_total_leave_days(session=session, user=user, count=count)
+    if request.user_ids:
+        for user_id in request.user_ids:
+            user = await users_crud.find_by_id(session=session, user_id=user_id)
+            if not user:
+                raise NotFoundError(detail=f"{user_id}번 유저를 찾을 수 없습니다.")
+            if user.total_leave_days < request.count:
+                raise BadRequestError(detail="잔여 연차가 부족합니다.")
+            await users_crud.minus_total_leave_days(session=session, user_id=user_id, count=request.count)
     return True
 
 
