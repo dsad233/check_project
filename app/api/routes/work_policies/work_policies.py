@@ -60,7 +60,7 @@ from app.schemas.branches_schemas import (
 from app.service import branch_service
 logger = logging.getLogger(__name__)
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 
 @router.get("/get", response_model=CombinedPoliciesDto, summary="근무정책 조회")

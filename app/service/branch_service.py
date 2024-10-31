@@ -281,66 +281,15 @@ async def update_branch_policies(*, session: AsyncSession, branch_id: int, reque
         # WorkPolicies 업데이트
         work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
         if work_policies is None:
-            new_policy = WorkPolicies(
-                branch_id=branch_id,
-                weekly_work_days=request.work_policies.weekly_work_days,
-                deleted_yn="N"
-            )
-            session.add(new_policy)
-            await session.flush()
-
-            # 관계형 데이터 처리
-            for schedule_dto in request.work_policies.work_schedules:
-                new_schedule = WorkSchedule(
-                    work_policy_id=new_policy.id,
-                    day_of_week=schedule_dto.day_of_week,
-                    start_time=schedule_dto.start_time,
-                    end_time=schedule_dto.end_time,
-                    is_holiday=schedule_dto.is_holiday
-                )
-                new_policy.work_schedules.append(new_schedule)
-
-            for break_dto in request.work_policies.break_times:
-                new_break = BreakTime(
-                    work_policy_id=new_policy.id,
-                    is_doctor=break_dto.is_doctor,
-                    break_type=break_dto.break_type,
-                    start_time=break_dto.start_time,
-                    end_time=break_dto.end_time
-                )
-                new_policy.break_times.append(new_break)
+            await work_crud.create(session=session, branch_id=branch_id)
+            work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+            if work_policies is None:
+                raise HTTPException(status_code=500, detail="근무정책 생성에 실패하였습니다.")
         else:
-            # 기존 정책 업데이트
-            update_policy = WorkPolicies(
-                branch_id=branch_id,
-                weekly_work_days=request.work_policies.weekly_work_days
-            )
-
-            # 관계형 데이터 업데이트
-            update_policy.work_schedules = [
-                WorkSchedule(
-                    day_of_week=s.day_of_week,
-                    start_time=s.start_time,
-                    end_time=s.end_time,
-                    is_holiday=s.is_holiday
-                )
-                for s in request.work_policies.work_schedules
-            ]
-
-            update_policy.break_times = [
-                BreakTime(
-                    is_doctor=b.is_doctor,
-                    break_type=b.break_type,
-                    start_time=b.start_time,
-                    end_time=b.end_time
-                )
-                for b in request.work_policies.break_times
-            ]
-
             await work_crud.update(
                 session=session,
                 branch_id=branch_id,
-                work_policies_update=update_policy
+                work_policies_update=request.work_policies  # WorkPoliciesUpdateDto 타입으로 전달
             )
 
         # AutoOvertimePolicies 업데이트
@@ -362,7 +311,7 @@ async def update_branch_policies(*, session: AsyncSession, branch_id: int, reque
                     branch_id=branch_id, 
                     **request.auto_overtime_policies.model_dump(exclude_unset=True)
                 ),
-                old=auto_overtime_policies  # old 매개변수 추가
+                old=auto_overtime_policies
             )
 
         # HolidayWorkPolicies 업데이트
@@ -384,7 +333,7 @@ async def update_branch_policies(*, session: AsyncSession, branch_id: int, reque
                     branch_id=branch_id, 
                     **request.holiday_work_policies.model_dump(exclude_unset=True)
                 ),
-                old=holiday_work_policies  # old 매개변수 추가
+                old=holiday_work_policies
             )
 
         # OverTimePolicies 업데이트
@@ -406,7 +355,7 @@ async def update_branch_policies(*, session: AsyncSession, branch_id: int, reque
                     branch_id=branch_id, 
                     **request.overtime_policies.model_dump(exclude_unset=True)
                 ),
-                old=overtime_policies  # old 매개변수 추가
+                old=overtime_policies
             )
 
         # AllowancePolicies 업데이트

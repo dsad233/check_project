@@ -114,7 +114,7 @@ async def login(login: Login, res : Response, users: AsyncSession = Depends(get_
 @router.post("/logout")
 async def logout(res: Response):
     try:
-        res.delete_cookie("authorization")
+        res.delete_cookie("Authorization")
         return {"message": "로그아웃 완료"}
     except Exception as err:
         print("에러가 발생하였습니다.")
