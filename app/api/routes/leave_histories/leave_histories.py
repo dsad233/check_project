@@ -130,7 +130,7 @@ async def get_leave_histories(
             base_query = base_query.where(LeaveHistories.status.ilike(f"%{search.status}%"))
         
         skip = (page - 1) * size
-        stmt = base_query.order_by(LeaveHistories.application_date.desc())\
+        stmt = base_query.order_by(LeaveHistories.created_at.desc())\
             .offset(skip)\
             .limit(size)
             
@@ -253,7 +253,7 @@ async def get_approve_leave(
             base_query = base_query.where(LeaveHistories.status.ilike(f"%{search.status}%"))
         
         skip = (page - 1) * size
-        stmt = base_query.order_by(LeaveHistories.application_date.desc())\
+        stmt = base_query.order_by(LeaveHistories.created_at.desc())\
             .offset(skip)\
             .limit(size)
             

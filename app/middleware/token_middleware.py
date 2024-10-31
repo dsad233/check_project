@@ -24,8 +24,9 @@ class TokenMiddleware(BaseHTTPMiddleware):
 
                 # 인증이 필요없는 경로들
                 public_paths = [
+                    "/callback",
                     "/auth/login",
-                    "/health",
+                    "/healthcheck",
                     "/docs",
                     "/openapi.json",
                     "/redoc",

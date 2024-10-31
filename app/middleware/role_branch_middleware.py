@@ -16,8 +16,9 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
 
         # public paths는 TokenMiddleware와 동일하게 유지
         self.PUBLIC_PATHS = [
+            "/callback",
             "/auth/login",
-            "/health",
+            "/healthcheck",
             "/docs",
             "/openapi.json",
             "/redoc",
@@ -42,6 +43,11 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
         self.ADMIN_LEVEL_PATHS = {
             "/branches",
             "/menu-management",
+            "/labor-management",
+            "/salary-bracket",
+            "/overtimes/approve",
+            "/overtimes/reject"
+            "/overtimes/approved-list"
         }
 
         # # 통합 관리자 이상 접근 가능 경로

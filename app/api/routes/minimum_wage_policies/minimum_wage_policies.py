@@ -12,10 +12,11 @@ from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 
-@router.get("/get", response_model=MinimumWageResponseDto)
+@router.get("/get", response_model=MinimumWageResponseDto, summary="최저시급 정책 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_minimum_wage_policy(session: AsyncSession = Depends(get_db)) -> MinimumWageResponseDto:
     minimum_wage_policy = await minimum_wage_policies_crud.find(session=session)
     if minimum_wage_policy is None:
@@ -23,7 +24,7 @@ async def get_minimum_wage_policy(session: AsyncSession = Depends(get_db)) -> Mi
     return minimum_wage_policy
 
 
-@router.patch("/update", response_model=str)
+@router.patch("/update", response_model=str, summary="최저시급 정책 수정")
 @available_higher_than(Role.MSO)
 async def update_minimum_wage_policy(
     *,

@@ -36,26 +36,23 @@ async def get_all_policies(db: Session, branch_id: int) -> Dict[str, Any]:
     )
     result = await db.execute(salary_templates_query)
     salary_templates_policies = []
-    part_name = []
+    
     for row in result:
         policy = row[0]  # SalaryTemplatesPolicies 조회결과
         policy.part_name = row[1] # part_id와 일치하는 part name
         salary_templates_policies.append(policy)
-        part_name.append(row[1])
+        
     
     allowance_query = select(AllowancePolicies).filter(
         AllowancePolicies.branch_id == branch_id,
         AllowancePolicies.deleted_yn == "N"
     )
     allowance_policies = (await db.execute(allowance_query)).scalar_one_or_none()
-
-    print(part_name)
     
     return {
         "parttimer_policies" : parttimer_policies,
         "salary_templates_policies" : salary_templates_policies,
         "allowance_policies" : allowance_policies,
-        "part_name" : part_name
     }
 
 

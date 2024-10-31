@@ -3,6 +3,7 @@ from datetime import datetime
 from typing import Optional
 from fastapi import Depends
 from sqlalchemy import func, select, update as sa_update
+from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
 
@@ -47,6 +48,19 @@ async def find_by_name_and_branch_id(
     )
     result = await session.execute(statement)
     return result.scalar_one_or_none()
+
+
+async def find_all_with_excluded_parts(
+    *, session: AsyncSession, branch_id: int
+) -> list[LeaveCategory]:
+    
+    stmt = (
+        select(LeaveCategory).options(selectinload(LeaveCategory.excluded_parts))
+        .where(LeaveCategory.branch_id == branch_id)
+        .where(LeaveCategory.deleted_yn == "N")
+    )
+    result = await session.execute(stmt)
+    return result.scalars().all()
 
 
 async def find_all_by_branch_id(

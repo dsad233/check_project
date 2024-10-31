@@ -9,8 +9,9 @@ class WorkContract(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # 계약일
-    contract_start_date = Column(Date, nullable=False)
-    contract_end_date = Column(Date, nullable=True)
+    contract_creation_date = Column(Date, nullable=False, default=datetime.now(UTC)) # 계약서 작성일
+    contract_start_date = Column(Date, nullable=False) # 계약 시작일
+    contract_end_date = Column(Date, nullable=True) # 계약 종료일
     is_fixed_rest_day = Column(Boolean, nullable=False, default=False)
 
     #근로 기본 설정

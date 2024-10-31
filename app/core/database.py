@@ -43,7 +43,7 @@ async def get_db():
 # Alembic 설정 및 마이그레이션 실행 함수
 def run_migrations():
     alembic_cfg = Config("alembic.ini")
-    command.upgrade(alembic_cfg, "head")
+    # command.upgrade(alembic_cfg, "head")
 
 # FastAPI 애플리케이션 시작 시 실행될 함수
 async def startup_event():

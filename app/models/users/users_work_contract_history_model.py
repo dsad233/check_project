@@ -1,23 +1,22 @@
 from datetime import datetime
 
-from sqlalchemy import Column, Integer, ForeignKey, Date, DateTime
+from sqlalchemy import Column, Integer, ForeignKey, Date, DateTime, Text, String
 
 from app.core.database import Base
 
 
-class UserWorkContractHistoryModel(Base):
-    __tablename__ = 'user_work_contract_history'
+class WorkContractHistory(Base):
+    __tablename__ = 'work_contract_history'
 
     id = Column(Integer, primary_key=True)
     user_id = Column(Integer, ForeignKey('users.id'))
     work_contract_id = Column(Integer, ForeignKey('work_contract.id'))
+    # salary_contract_id # 추후 급여 로직 구현 시 추가
 
-    start_date = Column(Date)
-    end_date = Column(Date)
+    # 변경 사유, 비고
+    change_reason = Column(Text, nullable=True)
+    note = Column(Text, nullable=True)
 
-    created_at = Column(DateTime, default=datetime.datetime.now)
-    updated_at = Column(DateTime, default=datetime.datetime.now, onupdate=datetime.datetime.now)
-
-    # 추후 __init__ 파일에 추가
-    # user = relationship("UserModel", back_populates="work_contract_history")
-    # contract = relationship("WorkContractModel", back_populates="user_work_contract_history")
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default='N')

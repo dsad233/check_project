@@ -11,7 +11,7 @@ class PartTimerCommuteHistoryCorrectionResponseDTO(BaseModel):
     work_end_set_time: time 
     work_hours: float
     rest_minutes: int
-    total_wage: int
+    total_wage: int | None # 프론트에서 전체 목록 조회로 임금 계산은 보류
 
     class Builder:
         def __init__(self, commute_id: int, requestDTO: PartTimerCommuteHistoryCorrectionRequestDTO):
@@ -30,7 +30,7 @@ class PartTimerCommuteHistoryCorrectionResponseDTO(BaseModel):
         def set_work_time(self, work_start_set_time: time, work_end_set_time: time) -> 'PartTimerCommuteHistoryCorrectionResponseDTO.Builder':
             self._work_start_set_time = work_start_set_time
             self._work_end_set_time = work_end_set_time
-            self._work_hours = (work_end_set_time.hour * 60 + work_end_set_time.minute - work_start_set_time.hour * 60 - work_start_set_time.minute) / 60
+            self._work_hours = work_end_set_time.hour + work_end_set_time.minute / 60 - work_start_set_time.hour - work_start_set_time.minute / 60
             return self
 
         def set_rest_minutes(self, rest_minutes: int) -> 'PartTimerCommuteHistoryCorrectionResponseDTO.Builder':
