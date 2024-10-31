@@ -1,14 +1,9 @@
-import logging
 from datetime import datetime
-from typing import List, Optional
-from fastapi import Depends, HTTPException
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
+from typing import Optional
 from sqlalchemy import select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.parts.hour_wage_template_model import HourWageTemplate
-from app.exceptions.exceptions import BadRequestError, NotFoundError
 
-logger = logging.getLogger(__name__)
 
 async def create(
     *, branch_id: int, session: AsyncSession, request: HourWageTemplate

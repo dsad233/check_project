@@ -66,67 +66,6 @@ class AutoLeavePoliciesAndPartsDto(BaseModel):
     manual_based_parts: list[PartIdWithName] = []
 
 
-class SalaryTemplateRequest(BaseModel):
-    id: Optional[int] = Field(default=None, description="템플릿ID")
-    part_id: int = Field(description="직책ID")
-    name: str = Field(description="템플릿명")
-    is_january_entry: bool = Field(description="1월입사여부")
-    weekly_work_days: int = Field(description="주간근무일수")
-    month_salary: int = Field(description="월급")
-    included_holiday_allowance: bool = Field(description="휴일수당포함여부")
-    included_job_allowance: bool = Field(description="직책수당포함여부")
-    hour_wage: int = Field(description="시급")
-    basic_salary: int = Field(description="기본급여")
-    contractual_working_hours: int = Field(description="소정근로시간")
-    weekly_rest_hours: int = Field(description="주휴시간")
-    annual_salary: int = Field(description="연봉")
-    comprehensive_overtime_allowance: int = Field(description="포괄산정연장근무수당")
-    comprehensive_overtime_hour: int = Field(description="포괄산정연장근무시간")
-    annual_leave_allowance: int = Field(description="연차수당")
-    annual_leave_allowance_hour: int = Field(description="연차수당시간")
-    annual_leave_allowance_day: int = Field(description="연차수당일수")
-    hire_year: int = Field(descriptio="입사년도 ( 몇년도 기준 임금정책인지 )")
-
-
-
-class SalaryTemplateResponse(BaseModel):
-    id: Optional[int] = Field(default=None, description="템플릿ID")
-    part_id: int = Field(description="직책ID")
-    part_name: Optional[str] = Field(description="직책명", default=None)
-    name: str = Field(description="템플릿명")
-    is_january_entry: bool = Field(description="1월입사여부")
-    weekly_work_days: int = Field(description="주간근무일수")
-    month_salary: int = Field(description="월급")
-    included_holiday_allowance: bool = Field(description="휴일수당포함여부")
-    included_job_allowance: bool = Field(description="직책수당포함여부")
-    hour_wage: int = Field(description="시급")
-    basic_salary: int = Field(description="기본급여")
-    contractual_working_hours: int = Field(description="소정근로시간")
-    weekly_rest_hours: int = Field(description="주휴시간")
-    annual_salary: int = Field(description="연봉")
-    comprehensive_overtime_allowance: int = Field(description="포괄산정연장근무수당")
-    comprehensive_overtime_hour: int = Field(description="포괄산정연장근무시간")
-    annual_leave_allowance: int = Field(description="연차수당")
-    annual_leave_allowance_hour: int = Field(description="연차수당시간")
-    annual_leave_allowance_day: int = Field(description="연차수당일수")
-    hire_year: int = Field(descriptio="입사년도 ( 몇년도 기준 임금정책인지 )")
-
-    holiday_allowance: Optional[int] = Field(description="휴일수당", default=None)
-    job_allowance: Optional[int] = Field(description="직무(직책)수당", default=None)
-    meal_allowance: Optional[int] = Field(description="식대", default=None)
-
-    class Config:
-        from_attributes = True
-
-
-class SalaryTemplatesResponse(BaseModel):
-    data: list[SalaryTemplateResponse]
-    pagination: PaginationDto
-
-    class Config:
-        from_attributes = True
-
-
 class BranchHistoryResponse(BaseModel):
     snapshot_id: str
     history: dict
@@ -187,63 +126,106 @@ class ManualGrantRequest(BaseModel):
     memo: Optional[str] = None
 
 
-class HourWageTemplateRequest(BaseModel):
-    part_id: Optional[int] = Field(description="직책 ID")
-    name: str = Field(description="템플릿 명")
-    start_time: time = Field(description="시작 시간")
-    end_time: time = Field(description="종료 시간")
-    hour_wage: int = Field(description="시급")
-    home_hour_wage: int = Field(description="재택근무시급 시급")
+class WorkPoliciesDto(BaseModel):
+    weekly_work_days: int = Field(description="주 근무일수", default=5)
+    weekday_start_time: time = Field(description="평일 시작 시간", default=time(9, 0))
+    weekday_end_time: time = Field(description="평일 종료 시간", default=time(18, 0))
+    weekday_is_holiday: bool = Field(description="평일 휴일 여부", default=False)
+    saturday_start_time: time = Field(description="토요일 시작 시간", default=time(0, 0))
+    saturday_end_time: time = Field(description="토요일 종료 시간", default=time(0, 0))
+    saturday_is_holiday: bool = Field(description="토요일 휴일 여부", default=True)
+    sunday_start_time: time = Field(description="일요일 시작 시간", default=time(0, 0))
+    sunday_end_time: time = Field(description="일요일 종료 시간", default=time(0, 0))
+    sunday_is_holiday: bool = Field(description="일요일 휴일 여부", default=True)
+    doctor_lunch_start_time: time = Field(description="의사 휴게 시작 시간", default=time(0, 0))
+    doctor_lunch_end_time: time = Field(description="의사 휴게 종료 시간", default=time(0, 0))
+    doctor_dinner_start_time: time = Field(description="의사 휴게 시작 시간", default=time(0, 0))
+    doctor_dinner_end_time: time = Field(description="의사 휴게 종료 시간", default=time(0, 0))
+    common_lunch_start_time: time = Field(description="일반 직원 휴게 시작 시간", default=time(0, 0))
+    common_lunch_end_time: time = Field(description="일반 직원 휴게 종료 시간", default=time(0, 0))
+    common_dinner_start_time: time = Field(description="일반 직원 휴게 시작 시간", default=time(0, 0))
+    common_dinner_end_time: time = Field(description="일반 직원 휴게 종료 시간", default=time(0, 0))
 
-    @field_validator('part_id', mode='before')
-    @classmethod
-    def set_part_id(cls, v):
-        return None if v == 0 else v
+
+    class Config:
+        from_attributes = True
+
+
+class AutoOvertimePoliciesDto(BaseModel):
+    top_auto_applied: bool = Field(description="통합관리자 자동적용", default=False)
+    total_auto_applied: bool = Field(description="관리자 자동적용", default=False)
+    part_auto_applied: bool = Field(description="사원 자동적용", default=False)
+
+    class Config:
+        from_attributes = True
+
+
+class HolidayWorkPoliciesDto(BaseModel):
+    do_holiday_work: bool = Field(description="휴무일 근무 여부", default=False)
+
+    class Config:
+        from_attributes = True
+
+
+class OverTimePoliciesDto(BaseModel):
+    doctor_ot_30: int = Field(description="O.T 30분 초과", default=0)
+    doctor_ot_60: int = Field(description="O.T 60분 초과", default=0)
+    doctor_ot_90: int = Field(description="O.T 90분 초과", default=0)
+    doctor_ot_120: int = Field(description="O.T 120분 초과", default=0)
+
+    common_ot_30: int = Field(description="O.T 30분 초과", default=0)
+    common_ot_60: int = Field(description="O.T 60분 초과", default=0)
+    common_ot_90: int = Field(description="O.T 90분 초과", default=0)
+    common_ot_120: int = Field(description="O.T 120분 초과", default=0)
+
+    class Config:
+        from_attributes = True
+
+
+class DefaultAllowancePoliciesDto(BaseModel):
+    comprehensive_overtime: bool = Field(description="포괄산정 연장근무수당", default=False)
+    annual_leave: bool = Field(description="연차수당", default=False)
+    holiday_work: bool = Field(description="휴일수당", default=False)
+    job_duty: bool = Field(description="직무수당", default=False)
+    meal: bool = Field(description="식대", default=False)
+    base_salary: bool = Field(description="기본급 사용여부", default=False)
+
+    class Config:
+        from_attributes = True
     
+class HolidayAllowancePoliciesDto(BaseModel):
+    doctor_holiday_work_pay: int = Field(description="의사 휴일수당", default=0)
+    common_holiday_work_pay: int = Field(description="일반 휴일수당", default=0)
 
-class HourWageTemplateResponse(BaseModel):
-    id: int = Field(description="아이디")
-    part_id: Optional[int] = Field(default=0, description="직책 ID")
-    name: str = Field(description="템플릿 명")
-    start_time: time = Field(description="시작 시간")
-    end_time: time = Field(description="종료 시간")
-    hour_wage: int = Field(description="시급")
-    home_hour_wage: int = Field(description="재택근무시급 시급")
+    class Config:
+        from_attributes = True
 
-    @field_validator('part_id', mode='before')
-    @classmethod
-    def set_part_id(cls, v):
-        return 0 if v is None else v
+class AllowancePoliciesDto(DefaultAllowancePoliciesDto, HolidayAllowancePoliciesDto):
+    pass
+
+class AllowancePoliciesResponse(BaseModel):
+    branch_id: Optional[int] = None
+    payment_day: Optional[int] = None
+    job_duty: bool = Field(description="직무수당", default=False)
+    meal: bool = Field(description="식대", default=False)
+    base_salary: bool = Field(description="기본급 사용여부", default=False)
+    
+    is_additional_holiday_hundred: bool = Field(description="휴일 근로 수당 100원 단위", default=False)
+    is_unused_annual_leave_hundred: bool = Field(description="미사용 연차 수당 100원 단위", default=False)
+    is_annual_leave_deduction_hundred: bool = Field(description="연차사용공제 100원 단위", default=False)
+    is_attendance_deduction_hundred: bool = Field(description="근태공제 100원 단위", default=False)
+    
+    display_meal_calc: bool = Field(description="식대 계산 표시", default=False)
+    display_night_calc: bool = Field(description="야간 수당 계산 표시", default=False)
 
     class Config:
         from_attributes = True
 
 
-class HourWageTemplatesResponse(BaseModel):
-    data: list[HourWageTemplateResponse]
-    pagination: PaginationDto
-
-
-class LeaveCategoryDto(BaseModel):
-    id: Optional[int] = Field(default=None, description="휴무 ID")
-    name: str = Field(description="휴무 명")
-    leave_count: int = Field(description="차감 일수")
-    is_paid: bool = Field(description="유급 여부")
-
-    @field_validator("id")
-    def validate_file_extension(cls, v):
-        if v == "" or v == 0:
-            return None
-        return v
-
-    class Config:
-        from_attributes = True
-
-
-class LeaveExcludedPartResponse(BaseModel):
-    id: int = Field(..., gt=0)
-    leave_category_id: int = Field(..., gt=0)
-    part_id: int = Field(..., gt=0)
-
-    class Config:
-        from_attributes = True
+class CombinedPoliciesDto(BaseModel):
+    work_policies: WorkPoliciesDto
+    auto_overtime_policies: AutoOvertimePoliciesDto
+    holiday_work_policies: HolidayWorkPoliciesDto
+    overtime_policies: OverTimePoliciesDto
+    default_allowance_policies: DefaultAllowancePoliciesDto
+    holiday_allowance_policies: HolidayAllowancePoliciesDto

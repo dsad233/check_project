@@ -1,40 +1,20 @@
-import logging
 from datetime import datetime
 from typing import Optional
-from fastapi import Depends
 from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError, SQLAlchemyError, NoResultFound
-
-from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.leave_categories_model import LeaveCategory
-from app.exceptions.exceptions import BadRequestError, NotFoundError
 
-from fastapi import HTTPException
-
-logger = logging.getLogger(__name__)
 
 async def create(
     *, branch_id: int, session: AsyncSession, request: LeaveCategory
 ) -> LeaveCategory:
-    try:
     
-        leave_category = await find_by_name_and_branch_id(session=session, branch_id=branch_id, name=request.name)
-        if leave_category:
-            raise HTTPException(status_code=400, detail=f"{branch_id}번 지점의 휴가 카테고리 이름 {request.name}이(가) 이미 존재합니다.")
-
-        session.add(request)
-        await session.commit()
-        await session.refresh(request)
-        return request
+    session.add(request)
+    await session.commit()
+    await session.refresh(request)
+    return request
     
-    except Exception as error:
-        if isinstance(error, HTTPException):
-            raise error
-
-        print(error)
-        raise HTTPException(status_code=500, detail="Internal Server Error")
 
 async def find_by_name_and_branch_id(
     *, session: AsyncSession, branch_id: int, name: str
@@ -102,32 +82,24 @@ async def count_all(*, session: AsyncSession, branch_id: int) -> int:
     return result.scalar_one_or_none()
 
 async def update(
-    *, session: AsyncSession, branch_id: int, leave_category_id: int, request: LeaveCategory
+    *, session: AsyncSession, branch_id: int, leave_category_id: int, request: LeaveCategory, old: LeaveCategory
 ) -> bool:
-        
-    # 기존 정책 조회
-    leave_category = await find_by_id_and_branch_id(
-        session=session, branch_id=branch_id, leave_id=leave_category_id
-    )
-
-    if leave_category is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {leave_category_id}번 휴가 카테고리가 존재하지 않습니다.")
 
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in LeaveCategory.__table__.columns:
         if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(request, column.name)
-            if new_value is not None and getattr(leave_category, column.name) != new_value:
+            if new_value is not None and getattr(old, column.name) != new_value:
                 changed_fields[column.name] = new_value
 
     if changed_fields:
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(LeaveCategory).where(LeaveCategory.branch_id == branch_id).where(LeaveCategory.id == leave_category_id).values(**changed_fields)
         await session.execute(stmt)
-        leave_category.updated_at = datetime.now()
+        old.updated_at = datetime.now()
         await session.commit()
-        await session.refresh(leave_category)
+        await session.refresh(old)
     else:
         pass
 
@@ -136,13 +108,15 @@ async def update(
 
 async def delete(
     *, session: AsyncSession, branch_id: int, leave_category_id: int
-) -> None:
+) -> bool:
     
-    leave_category = await find_by_id_and_branch_id(
-        session=session, branch_id=branch_id, leave_id=leave_category_id
-    )
-    if leave_category is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {leave_category_id}번 휴가 카테고리를 찾을 수 없습니다.")
-    leave_category.deleted_yn = "Y"
-    leave_category.updated_at = datetime.now()
+    await session.execute(
+            sa_update(LeaveCategory)
+            .where(LeaveCategory.id == leave_category_id)
+            .values(
+                deleted_yn="Y",
+                updated_at=datetime.now()
+            )
+        )
     await session.commit()
+    return True
