@@ -177,7 +177,7 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users, d
         # MSO만 다른 MSO의 권한을 관리할 수 있음
         if current_user.role != Role.MSO:
             raise HTTPException(
-                status_code=403,
+                status_code=401,
                 detail="MSO 관련 권한은 오직 MSO만 관리할 수 있습니다."
             )
     # MSO는 모든 지점의 모든 사용자 관리 가능
@@ -192,7 +192,7 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users, d
     # 2. 지점 확인 (MSO를 제외한 모든 관리자급)
     if current_user.role in [Role.SUPER_ADMIN, Role.INTEGRATED_ADMIN, Role.ADMIN]:
         if current_user.branch_id != target_user.branch_id:
-            raise HTTPException(status_code=403, detail="다른 지점의 사용자의 권한은 관리할 수 없습니다.")
+            raise HTTPException(status_code=401, detail="다른 지점의 사용자의 권한은 관리할 수 없습니다.")
 
     # 파트가 해당 지점에 속하는지 확인
     if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
@@ -211,13 +211,13 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users, d
     if current_user.role == Role.INTEGRATED_ADMIN:
         if target_level <= current_level:
             raise HTTPException(
-                status_code=403,
+                status_code=401,
                 detail="통합 관리자는 같은 레벨, 보다 높은 권한을 가진 사용자의 권한은 수정할 수 없습니다."
             )
         return True
 
     raise HTTPException(
-        status_code=403,
+        status_code=401,
         detail="해당 파트 관리 권한이 없습니다."
     )
 
