@@ -12,7 +12,11 @@ PUBLIC_PATHS = [
     "/docs",
     "/openapi.json",
     "/redoc",
-    "/favicon.ico"
+    "/favicon.ico",
+    "/monitor",
+    "/metrics/connections",
+    "/metrics/max-connections",
+    "/metrics/connection-history"
 ]
 
 
