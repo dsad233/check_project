@@ -11,11 +11,15 @@ from app.core.log_config import get_logger
 from app.middleware.token_middleware import TokenMiddleware
 from app.middleware.role_branch_middleware import RoleBranchMiddleware
 from app.core.config import settings
+from app.api.routes.db_monitor.db_connections_monitor import start_scheduler, shutdown_scheduler
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await startup_event()
+    start_scheduler()
     yield
+
+    shutdown_scheduler()
 
 
 # FastAPI 앱 생성 시 Swagger UI 기본 설정 추가
