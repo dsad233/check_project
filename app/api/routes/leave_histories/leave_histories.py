@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
-from sqlalchemy import select, func
-from datetime import datetime, date, timedelta
+from sqlalchemy import select, func, update
+from datetime import UTC, datetime, date, timedelta
 from typing import Optional
+from decimal import Decimal
 
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
@@ -15,7 +16,9 @@ from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import Numeric
 
+from app.schemas.branches_schemas import ManualGrantRequest
 from app.service import user_service
 
 router = APIRouter()
@@ -446,9 +449,7 @@ async def create_leave_history(
 
 
 @router.patch('/{branch_id}/leave-histories/{leave_id}/approve', summary="연차 승인/반려", description="연차를 승인/반려합니다.")
-# @available_higher_than(Role.ADMIN)
 async def approve_leave(
-    # context: Request,
     leave_approve: LeaveHistoriesApprove,
     leave_id: int = Path(..., description="승인/반려 결정을 할 연차 ID를 입력합니다."),
     branch_id: int = Path(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
@@ -456,83 +457,130 @@ async def approve_leave(
     db: AsyncSession = Depends(get_db)
 ):
     try:
-        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == 'N')
+        user_query = select(Users).where(Users.id == current_user_id, Users.deleted_yn == "N")
         user_result = await db.execute(user_query)
         current_user = user_result.scalar_one_or_none()
-
+        
         if current_user.role.strip() == "MSO 관리자":
             pass
-        elif current_user.role.strip() == "사원":
-            raise HTTPException(status_code=403, detail="사원은 연차를 승인할 수 없습니다.")
-        elif current_user.branch_id != branch_id:
-            raise HTTPException(status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다.")
-
-        query = select(LeaveHistories).where(LeaveHistories.id == leave_id, LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == 'N')
+        
+        query = select(LeaveHistories).where(LeaveHistories.id == leave_id, LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == "N")
         result = await db.execute(query)
         leave_history = result.scalar_one_or_none()
-
+        
         if not leave_history:
             raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
-
-        now = datetime.now().date()
         
+        now = datetime.now(UTC).date()
         if leave_history.application_date >= now:
             leave_history.status = leave_approve.status
-            leave_history.admin_description = leave_approve.admin_description or None
+            leave_history.admin_description = leave_approve.admin_description
             leave_history.approve_date = datetime.now()
             
             if leave_approve.status == Status.APPROVED:
-                await user_service.minus_total_leave_days(
-                    session=db, 
-                    user_id=leave_history.user_id, 
-                    count=int(leave_history.decreased_days)
+                decreased_days = Decimal(str(leave_history.decreased_days))
+                await db.execute(
+                    update(Users)
+                    .where(Users.id == leave_history.user_id)
+                    .values(
+                        total_leave_days=Users.total_leave_days - decreased_days,
+                        updated_at=datetime.now(UTC)
+                    )
                 )
-            user = await user_service.get_branch_users_leave(session=db, branch_id=branch_id, search=BaseSearchDto(record_size=1))
-            if not user:
-                raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-            
-        if leave_history.status == Status.APPROVED:
-            leave_days_query = select(UserLeavesDays).where(
-                UserLeavesDays.user_id == leave_history.user_id,
-                UserLeavesDays.branch_id == branch_id,
-                UserLeavesDays.deleted_yn == 'N'
-            ).order_by(UserLeavesDays.created_at.desc())
-            
-            result = await db.execute(leave_days_query)
-            latest_record = result.scalar_one_or_none()
-            
-            if latest_record:
-                # 새로운 레코드 생성
-                new_total_decreased = float(latest_record.total_decreased_days or 0) + float(leave_history.decreased_days)
-                new_total_leave = float(latest_record.total_leave_days or 0) - float(leave_history.decreased_days)
+            if leave_history.status == Status.APPROVED:
+                existing_leave_days = await db.execute(
+                    select(UserLeavesDays)
+                    .where(
+                        UserLeavesDays.user_id == leave_history.user_id,
+                        UserLeavesDays.deleted_yn == 'N'
+                    )
+                    .order_by(UserLeavesDays.created_at.desc())
+                )
+                leave_days_record = existing_leave_days.scalar_one_or_none()
+
+                if not leave_days_record:
+                    raise HTTPException(status_code=404, detail="사용자의 연차 정보를 찾을 수 없습니다.")
+
+                # UserLeavesDays 업데이트
+                leave_days_record.decreased_days += decreased_days
+                leave_days_record.total_leave_days -= decreased_days
+                leave_days_record.updated_at = datetime.now(UTC)
+
+                # LeaveHistories 업데이트
+                leave_history.status = Status.APPROVED
+                leave_history.decreased_days += decreased_days
+                leave_history.manager_id = current_user.id
+                leave_history.manager_name = current_user.name
+                leave_history.approve_date = datetime.now(UTC)
+                leave_history.admin_description = leave_approve.admin_description
+                leave_history.updated_at = datetime.now(UTC)
                 
-                new_record = UserLeavesDays(
-                    user_id=leave_history.user_id,
-                    branch_id=branch_id,
-                    leave_category_id=leave_history.leave_category_id,
-                    leave_history_id=leave_history.id,
-                    increased_days=0.00,
-                    total_increased_days=latest_record.total_increased_days,
-                    decreased_days=float(leave_history.decreased_days),
-                    total_decreased_days=new_total_decreased,
-                    total_leave_days=new_total_leave,
-                    description=leave_approve.admin_description,
-                    is_paid=True,
-                    is_approved=True,
-                    deleted_yn='N'
-                )
-                db.add(new_record)
-            
-            await db.flush()
-            await db.refresh(leave_history)
-            return {
-                "message": "연차 승인/반려에 성공하였습니다."}
+            else:  # Status.REJECTED
+                leave_history.status = Status.REJECTED
+                leave_history.manager_id = current_user.id
+                leave_history.manager_name = current_user.name
+                leave_history.approve_date = datetime.now(UTC)
+                leave_history.admin_description = leave_approve.admin_description
+                leave_history.updated_at = datetime.now(UTC)
+                
+            await db.commit()
+            return {"message": "연차 승인에 성공하였습니다."}
         else:
             raise HTTPException(status_code=400, detail="날짜가 지났습니다.")
+            
     except Exception as err:
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
+        
+        # stmt = select(LeaveHistories).where((LeaveHistories.id == leave_id) & (LeaveHistories.status == "pending") & (LeaveHistories.deleted_yn == "N") & (LeaveHistories.branch_id == branch_id))
+        # result = await db.execute(stmt)
+        # leave_history = result.first()
+        
+        # if not leave_history:
+        #     raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
+        
+        # find_user = await db.execute(select(Users).where(Users.id == leave_history.user_id, Users.deleted_yn == "N"))
+        # result_user = find_user.scalar_one_or_none()
+        # print(f"result_user: {result_user}")
+        
+        # if not result_user:
+        #     raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
+        
+        # if leave_approve.status == "approved":
+        #     leave_history.status = "approved"
+        #     leave_history.manager_id = current_user.id
+        #     leave_history.manager_name = current_user.name
+        #     leave_history.approve_date = datetime.now(UTC).date()
+        #     leave_history.admin_description = leave_approve.admin_description
+            
+        #     leave_query = select(UserLeavesDays).where(UserLeavesDays.user_id == leave_history.user_id)
+        #     leave_result = await db.execute(leave_query)
+        #     leave_record = leave_result.scalar_one_or_none()
+            
+        #     leave_record.decreased_days += float(leave_history.decreased_days)
+        #     leave_record.total_leave_days -= float(leave_history.decreased_days)
+            
+        #     await db.commit()
+        #     return {"message": "연차 신청을 승인하였습니다."}
+        
+        # elif leave_approve.status == "rejected":
+        #     leave_history.status = "rejected"
+        #     leave_history.manager_id = current_user.id
+        #     leave_history.manager_name = current_user.name
+        #     leave_history.approve_date = datetime.now(UTC).date()
+        #     leave_history.admin_description = leave_approve.admin_description
+            
+        #     await db.commit()
+        #     return {"message": "연차 신청을 반려하였습니다."}
+        
+        # else:
+        #     raise HTTPException(status_code=400, detail="잘못된 상태값입니다.")
+        
+    # except Exception as err:
+    #     await db.rollback()
+    #     print(err)
+    #     raise HTTPException(status_code=500, detail=str(err))
 
 @router.patch("/leave-histories/{leave_id}", summary="연차 수정", description="연차를 수정합니다.")
 async def update_leave(
