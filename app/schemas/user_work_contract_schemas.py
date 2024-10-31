@@ -3,7 +3,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.models.users.users_model import Users
-from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay, WorkContractBreakTime
 
 
 # ==================== Request ====================
@@ -12,25 +12,30 @@ class RequestWorkContractFixedRestDay(BaseModel):
     rest_day: str
     every_over_week: bool
 
-
-class RequestCreateWorkContract(BaseModel):
-    user_id: int
-    contract_start_date: str
-    contract_end_date: Optional[str] = None
-    is_fixed_rest_day: bool
-    fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]] = None
-    weekly_work_start_time: str
-    weekly_work_end_time: str
-    weekly_is_rest: bool
-    saturday_work_start_time: str
-    saturday_work_end_time: str
-    saturday_is_rest: bool
-    sunday_work_start_time: str
-    sunday_work_end_time: str
-    sunday_is_rest: bool
+class RequestWorkContrackBreakTime(BaseModel):
     break_start_time: str
     break_end_time: str
 
+
+class RequestCreateWorkContract(BaseModel):
+    user_id: int
+
+    contract_start_date: str
+    contract_end_date: Optional[str] = None
+
+    is_fixed_rest_day: bool
+    fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]] = None
+
+    weekly_work_start_time: str
+    weekly_work_end_time: str
+
+    saturday_work_start_time: str
+    saturday_work_end_time: str
+
+    sunday_work_start_time: str
+    sunday_work_end_time: str
+
+    break_times: list[RequestWorkContrackBreakTime]
 
     def to_model(self) -> WorkContract:
         return WorkContract(
@@ -46,17 +51,18 @@ class RequestCreateWorkContract(BaseModel):
             ] if self.fixed_rest_days else [],
             weekly_work_start_time=self.weekly_work_start_time,
             weekly_work_end_time=self.weekly_work_end_time,
-            weekly_is_rest=self.weekly_is_rest,
             saturday_work_start_time=self.saturday_work_start_time,
             saturday_work_end_time=self.saturday_work_end_time,
-            saturday_is_rest=self.saturday_is_rest,
             sunday_work_start_time=self.sunday_work_start_time,
             sunday_work_end_time=self.sunday_work_end_time,
-            sunday_is_rest=self.sunday_is_rest,
-            break_start_time=self.break_start_time,
-            break_end_time=self.break_end_time
+            break_times=[
+                WorkContractBreakTime(
+                    break_start_time=break_time.break_start_time,
+                    break_end_time=break_time.break_end_time
+                )
+                for break_time in self.break_times
+            ]
         )
-
 
 class RequestPatchWorkContract(BaseModel):
     contract_start_date: Optional[str] = None
