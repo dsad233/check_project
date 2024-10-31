@@ -63,7 +63,7 @@
 
     <script>
     let chart;
-    const maxDataPoints = 4320;  // 3일 * 24시간 * 60분 = 4320 데이터 포인트
+    const maxDataPoints = 864;  // 3일 * 24시간 * 60분 = 4320 데이터 포인트
     const data = {
         labels: [],
         datasets: [{
@@ -125,6 +125,10 @@
         try {
             const response = await fetch('/metrics/connection-history');
             const historyData = await response.json();
+            if (!historyData || historyData.length === 0) {
+                console.log("No historical data available");
+                return;
+            }
             
             // 차트 데이터 초기화
             data.labels = [];
@@ -170,15 +174,15 @@
     }
 
     // Initialize
-    initChart();
-    loadHistoricalData();  // 먼저 히스토리 데이터 로드
-    fetchMaxConnections();
+initChart();
+loadHistoricalData();  // 먼저 히스토리 데이터 로드
+fetchMaxConnections();
 
-    // 현재 연결 수는 1분마다 업데이트
-    setInterval(fetchConnections, 60000);
+// 현재 연결 수는 5분마다 업데이트
+setInterval(fetchConnections, 300000);  // 5분 = 300000ms
 
-    // 최대 연결 수는 1시간마다 업데이트
-    setInterval(fetchMaxConnections, 3600000);
+// 최대 연결 수는 1시간마다 업데이트
+setInterval(fetchMaxConnections, 3600000);
 </script>
 </body>
 </html>
