@@ -1,17 +1,11 @@
 from typing import List
-
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
-from app.cruds.hour_wage_template import hour_wage_template_crud
-from app.cruds.users import users_crud
-from app.service import branch_service
-from app.exceptions.exceptions import ForbiddenError
+from app.service import hour_wage_template_service
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
-from app.middleware.tokenVerify import validate_token, get_current_user_id
-from app.schemas.branches_schemas import HourWageTemplateRequest, HourWageTemplateResponse, HourWageTemplatesResponse
-from app.models.parts.hour_wage_template_model import HourWageTemplate
+from app.schemas.hour_wage_template_schemas import HourWageTemplateRequest, HourWageTemplateResponse, HourWageTemplatesResponse
 
 
 router = APIRouter()
@@ -24,7 +18,7 @@ async def get_hour_wage_template_list(*,
     context: Request
 ) -> list[HourWageTemplateResponse]:
 
-    return await branch_service.get_hour_wage_templates(session=session, branch_id=branch_id)
+    return await hour_wage_template_service.get_hour_wage_templates(session=session, branch_id=branch_id)
 
 @router.post("/create", response_model=HourWageTemplateResponse, summary="시급 템플릿 생성")
 @available_higher_than(Role.INTEGRATED_ADMIN)
@@ -35,7 +29,7 @@ async def create_hour_wage_template(*,
     context: Request
 ) -> HourWageTemplateResponse:
 
-    return await branch_service.create_hour_wage_template(session=session, branch_id=branch_id, request=request)
+    return await hour_wage_template_service.create_hour_wage_template(session=session, branch_id=branch_id, request=request)
 
 @router.patch("/{hour_wage_template_id}/update", response_model=bool, summary="시급 템플릿 수정")
 @available_higher_than(Role.INTEGRATED_ADMIN)
@@ -47,7 +41,7 @@ async def update_hour_wage_template(*,
     context: Request
 ) -> bool:
 
-    return await branch_service.update_hour_wage_template(session=session, branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, request=request)
+    return await hour_wage_template_service.update_hour_wage_template(session=session, branch_id=branch_id, hour_wage_template_id=hour_wage_template_id, request=request)
 
 
 @router.delete("/{hour_wage_template_id}/delete", response_model=bool, summary="시급 템플릿 삭제")
@@ -59,4 +53,4 @@ async def delete_hour_wage_template(*,
     context: Request
 ) -> bool:
 
-    return await branch_service.delete_hour_wage_template(session=session, branch_id=branch_id, hour_wage_template_id=hour_wage_template_id)
+    return await hour_wage_template_service.delete_hour_wage_template(session=session, branch_id=branch_id, hour_wage_template_id=hour_wage_template_id)

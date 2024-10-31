@@ -8,10 +8,10 @@ from app.common.dto.search_dto import BaseSearchDto
 from app.models.users.users_model import Users
 
 
-# 지점 내 유저들의 잔여 연차 수 및 연차 부여 방식 조회
 async def get_branch_users_leave(
     *, session: AsyncSession, branch_id: int, request: BaseSearchDto
 ) -> UsersLeaveResponse:
+    """지점 내 유저들의 잔여 연차 수 및 연차 부여 방식 조회"""
     users_count = await users_crud.get_users_count(session=session, branch_id=branch_id)
     users = await users_crud.find_all_by_branch_id(session=session, branch_id=branch_id, request=request)
     if not users:
@@ -25,24 +25,24 @@ async def get_branch_users_leave(
                           total_leave_days=user.total_leave_days) for user in users
     ], pagination=PaginationDto(total_record=users_count, record_size=request.record_size))
 
-# 잔여 연차 수 증가
+
 async def plus_total_leave_days(
     *, session: AsyncSession, request: ManualGrantRequest
 ) -> bool:
+    """잔여 연차 수 증가"""
     if request.user_ids:
         for user_id in request.user_ids:
             user = await users_crud.find_by_id(session=session, user_id=user_id)
             if not user:
                 raise NotFoundError(detail=f"{user_id}번 유저를 찾을 수 없습니다.")
-            if user.total_leave_days + request.count > 25:
-                raise BadRequestError(detail="연차를 초과해서 부여할 수 없습니다.")
             await users_crud.plus_total_leave_days(session=session, user_id=user_id, count=request.count)
     return True
 
-# 잔여 연차 수 감소
+
 async def minus_total_leave_days(
     *, session: AsyncSession, request: ManualGrantRequest
 ) -> bool:
+    """잔여 연차 수 감소"""
     if request.user_ids:
         for user_id in request.user_ids:
             user = await users_crud.find_by_id(session=session, user_id=user_id)
@@ -57,6 +57,7 @@ async def minus_total_leave_days(
 async def get_user_by_id(
     *, session: AsyncSession, user_id: int
 ) -> Users:
+    """유저 조회"""
     user = await users_crud.find_by_id(session=session, user_id=user_id)
     if not user:
         raise NotFoundError(detail="유저를 찾을 수 없습니다.")
