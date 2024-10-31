@@ -1,4 +1,3 @@
-import logging
 from typing import Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,11 +18,12 @@ from app.schemas.branches_schemas import BranchRequest, BranchListResponse, Bran
 from app.core.permissions.auth_utils import available_higher_than
 
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 @router.get("/get", response_model=BranchListResponse, summary="지점 목록 조회")
+@available_higher_than(Role.EMPLOYEE)
 async def read_branches(
-    *, session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto), user: int = Depends(get_current_user)
+    *, context: Request, session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto), user: int = Depends(get_current_user)
 ) -> BranchListResponse:
     """
     지점 목록을 조회합니다.
@@ -50,6 +50,7 @@ async def create_branch(
 
 
 @router.get("/{branch_id}/get", response_model=BranchResponse, summary="지점 조회")
+@available_higher_than(Role.EMPLOYEE)
 async def read_branch(
     *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> BranchResponse:
