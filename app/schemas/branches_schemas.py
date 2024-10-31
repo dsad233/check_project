@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
+from app.models.branches.work_policies_model import WorkPoliciesUpdateDto
 from app.schemas.parts_schemas import PartIdWithName
 from app.common.dto.pagination_dto import PaginationDto
 from datetime import datetime, time
@@ -224,6 +225,15 @@ class AllowancePoliciesResponse(BaseModel):
 
 class CombinedPoliciesDto(BaseModel):
     work_policies: WorkPoliciesDto
+    auto_overtime_policies: AutoOvertimePoliciesDto
+    holiday_work_policies: HolidayWorkPoliciesDto
+    overtime_policies: OverTimePoliciesDto
+    default_allowance_policies: DefaultAllowancePoliciesDto
+    holiday_allowance_policies: HolidayAllowancePoliciesDto
+
+
+class CombinedPoliciesUpdateDto(BaseModel):
+    work_policies: WorkPoliciesUpdateDto
     auto_overtime_policies: AutoOvertimePoliciesDto
     holiday_work_policies: HolidayWorkPoliciesDto
     overtime_policies: OverTimePoliciesDto

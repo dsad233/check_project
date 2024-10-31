@@ -53,33 +53,16 @@ from app.schemas.branches_schemas import (
     HolidayWorkPoliciesDto,
     OverTimePoliciesDto,
 )
-
+from app.schemas.branches_schemas import (
+    CombinedPoliciesDto,
+    CombinedPoliciesUpdateDto,
+)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(dependencies=[Depends(validate_token)])
 
 
-class CombinedPoliciesDto(BaseModel):
-    work_policies: WorkPoliciesDto
-    auto_overtime_policies: AutoOvertimePoliciesDto
-    holiday_work_policies: HolidayWorkPoliciesDto
-    overtime_policies: OverTimePoliciesDto
-    default_allowance_policies: DefaultAllowancePoliciesDto
-    holiday_allowance_policies: HolidayAllowancePoliciesDto
-from app.schemas.branches_schemas import CombinedPoliciesDto
-from app.service import branch_service
 
-
-router = APIRouter()
-
-
-class CombinedPoliciesUpdateDto(BaseModel):
-    work_policies: WorkPoliciesUpdateDto
-    auto_overtime_policies: AutoOvertimePoliciesDto
-    holiday_work_policies: HolidayWorkPoliciesDto
-    overtime_policies: OverTimePoliciesDto
-    default_allowance_policies: DefaultAllowancePoliciesDto
-    holiday_allowance_policies: HolidayAllowancePoliciesDto
 
 
 @router.get("/get", response_model=CombinedPoliciesDto)
