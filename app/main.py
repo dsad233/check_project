@@ -93,6 +93,11 @@ origins = [
     "http://52.78.246.46"
 ]
 
+
+app.add_middleware(RoleBranchMiddleware)  #type: ignore #RoleBranchMiddleware가 user 정보를 사용
+
+app.add_middleware(TokenMiddleware)     #type: ignore #TokenMiddleware가 먼저 실행되어 user 정보를 설정
+
 app.add_middleware(
     CORSMiddleware,  # type: ignore
     allow_origins=origins,
@@ -100,10 +105,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
-
-app.add_middleware(RoleBranchMiddleware)  #type: ignore #RoleBranchMiddleware가 user 정보를 사용
-
-app.add_middleware(TokenMiddleware)     #type: ignore #TokenMiddleware가 먼저 실행되어 user 정보를 설정
 
 # Register exception handlers
 add_exception_handlers(app)
