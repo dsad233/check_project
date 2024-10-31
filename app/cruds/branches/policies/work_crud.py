@@ -170,3 +170,21 @@ async def get_work_policies(*, session: AsyncSession, branch_id: int) -> WorkPol
         raise HTTPException(status_code=404, detail="Work policies not found")
 
     return work_policies
+
+async def get_work_policies(*, session: AsyncSession, branch_id: int) -> WorkPolicies:
+    stmt = (
+        select(WorkPolicies)
+        .where(WorkPolicies.branch_id == branch_id, WorkPolicies.deleted_yn == "N")
+        .options(
+            selectinload(WorkPolicies.work_schedules),
+            selectinload(WorkPolicies.break_times),
+        )
+    )
+
+    result = await session.execute(stmt)
+    work_policies = result.scalar_one_or_none()
+
+    if not work_policies:
+        raise HTTPException(status_code=404, detail="Work policies not found")
+
+    return work_policies
