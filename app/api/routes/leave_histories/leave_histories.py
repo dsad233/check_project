@@ -1,15 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Path
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
 from sqlalchemy import select, func
 from datetime import datetime, date, timedelta
 from typing import Optional
 
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
+from app.core.permissions.auth_utils import available_higher_than
 from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
 from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
 from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
-from app.enums.users import Status
+from app.enums.users import Role, Status
 from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
@@ -21,7 +22,7 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 # db = async_session()
 
 # 현재 사용자의 연차 일수 정보 조회
-@router.get("/current-user-leaves", response_model=UserLeavesDaysResponse, summary="현재 사용자의 연차 일수 정보 조회", description="현재 사용자의 연차 일수 정보를 조회합니다.")
+@router.get("/leave-histories/current-user-leaves", response_model=UserLeavesDaysResponse, summary="현재 사용자의 연차 일수 정보 조회", description="현재 사용자의 연차 일수 정보를 조회합니다.")
 async def get_current_user_leaves(
     *,
     branch_id: int = Query(..., description="지점 ID를 입력합니다."),
@@ -60,7 +61,7 @@ async def get_current_user_leaves(
             year=year,
             increased_days=total_increased,  # 합산된 증가 일수
             decreased_days=total_decreased,  # 합산된 감소 일수
-            total_leave_days=100 + total_increased - total_decreased,  # 사용 가능한 연차 일수
+            total_leave_days=total_increased - total_decreased,  # 사용 가능한 연차 일수
             leave_category_id=latest_info.leave_category_id
         )
 
@@ -68,7 +69,7 @@ async def get_current_user_leaves(
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
 
-@router.get("/list", summary="연차 신청 목록 조회", description="연차 신청 목록을 조회합니다.")
+@router.get("/leave-histories", summary="연차 신청 목록 조회", description="연차 신청 목록을 조회합니다.")
 async def get_leave_histories(
     search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
     date: Optional[date] = Query(None, description="시작일 계산을 위한 날짜를 입력합니다. 공백인 경우 오늘을 포함한 주의 일요일-토요일 기간을 조회합니다. 예) YYYY-MM-DD"), # 시작일 계산을 위한 날짜 입력
@@ -84,7 +85,7 @@ async def get_leave_histories(
     try:
         if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자", "사원"]:
             raise HTTPException(status_code=403, detail="권한이 없습니다.")
-        
+
         if date is None:
             # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()    
@@ -111,7 +112,7 @@ async def get_leave_histories(
         stmt = None
 
         # 필터 적용 부분 수정
-        if branch_id:
+        if branch_id:   
             base_query = base_query.join(Branches, LeaveHistories.branch_id == Branches.id)\
                 .where(Branches.id == branch_id)
         if part_id:
@@ -151,7 +152,7 @@ async def get_leave_histories(
             
             leave_history_data = {
                 "id": leave_history.id,
-                "branch_id": branch.id,
+                "search_branch_id": branch.id,
                 "branch_name": branch.name,
                 "user_id": user.id,
                 "user_name": user.name,
@@ -189,8 +190,10 @@ async def get_leave_histories(
         print(f"에러가 발생하였습니다: {err}")
         raise HTTPException(status_code=500, detail=str(err))
 
-@router.get("/approve-list", summary="연차 전체 승인 목록 조회", description="연차 전체 승인 목록을 조회합니다.")
+@router.get("/leave-histories/approve", summary="연차 전체 승인 목록 조회", description="연차 전체 승인 목록을 조회합니다.")
+@available_higher_than(Role.ADMIN)
 async def get_approve_leave(
+    context: Request,
     search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
     date: Optional[date] = Query(None, description="시작일 계산을 위한 날짜를 입력합니다. 공백인 경우 오늘을 포함한 주의 일요일-토요일 기간을 조회합니다. 예) YYYY-MM-DD"), # 시작일
     branch_id: Optional[int] = Query(None, description="검색할 지점 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 지점
@@ -203,9 +206,11 @@ async def get_approve_leave(
     db: AsyncSession = Depends(get_db)
 ):
     try:
-         
-        if current_user.role not in ["MSO 최고권한", "최고관리자", "관리자", "통합관리자", "사원"]:
-            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        if current_user.role in ["최고관리자", "관리자", "통합관리자"]:
+            branch_id = current_user.branch_id
+        if current_user.role == "관리자":
+            part_id = current_user.part_id
+            
         
         if date is None:
             # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
@@ -312,7 +317,7 @@ async def get_approve_leave(
         print(f"에러가 발생하였습니다: {err}")
         raise HTTPException(status_code=500, detail=str(err))
 
-@router.post("", summary="연차 신청", description="연차를 신청합니다.")
+@router.post("/leave-histories", summary="연차 신청", description="연차를 신청합니다.")
 async def create_leave_history(
     leave_create: LeaveHistoriesCreate,
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
@@ -379,6 +384,8 @@ async def create_leave_history(
             
         
         await db.flush()
+        await db.refresh(create)
+        
         leave_history = select(UserLeavesDays)\
             .where(UserLeavesDays.user_id == current_user.id, UserLeavesDays.branch_id == branch_id, UserLeavesDays.deleted_yn == 'N')
         
@@ -407,7 +414,8 @@ async def create_leave_history(
             db.add(user_leaves_days)
             print(f"user_leaves_days: {user_leaves_days.user_id}")
         
-        await db.commit()
+        await db.flush()
+        await db.refresh(user_leaves_days)
         return {"message": "연차 생성에 성공하였습니다."}
     except Exception as err:
         await db.rollback()
@@ -415,11 +423,13 @@ async def create_leave_history(
         raise HTTPException(status_code=500, detail=str(err))
 
 
-@router.patch("/{leave_id}/approve", summary="연차 승인/반려", description="연차를 승인/반려합니다.")
+@router.patch('/{branch_id}/leave-histories/{leave_id}/approve', summary="연차 승인/반려", description="연차를 승인/반려합니다.")
+@available_higher_than(Role.ADMIN)
 async def approve_leave(
+    context: Request,
     leave_approve: LeaveHistoriesApprove,
     leave_id: int = Path(..., description="승인/반려 결정을 할 연차 ID를 입력합니다."),
-    branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
+    branch_id: int = Path(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     current_user_id: int = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
@@ -491,7 +501,8 @@ async def approve_leave(
                 )
                 db.add(new_record)
             
-            await db.commit()
+            await db.flush()
+            await db.refresh(leave_history)
             return {
                 "message": "연차 승인/반려에 성공하였습니다."}
         else:
@@ -501,7 +512,7 @@ async def approve_leave(
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
 
-@router.patch("/{leave_id}", summary="연차 수정", description="연차를 수정합니다.")
+@router.patch("/leave-histories/{leave_id}", summary="연차 수정", description="연차를 수정합니다.")
 async def update_leave(
     leave_update: LeaveHistoriesUpdate,
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
@@ -546,7 +557,7 @@ async def update_leave(
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
 
-@router.delete("/{leave_id}", summary="연차 삭제", description="연차를 삭제합니다.")
+@router.delete("/leave-histories/{leave_id}", summary="연차 삭제", description="연차를 삭제합니다.")
 async def delete_leave(
     branch_id: int = Query(..., description="현재 사용자가 포함된 지점 ID를 입력합니다."),
     leave_id: int = Path(..., description="삭제할 연차 ID를 입력합니다."),
