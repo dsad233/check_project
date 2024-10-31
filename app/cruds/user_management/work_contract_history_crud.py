@@ -1,6 +1,24 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
+
 from app.models.users.users_work_contract_history_model import WorkContractHistory
+
+
+
+async def find_work_contract_history_by_id(
+    *,
+    session: AsyncSession,
+    work_contract_history_id: int
+) -> WorkContractHistory:
+    stmt = (select(WorkContractHistory)
+            .options(selectinload(WorkContractHistory.user))
+            .options(selectinload(WorkContractHistory.work_contract))
+            .where(WorkContractHistory.id == work_contract_history_id)
+            .where(WorkContractHistory.deleted_yn == "N"))
+
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 

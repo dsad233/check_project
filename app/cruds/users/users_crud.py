@@ -61,6 +61,19 @@ async def add_user(
         await session.rollback()
         raise e
 
+async def update_user(
+        *, session: AsyncSession, user: Users
+) -> Users:
+    try:
+        user.updated_at = datetime.now()
+        await session.commit()
+        await session.refresh(user)
+        return user
+    except SQLAlchemyError as e:
+        logger.error(f"Failed to update user: {e}")
+        await session.rollback()
+        raise e
+
 async def plus_total_leave_days(
     *, session: AsyncSession, user: Users, count: int
 ) -> Users:

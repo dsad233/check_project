@@ -107,13 +107,14 @@ class UserManagementContract:
     @router.post("/request-contract")
     async def request_contract(
             user_id: int,
-            # work_contract_history_id: int,
+            work_contract_history_id: int,
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user),
     ):
         await user_management_contract_service.create_contract(
             user_id=user_id,
-            # work_contract_history_id=work_contract_history_id,
+            manager_id=current_user.id,
+            work_contract_history_id=work_contract_history_id,
             session=db
         )
 
