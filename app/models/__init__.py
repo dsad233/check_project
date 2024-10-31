@@ -7,7 +7,7 @@ from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
-from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay, WorkContractBreakTime
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -221,3 +221,6 @@ WorkContract.work_contract_history = relationship("WorkContractHistory", back_po
 
 WorkContract.contract = relationship("Contract", back_populates="work_contract")
 Contract.work_contract = relationship("WorkContract", back_populates="contract")
+
+WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract")
+WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")

@@ -11,15 +11,17 @@ from app.models.users.users_model import Users
 
 logger = logging.getLogger(__name__)
 
-async def find_user_by_id_with_contracts(*, session: AsyncSession, user_id: int) -> Optional[Users]:
+async def find_user_by_id_with_contracts(
+        *,
+        session: AsyncSession,
+        user_id: int
+) -> Optional[Users]:
     stmt = (
         select(Users)
-        .options(
-            # user_id 관계로 연결된 contracts 로드
-            selectinload(Users.contracts_user_id).options(
-                # 각 contract의 manager 정보도 로드
-                joinedload(Contract.manager)
-            ),
+        # user_id 관계로 연결된 contracts 로드
+        .options(selectinload(Users.contracts_user_id)
+        # 각 contract의 manager 정보도 로드
+        .options(joinedload(Contract.manager)),
             # manager_id 관계로 연결된 contracts 로드
             selectinload(Users.contracts_manager_id)
         )
@@ -30,14 +32,41 @@ async def find_user_by_id_with_contracts(*, session: AsyncSession, user_id: int)
     return result.scalar_one_or_none()
 
 
-async def find_contract_by_contract_id(*, session: AsyncSession, user_id: int, contract_id: int) -> Optional[Contract]:
+async def find_contract_by_contract_id(
+        *,
+        session: AsyncSession,
+        user_id: int,
+        contract_id: int
+) -> Optional[Contract]:
     stmt = (
         select(Contract)
         .where(Contract.id == contract_id)
         .where(Contract.user_id == user_id)
+        .where(Contract.deleted_yn == "N")
     )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def find_contract_by_modusign_id(
+        *,
+        session: AsyncSession,
+        modusign_id: str
+) -> Optional[Contract]:
+    stmt = (
+        select(Contract)
+        .options(joinedload(Contract.user))
+        .options(joinedload(Contract.manager))
+        .options(joinedload(Contract.work_contract))
+        .options(joinedload(Contract.work_contract_history))
+        .where(
+            Contract.modusign_id == modusign_id,
+            Contract.deleted_yn == "N"
+        )
+    )
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
 
 async def find_contract_send_mail_histories_by_user_id(
     *,
@@ -73,7 +102,26 @@ async def add_contracts(*, session: AsyncSession, contracts: list[dict]) -> list
         logger.error(f"Failed to add contracts: {str(e)}")
         raise e
 
-async def add_contract_send_mail_history(*, session: AsyncSession, contract_send_mail_history_dict: dict):
+async def add_contract(
+        *,
+        session: AsyncSession,
+        contract: Contract
+) -> int:
+    try:
+        session.add(contract)
+        await session.commit()
+        await session.refresh(contract)
+        return contract.id
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Failed to add contract: {str(e)}")
+        raise e
+
+async def add_contract_send_mail_history(
+        *,
+        session: AsyncSession,
+        contract_send_mail_history_dict: dict
+):
     try:
         stmt = insert(ContractSendMailHistory).values(contract_send_mail_history_dict)
         await session.execute(stmt)
@@ -83,12 +131,43 @@ async def add_contract_send_mail_history(*, session: AsyncSession, contract_send
         logger.error(f"Failed to add contract send mail history: {str(e)}")
         raise e
 
-async def hard_delete_contract(*, session: AsyncSession, user_id: int, contract_id: int):
+async def soft_delete_contract(
+        *,
+        session: AsyncSession,
+        user_id: int,
+        contract_id: int
+):
     try:
         stmt = (
             select(Contract)
             .where(Contract.user_id == user_id)
             .where(Contract.id == contract_id)
+            .where(Contract.deleted_yn == "N")
+        )
+        result = await session.execute(stmt)
+        contract = result.scalar_one_or_none()
+        if not contract:
+            raise Exception("Contract not found")
+
+        contract.deleted_yn = "Y"
+        await session.commit()
+    except Exception as e:
+        logger.error(f"Failed to soft delete contract: {e}")
+        await session.rollback()
+        raise e
+
+async def hard_delete_contract(
+        *,
+        session: AsyncSession,
+        user_id: int,
+        contract_id: int
+):
+    try:
+        stmt = (
+            select(Contract)
+            .where(Contract.user_id == user_id)
+            .where(Contract.id == contract_id)
+            .where(Contract.deleted_yn == "Y")
         )
         result = await session.execute(stmt)
         contract = result.scalar_one_or_none()
