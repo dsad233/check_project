@@ -1,5 +1,5 @@
 from datetime import datetime, UTC
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, Date, String, Enum
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, Date, String, Enum, Boolean
 from app.core.database import Base
 from app.enums.user_management import Status as SendMailStatus, ContractStatus
 
@@ -26,10 +26,9 @@ class Contract(Base):
         nullable=False,
         default=ContractStatus.PENDING
     )  # 계약 상태
-
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-    deleted_yn = Column(String(1), default='N')
+    deleted_yn = Column(String(1), default="N")
 
 
 class ContractSendMailHistory(Base):
