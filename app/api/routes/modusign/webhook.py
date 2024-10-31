@@ -5,7 +5,7 @@ from app.service.webhook_service import WebhookService
 import logging
 
 logger = logging.getLogger(__name__)
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 webhook_service = WebhookService()
 
 @router.post("/webhook")

@@ -13,7 +13,7 @@ from app.models.users.users_model import Users, UserUpdate
 from app.models.branches.branches_model import Branches
 from typing import Annotated
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # db = async_session()
 
 ##

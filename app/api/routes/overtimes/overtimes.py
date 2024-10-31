@@ -23,7 +23,7 @@ from typing import Optional
 from datetime import date
 from datetime import timedelta
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 
 # 오버타임 초과 근무 생성(신청)

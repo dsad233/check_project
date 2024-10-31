@@ -11,7 +11,7 @@ from app.middleware.mailsend import send_email, MailSend
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # mailsend = async_session()
 
 

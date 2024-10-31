@@ -74,7 +74,7 @@ class TokenMiddleware(BaseHTTPMiddleware):
                     .where(
                         (Users.id == user_id) &
                         (Users.deleted_yn == "N") &
-                        ~Users.role.in_([Role.RESIGNED, Role.ON_LEAVE])  # 퇴사자, 휴직자 접근 제한
+                        ~Users.role.in_([Role.RESIGNED, Role.ON_LEAVE, Role.TEMPORARY])  # 퇴사자, 휴직자, 임시회원 접근 제한
                     )
                 )
                 result = await session.execute(stmt) #DB 작업 수행

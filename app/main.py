@@ -21,14 +21,14 @@ async def lifespan(app: FastAPI):
 # FastAPI 앱 생성 시 Swagger UI 기본 설정 추가
 app = FastAPI(
     lifespan=lifespan,
-    title="WorksWave API",
-    description="WorksWave API Documentation",
+    title="Check API 명세서",
+    description="Check API Documentation",
     version="1.0.0",
     swagger_ui_parameters={
-        "defaultModelsExpandDepth": -1,  # 모델 섹션 접기
+        "defaultModelsExpandDepth": 1 ,  # 모델 섹션 접기
         "docExpansion": "none",          # 모든 엔드포인트 접기
         "filter": True,                   # 검색 필터 활성화
-        "persistAuthorization": True      # 인증 정보 유지
+        "persistAuthorization": False      # 인증 정보 유지
     }
 )
 

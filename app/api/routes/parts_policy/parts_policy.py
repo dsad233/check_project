@@ -16,7 +16,7 @@ from app.models.parts.salary_policies_model import SalaryPolicies
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # db = async_session()
 
 
