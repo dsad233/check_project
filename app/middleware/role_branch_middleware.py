@@ -43,6 +43,11 @@ class RoleBranchMiddleware(BaseHTTPMiddleware):
         self.ADMIN_LEVEL_PATHS = {
             "/branches",
             "/menu-management",
+            "/labor-management",
+            "/salary-bracket",
+            "/overtimes/approve",
+            "/overtimes/reject"
+            "/overtimes/approved-list"
         }
 
         # # 통합 관리자 이상 접근 가능 경로
