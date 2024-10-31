@@ -1,13 +1,11 @@
 import logging
 from datetime import datetime
-from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from sqlalchemy.orm import selectinload
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.models.branches.branches_model import Branches
-from sqlalchemy import update as sa_update
 from app.common.dto.search_dto import BaseSearchDto
 
 
@@ -100,28 +98,31 @@ async def find_by_id_with_policies(
     return branch
 
 
-async def delete(*, session: AsyncSession, branch_id: int) -> None:
+async def delete(*, session: AsyncSession, branch_id: int) -> bool:
 
-    branch = await find_by_id(session=session, branch_id=branch_id)
-    if branch is None:
-        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
-    
-    branch.deleted_yn = "Y"
-    branch.updated_at = datetime.now()  # 업데이트 시간도 함께 변경
-
+    await session.execute(
+            sa_update(Branches)
+            .where(Branches.id == branch_id)
+            .values(
+                deleted_yn="Y",
+                updated_at=datetime.now()
+            )
+        )
     await session.commit()
-    return
+    return True
 
-async def revive(*, session: AsyncSession, branch_id: int) -> None:
+async def revive(*, session: AsyncSession, branch_id: int) -> bool:
 
-    branch = await find_by_id(session=session, branch_id=branch_id)
-    if branch is None:
-        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
-    
-    branch.deleted_yn = "N"
-    branch.updated_at = datetime.now()
+    await session.execute(
+            sa_update(Branches)
+            .where(Branches.id == branch_id)
+            .values(
+                deleted_yn="N",
+                updated_at=datetime.now()
+            )
+        )
     await session.commit()
-    return
+    return True
 
 async def count_deleted_all(*, session: AsyncSession) -> int:
 
@@ -129,27 +130,23 @@ async def count_deleted_all(*, session: AsyncSession) -> int:
     result = await session.execute(statement)
     return result.scalar_one()
 
-async def update(*, session: AsyncSession, branch_id: int, request: Branches) -> Branches:
-    branch = await find_by_id(session=session, branch_id=branch_id)
-    if branch is None:
-        raise NotFoundError(f"{branch_id}번 지점을 찾을 수 없습니다.")
-    
+async def update(*, session: AsyncSession, branch_id: int, request: Branches, old: Branches) -> bool:
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in Branches.__table__.columns:
         if column.name not in ['id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(request, column.name)
-            if new_value is not None and getattr(branch, column.name) != new_value:
+            if new_value is not None and getattr(old, column.name) != new_value:
                 changed_fields[column.name] = new_value
 
     if changed_fields:
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(Branches).where(Branches.id == branch_id).values(**changed_fields)
         await session.execute(stmt)
-        branch.updated_at = datetime.now()
+        old.updated_at = datetime.now()
         await session.commit()
-        await session.refresh(branch)
+        await session.refresh(old)
     else:
         pass
     
-    return branch
+    return True
