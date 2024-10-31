@@ -44,7 +44,7 @@ async def read_branches(
 @available_higher_than(Role.MSO)
 async def create_branch(
     *, context: Request, session: AsyncSession = Depends(get_db), request: BranchRequest
-) -> bool:
+) -> BranchResponse:
     
     return await branch_service.create_branch(session=session, request=request)
 
