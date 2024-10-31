@@ -112,7 +112,7 @@ async def login(login: Login, res : Response, users: AsyncSession = Depends(get_
 
 # 로그아웃
 @router.post("/logout")
-async def logout(res: Response, token: Annotated[Users, Depends(validate_token)]):
+async def logout(res: Response):
     try:
         res.delete_cookie("authorization")
         return {"message": "로그아웃 완료"}
