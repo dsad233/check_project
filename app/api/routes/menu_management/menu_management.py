@@ -10,9 +10,7 @@ from app.middleware.tokenVerify import get_current_user, validate_token
 from app.models.users.users_model import Users, user_menus, user_parts
 from app.enums.users import Role, MenuPermissions
 
-router = APIRouter(
-    dependencies=[Depends(validate_token)]
-)
+router = APIRouter()
 
 class MenuPermissionUpdate(BaseModel):
     part_id: int
@@ -31,7 +29,6 @@ async def update_menu_permissions(
     current_user: Users = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    print(f"Current User - ID: {current_user.id}, Email: {current_user.email}, Role: {current_user.role}")
     try:
         def get_menu_enum(menu_value: str) -> MenuPermissions:
             """메뉴 value에 해당하는 Enum 객체 반환"""
@@ -49,9 +46,6 @@ async def update_menu_permissions(
             select(Users).where(Users.id == body.user_id)
         )
         target_user = target_user_query.scalar_one_or_none()
-        
-        if target_user:
-            print(f"Target User - ID: {target_user.id}, Email: {target_user.email}, Role: {target_user.role}")
 
         if not target_user:
             raise HTTPException(status_code=404, detail="해당 사용자를 찾을 수 없습니다.")
@@ -70,7 +64,7 @@ async def update_menu_permissions(
             existing = await db.execute(
                 select(user_menus).where(
                     and_(
-                        user_menus.c.request_user_id == body.user_id,
+                        user_menus.c.user_id == body.user_id,
                         user_menus.c.part_id == perm.part_id,
                         user_menus.c.menu_name == menu_enum
                     )
@@ -83,7 +77,7 @@ async def update_menu_permissions(
                     await db.execute(
                         update(user_menus).where(
                             and_(
-                                user_menus.c.request_user_id == target_user.id,
+                                user_menus.c.user_id == target_user.id,
                                 user_menus.c.part_id == perm.part_id,
                                 user_menus.c.menu_name == menu_enum
                             )
