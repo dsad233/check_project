@@ -150,3 +150,11 @@ async def update(*, session: AsyncSession, branch_id: int, request: Branches, ol
         pass
     
     return True
+
+
+async def find_by_id_with_parts(
+    *, session: AsyncSession, branch_id: int
+) -> Optional[Branches]:
+    stmt = select(Branches).options(selectinload(Branches.parts)).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
