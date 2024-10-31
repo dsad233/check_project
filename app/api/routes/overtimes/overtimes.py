@@ -35,17 +35,18 @@ async def create_overtime(
     ):
 
     try:        
-        existing_overtime = await db.execute(
-            select(Overtimes)
-            .where(
-                Overtimes.applicant_id == current_user_id,
-                Overtimes.application_date == overtime.application_date,
-                Overtimes.deleted_yn == "N"
-            )
-            .limit(1)
-        )
-        if existing_overtime.scalar_one_or_none() is not None:
-            raise HTTPException(status_code=400, detail="이미 해당 날짜에 초과근무 신청을 했습니다.")
+        # existing_overtime = await db.execute(
+        #     select(Overtimes)
+        #     .where(
+        #         Overtimes.applicant_id == current_user_id,
+        #         Overtimes.application_date == datetime.now(UTC).date(),
+        #         Overtimes.overtime_hours == overtime.overtime_hours,
+        #         Overtimes.deleted_yn == "N"
+        #     )
+        #     .limit(1)
+        # )
+        # if existing_overtime.scalar_one_or_none() is not None:
+        #     raise HTTPException(status_code=400, detail=f"이미 오늘 {overtime.overtime_hours}분 초과근무 신청을 했습니다.")
             
         new_overtime = Overtimes(
             applicant_id=current_user_id,
