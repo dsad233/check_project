@@ -55,8 +55,8 @@ async def get_all_with_excluded_parts(*,
         )
         # 제외 부서가 가지는 part_id로 이름 추출
         excluded_parts_data = [(
-            PartIdWithName.model_validate(await parts_crud.find_by_id_and_branch_id(
-                session=session, branch_id=branch_id, part_id=excluded_part.part_id
+            PartIdWithName.model_validate(await parts_crud.find_by_id(
+                session=session, part_id=excluded_part.part_id
             ))
         ) for excluded_part in excluded_parts]
         result.append(LeaveCategoryWithExcludedPartsDto(
@@ -99,9 +99,13 @@ async def update_leave_category(*,
     leave_category = await leave_categories_crud.find_by_id_and_branch_id(
         session=session, branch_id=branch_id, leave_id=leave_category_id
     )
-
     if leave_category is None:
         raise NotFoundError(f"{branch_id}번 지점의 {leave_category_id}번 휴가 카테고리가 존재하지 않습니다.")
+    
+    if leave_category.name != request.leave_category.name:
+        duplicate_leave_category = await leave_categories_crud.find_by_name_and_branch_id(session=session, branch_id=branch_id, name=request.leave_category.name)
+        if duplicate_leave_category is not None:
+            raise BadRequestError(detail=f"{branch_id}번 지점의 휴가 카테고리 이름 {request.leave_category.name}이(가) 이미 존재합니다.")
     
     await leave_categories_crud.update(
         session=session, branch_id=branch_id, leave_category_id=leave_category_id, request=LeaveCategory(branch_id=branch_id, **request.leave_category.model_dump(exclude_unset=True)), old=leave_category

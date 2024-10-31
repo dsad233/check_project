@@ -11,7 +11,7 @@ from app.models.users.users_work_contract_model import WorkContract, FixedRestDa
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
-from .parts.parts_model import Parts, PartUpdate, PartCreate
+from .parts.parts_model import Parts
 from .parts.user_salary import UserSalary
 from .branches.branches_model import Branches
 
