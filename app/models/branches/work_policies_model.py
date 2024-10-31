@@ -1,6 +1,5 @@
 from datetime import datetime, time
 from typing import Optional
-from typing import Optional
 from pydantic import BaseModel, Field
 from sqlalchemy import (
     Boolean,
@@ -214,7 +213,6 @@ class WorkPoliciesDto(BaseModel):
     work_schedules: list[WorkScheduleDto] = []
     break_times: list[BreakTimeDto] = []
 
-    
     class Config:
         from_attributes = True
 
