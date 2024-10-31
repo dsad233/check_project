@@ -1,3 +1,4 @@
+from app.cruds.branches.policies.salary_polices_crud import create_parttimer_policies
 from app.models.branches.auto_annual_leave_approval_model import AutoAnnualLeaveApproval
 from app.models.branches.account_based_annual_leave_grant_model import AccountBasedAnnualLeaveGrant
 from app.models.branches.entry_date_based_annual_leave_grant_model import EntryDateBasedAnnualLeaveGrant
@@ -219,6 +220,7 @@ async def create_branch(
         await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
         await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
         await condition_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+        await create_parttimer_policies(session, branch_id)
 
     return branch
 
