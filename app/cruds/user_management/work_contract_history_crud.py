@@ -48,4 +48,3 @@ async def add_work_contract_history(
         return work_contract_history.id
     except Exception as e:
         await session.rollback()
-        raise e

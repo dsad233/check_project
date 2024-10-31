@@ -23,7 +23,7 @@ class WebhookCallback:
             return {"status": "FAIL", "message": "Invalid event type"}
 
         result = await user_management_contract_service.approve_contract(
-            modusign_document_id=body.event.document_id,
+            modusign_document_id=body.document.id,
             session=db
         )
 

@@ -29,7 +29,7 @@ class WorkContract(Base):
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-    deleted_yn = Column(Boolean, default="N")
+    deleted_yn = Column(String(1), default="N")
 
 
 
