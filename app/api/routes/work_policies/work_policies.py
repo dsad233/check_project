@@ -6,53 +6,7 @@ from fastapi import APIRouter, Depends, Request
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-from app.exceptions.exceptions import (
-    BadRequestError,
-    NotFoundError,
-    UnauthorizedError,
-    ForbiddenError,
-)
 from app.core.database import get_db
-from app.cruds.branches.policies import (
-    allowance_crud,
-    auto_overtime_crud,
-    holiday_work_crud,
-    overtime_crud,
-    work_crud,
-)
-from app.middleware.tokenVerify import validate_token, get_current_user
-from app.models.users.users_model import Users
-from app.models.branches.allowance_policies_model import (
-    AllowancePolicies,
-    AllowancePoliciesDto,
-    DefaultAllowancePoliciesDto,
-    HolidayAllowancePoliciesDto,
-)
-from app.models.branches.auto_overtime_policies_model import (
-    AutoOvertimePolicies,
-)
-from app.models.branches.holiday_work_policies_model import (
-    HolidayWorkPolicies,
-)
-from app.models.branches.overtime_policies_model import (
-    OverTimePolicies,
-)
-from app.models.branches.work_policies_model import (
-    BreakTime,
-    WorkPolicies,
-    WorkPoliciesDto,
-    WorkPoliciesUpdateDto,
-    WorkSchedule,
-)
-from app.models.branches.auto_overtime_policies_model import (
-    AutoOvertimePolicies,
-)
-from app.schemas.branches_schemas import (
-    AutoOvertimePoliciesDto,
-    HolidayWorkPoliciesDto,
-    OverTimePoliciesDto,
-)
 from app.schemas.branches_schemas import (
     CombinedPoliciesDto,
     CombinedPoliciesUpdateDto,
@@ -64,22 +18,23 @@ router = APIRouter()
 
 
 @router.get("/get", response_model=CombinedPoliciesDto, summary="근무정책 조회")
-# @available_higher_than(Role.INTEGRATED_ADMIN)
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_work_policies(
     *,
+    context: Request,
     session: AsyncSession = Depends(get_db),
-    branch_id: int,
-    user: Annotated[Users, Depends(get_current_user)],
+    branch_id: int, 
 ) -> CombinedPoliciesDto:
 
     return await branch_service.get_branch_policies(session=session, branch_id=branch_id)
 
 
-@router.patch("/update", response_model=str)
+@router.patch("/update", response_model=str, summary="근무정책 수정")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_work_policies(
     *,
+    context: Request,
     session: AsyncSession = Depends(get_db),
-    user: Annotated[Users, Depends(get_current_user)],
     branch_id: int,
     policies_in: CombinedPoliciesUpdateDto,
 ) -> str:

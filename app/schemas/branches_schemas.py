@@ -1,7 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from app.enums.users import Weekday
-from app.models.branches.work_policies_model import WorkPoliciesUpdateDto
 from app.schemas.parts_schemas import PartIdWithName
 from app.common.dto.pagination_dto import PaginationDto
 from datetime import datetime, time
@@ -128,7 +127,7 @@ class ManualGrantRequest(BaseModel):
     memo: Optional[str] = None
 
 
-class WorkScheduleDto(BaseModel):
+class BranchWorkScheduleDto(BaseModel):
     day_of_week: Weekday
     start_time: time
     end_time: time
@@ -139,7 +138,7 @@ class WorkScheduleDto(BaseModel):
         use_enum_values = True
 
 
-class BreakTimeDto(BaseModel):
+class BranchBreakTimeDto(BaseModel):
     is_doctor: bool
     break_type: str
     start_time: time
@@ -153,8 +152,39 @@ class WorkPoliciesDto(BaseModel):
     id: int
     branch_id: int
     weekly_work_days: int
-    work_schedules: list[WorkScheduleDto] = []
-    break_times: list[BreakTimeDto] = []
+    work_schedules: list[BranchWorkScheduleDto] = []
+    break_times: list[BranchBreakTimeDto] = []
+
+    class Config:
+        from_attributes = True
+        
+class BranchWorkScheduleUpdateDto(BaseModel):
+    day_of_week: Optional[Weekday] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    is_holiday: Optional[bool] = None
+
+    class Config:
+        from_attributes = True
+        use_enum_values = True
+
+
+class BranchBreakTimeUpdateDto(BaseModel):
+    is_doctor: Optional[bool] = None
+    break_type: Optional[str] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+
+    class Config:
+        from_attributes = True
+
+
+class WorkPoliciesUpdateDto(BaseModel):
+    id: Optional[int] = None
+    branch_id: Optional[int] = None
+    weekly_work_days: Optional[int] = None
+    work_schedules: Optional[list[BranchWorkScheduleUpdateDto]] = None
+    break_times: Optional[list[BranchBreakTimeUpdateDto]] = None
 
     class Config:
         from_attributes = True

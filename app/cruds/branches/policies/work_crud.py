@@ -7,13 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import SQLAlchemyError, NoResultFound
 from app.models.branches.work_policies_model import (
     WorkPolicies,
-    WorkPoliciesDto,
-    WorkPoliciesUpdateDto,
-    WorkSchedule,
-    WorkScheduleDto,
-    BreakTime,
-    BreakTimeDto,
+    BranchWorkSchedule,
+    BranchBreakTime,
 )
+from app.schemas.branches_schemas import WorkPoliciesUpdateDto, WorkPoliciesUpdateDto
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.enums.users import Weekday
 from sqlalchemy.orm import selectinload
@@ -21,14 +18,14 @@ from sqlalchemy.orm import selectinload
 logger = logging.getLogger(__name__)
 
 
-def generate_break_times(work_policy_id: int) -> list[BreakTime]:
+def generate_break_times(work_policy_id: int) -> list[BranchBreakTime]:
     break_times = []
     for is_doctor in [True, False]:
         for break_type, start, end in [
             ("점심", time(12, 0), time(13, 0)),
             ("저녁", time(18, 0), time(19, 0)),
         ]:
-            break_time = BreakTime(
+            break_time = BranchBreakTime(
                 work_policy_id=work_policy_id,
                 is_doctor=is_doctor,
                 break_type=break_type,
@@ -64,7 +61,7 @@ async def create(
 
     # 월요일부터 일요일까지의 WorkSchedule 생성
     for day in Weekday:
-        work_schedule = WorkSchedule(
+        work_schedule = BranchWorkSchedule(
             work_policy_id=work_policies.id,
             day_of_week=day,
             start_time=time(9, 0),
@@ -101,7 +98,7 @@ async def update(
     # WorkSchedule 업데이트
     if work_policies_update.work_schedules:
         existing_schedules = await session.execute(
-            select(WorkSchedule).where(WorkSchedule.work_policy_id == work_policies.id)
+            select(BranchWorkSchedule).where(BranchWorkSchedule.work_policy_id == work_policies.id)
         )
         existing_schedules = existing_schedules.scalars().all()
 
@@ -122,7 +119,7 @@ async def update(
     # BreakTime 업데이트
     if work_policies_update.break_times:
         existing_breaks = await session.execute(
-            select(BreakTime).where(BreakTime.work_policy_id == work_policies.id)
+            select(BranchBreakTime).where(BranchBreakTime.work_policy_id == work_policies.id)
         )
         existing_breaks = existing_breaks.scalars().all()
 

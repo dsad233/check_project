@@ -6,7 +6,8 @@ from app.models.branches.entry_date_based_annual_leave_grant_model import EntryD
 from app.models.branches.condition_based_annual_leave_grant_model import ConditionBasedAnnualLeaveGrant
 from app.models.histories.branch_histories_model import BranchHistories
 from app.models.branches.branches_model import Branches
-from app.models.branches.work_policies_model import BreakTime, WorkPolicies, WorkPoliciesUpdateDto, WorkSchedule
+from app.models.branches.work_policies_model import BranchBreakTime, WorkPolicies, BranchWorkSchedule
+from app.schemas.branches_schemas import AllowancePoliciesResponse, WorkPoliciesDto, AutoOvertimePoliciesDto, HolidayWorkPoliciesDto, OverTimePoliciesDto, AllowancePoliciesDto
 from app.models.branches.auto_overtime_policies_model import AutoOvertimePolicies
 from app.models.branches.holiday_work_policies_model import HolidayWorkPolicies
 from app.models.branches.overtime_policies_model import OverTimePolicies
