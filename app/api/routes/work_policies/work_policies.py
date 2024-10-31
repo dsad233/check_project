@@ -31,15 +31,12 @@ from app.models.branches.allowance_policies_model import (
 )
 from app.models.branches.auto_overtime_policies_model import (
     AutoOvertimePolicies,
-    AutoOvertimePoliciesDto,
 )
 from app.models.branches.holiday_work_policies_model import (
     HolidayWorkPolicies,
-    HolidayWorkPoliciesDto,
 )
 from app.models.branches.overtime_policies_model import (
     OverTimePolicies,
-    OverTimePoliciesDto,
 )
 from app.models.branches.work_policies_model import (
     BreakTime,
@@ -47,6 +44,14 @@ from app.models.branches.work_policies_model import (
     WorkPoliciesDto,
     WorkPoliciesUpdateDto,
     WorkSchedule,
+)
+from app.models.branches.auto_overtime_policies_model import (
+    AutoOvertimePolicies,
+)
+from app.schemas.branches_schemas import (
+    AutoOvertimePoliciesDto,
+    HolidayWorkPoliciesDto,
+    OverTimePoliciesDto,
 )
 
 logger = logging.getLogger(__name__)
