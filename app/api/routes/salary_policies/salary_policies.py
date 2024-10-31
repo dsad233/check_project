@@ -10,7 +10,7 @@ from sqlalchemy.future import select
 from app.core.database import async_session, get_db
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-salay_policies = async_session()
+# salay_policies = async_session()
 
 # # 연봉 정책 생성
 # @router.post('parts/{part_id}/salary_policies')

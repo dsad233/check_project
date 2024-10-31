@@ -31,6 +31,10 @@ class Overtimes(Base):
 from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 
+class ManagerMemoResponseDto(BaseModel):
+    id: int = Field(None, description="primary key")
+    manager_memo: str = Field(None, description="관리자 메모")
+
 class OvertimeBase(BaseModel):
     applicant_id: Optional[int] = Field(None, description="신청자 ID")
     manager_id: Optional[int] = Field(None, description="승인자 ID")

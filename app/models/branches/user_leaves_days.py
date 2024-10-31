@@ -4,19 +4,13 @@ from pydantic import BaseModel, Field
 from sqlalchemy import (
     Boolean,
     Column,
-    Date,
     DateTime,
-    Enum,
-    Float,
     ForeignKey,
     Index,
     Integer,
     String,
-    UniqueConstraint,
     Numeric
 )
-from sqlalchemy.orm import relationship
-from typing import Optional
 
 from app.core.database import Base
 
@@ -44,9 +38,7 @@ class UserLeavesDays(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
-    user = relationship("Users", back_populates="leaves", foreign_keys=[user_id])
-    approver = relationship("Users", back_populates="approved_leaves", foreign_keys=[approver_id])
-    branch = relationship("Branches", back_populates="user_leaves")
+    
     
 class UserLeavesDaysResponse(BaseModel):
     user_id: int = Field(..., gt=0) # 사용자 ID

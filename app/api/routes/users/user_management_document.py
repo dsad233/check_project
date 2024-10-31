@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.dto.response_dto import ResponseDTO
-from app.core.database import async_session
-from app.cruds.user_management.user_management_document_crud import find_by_id_with_documents, add_documents, \
+from app.core.database import get_db
+from app.cruds.user_management.document_crud import find_by_id_with_documents, add_documents, \
     hard_delete_document, add_send_document_history, find_send_document_history_by_request_user_id, \
     find_send_document_history_by_user_id, patch_document_send_history_status, delete_send_document_history
 from app.enums.user_management import DocumentSendStatus
@@ -14,7 +15,6 @@ from app.schemas.user_management_document_schemas import ResponseUserDocuments, 
     RequestApproveSendDocument, RequestRejectSendDocument, RequestCancelSendDocument
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
 
 
 class UserManagementDocument:
@@ -22,8 +22,9 @@ class UserManagementDocument:
 
     @router.get("", response_model=ResponseDTO[ResponseUserDocuments])
     async def get_user_documents(
-        user_id: int,
-        current_user: Users = Depends(get_current_user),
+            user_id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         try:
             user = await find_by_id_with_documents(session=db, user_id=user_id)
@@ -42,8 +43,9 @@ class UserManagementDocument:
 
     @router.post("", response_model=ResponseDTO[ResponseAddedDocuments])
     async def add_user_document(
-        request_add_documents: RequestAddDocuments,
-        current_user: Users = Depends(get_current_user),
+            request_add_documents: RequestAddDocuments,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         documents = [
             {
@@ -64,8 +66,9 @@ class UserManagementDocument:
 
     @router.delete("", response_model=ResponseDTO)
     async def delete_user_document(
-        request_remove_document: RequestRemoveDocument,
-        current_user: Users = Depends(get_current_user),
+            request_remove_document: RequestRemoveDocument,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         try:
             await hard_delete_document(
@@ -83,8 +86,9 @@ class UserManagementDocument:
 
     @router.get("/send/{user_id}", response_model=ResponseDTO[ResponseDocumentSendHistoryRequestsDto])
     async def get_send_document_requests(
-        user_id: int,
-        current_user: Users = Depends(get_current_user),
+            user_id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         document_send_histories = await find_send_document_history_by_user_id(
             session=db,
@@ -102,8 +106,9 @@ class UserManagementDocument:
 
     @router.post("/send", response_model=ResponseDTO[ResponseSendDocumentHistoryDto])
     async def send_document(
-        request_send_document: RequestSendDocument,
-        current_user: Users = Depends(get_current_user),
+            request_send_document: RequestSendDocument,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         request_send_document_dict = request_send_document.model_dump()
         inserted_send_document_history_id = await add_send_document_history(
@@ -123,8 +128,9 @@ class UserManagementDocument:
 
     @router.patch("/approve", response_model=ResponseDTO)
     async def approve_send_document(
-        request_approve_send_document: RequestApproveSendDocument,
-        current_user: Users = Depends(get_current_user),
+            request_approve_send_document: RequestApproveSendDocument,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         result = await patch_document_send_history_status(
             session=db,
@@ -142,8 +148,9 @@ class UserManagementDocument:
 
     @router.patch("/reject", response_model=ResponseDTO)
     async def reject_send_document(
-        request_reject_send_document: RequestRejectSendDocument,
-        current_user: Users = Depends(get_current_user),
+            request_reject_send_document: RequestRejectSendDocument,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         result = await patch_document_send_history_status(
             session=db,
@@ -161,8 +168,9 @@ class UserManagementDocument:
 
     @router.delete("/cancel", response_model=ResponseDTO)
     async def cancel_send_document(
-        requset_cancel_send_document: RequestCancelSendDocument,
-        current_user: Users = Depends(get_current_user),
+            requset_cancel_send_document: RequestCancelSendDocument,
+            db: AsyncSession = Depends(get_db),
+            current_user: Users = Depends(get_current_user),
     ):
         result = await delete_send_document_history(
             session=db,
@@ -180,5 +188,7 @@ class UserManagementDocument:
             status="SUCCESS",
             message="성공적으로 문서 전달을 취소했습니다.",
         )
+
+
 
 user_management_document = UserManagementDocument()

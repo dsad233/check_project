@@ -36,6 +36,7 @@ async def create(*, session: AsyncSession, branch_id: int, condition_based_annua
         condition_based_annual_leave_grant_create.branch_id = branch_id
     session.add(condition_based_annual_leave_grant_create)
     await session.commit()
+    await session.flush()
     await session.refresh(condition_based_annual_leave_grant_create)
     return condition_based_annual_leave_grant_create
     

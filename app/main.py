@@ -1,4 +1,5 @@
-from fastapi import FastAPI
+from typing import Callable, Any
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.openapi.utils import get_openapi
 from app.core.database import startup_event
@@ -7,6 +8,9 @@ from app.api import main
 from app.api.routes.auth import auth
 from contextlib import asynccontextmanager
 from app.core.log_config import get_logger
+from app.middleware.token_middleware import TokenMiddleware
+from app.middleware.role_branch_middleware import RoleBranchMiddleware
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,22 +21,32 @@ app = FastAPI(lifespan=lifespan)
 
 origins = [
     "https://workswave-frontend-one.vercel.app",
+    "https://develop-check.mementoai.io",
     "http://localhost:5173",
     "http://52.78.246.46"
-
 ]
 
 app.add_middleware(
-    CORSMiddleware,
+    CORSMiddleware,  # type: ignore
     allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
+
+app.add_middleware(RoleBranchMiddleware)  #type: ignore #RoleBranchMiddleware가 user 정보를 사용
+
+app.add_middleware(TokenMiddleware)     #type: ignore #TokenMiddleware가 먼저 실행되어 user 정보를 설정
+
+
+
+
+
 # Register exception handlers
 add_exception_handlers(app)
 
-app.include_router(auth.router, prefix="/api")
+
+# app.include_router(auth.router, prefix="/api")
 
 
 # def custom_openapi():

@@ -9,6 +9,7 @@ class BaseAppSettings(BaseSettings):
     JWT_ALGORITHM: str
     MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
     MODUSIGN_USER_EMAIL: str  
+    MODUSIGN_WEBHOOK_URL: str = Field(..., env="MODUSIGN_WEBHOOK_URL")
     
     @property
     def MODUSIGN_HEADERS(self) -> dict:
@@ -26,6 +27,7 @@ class BaseAppSettings(BaseSettings):
     class Config:
         env_file = ".env"
         case_sensitive = False
+        extra = "allow"
 
 class DevSettings(BaseAppSettings):
     MYSQL_USER: str
@@ -33,7 +35,6 @@ class DevSettings(BaseAppSettings):
     MYSQL_HOST: str
     MYSQL_PORT: int
     MYSQL_DATABASE: str
-    MYSQL_ROOT_PASSWORD: str
 
     @property
     def DATABASE_URL(self) -> str:

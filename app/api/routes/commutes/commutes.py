@@ -5,20 +5,21 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from pydantic import ValidationError
 from sqlalchemy import func, select, update
 
-from app.core.database import async_session
+from app.core.database import async_session, get_db
 from app.middleware.tokenVerify import get_current_user, get_current_user_id, validate_token
 from app.models.branches.branches_model import Branches
 from app.models.branches.commute_policies_model import CommutePolicies
 from app.models.commutes.commutes_model import Commutes, CommuteUpdate, Commutes_clock_in, Commutes_clock_out
 from app.models.users.users_model import Users
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
+# db = async_session()
 
 
 # 출근 기록 생성
 @router.post("/clock-in")
-async def create_clock_in(request: Request, current_user: Users = Depends(get_current_user)):
+async def create_clock_in(request: Request, current_user: Users = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -81,7 +82,7 @@ async def create_clock_in(request: Request, current_user: Users = Depends(get_cu
 
 # 퇴근 기록 생성 (기존의 출근 기록 수정)
 @router.post("/clock-out")
-async def create_clock_out(request: Request, current_user: Users = Depends(get_current_user)):
+async def create_clock_out(request: Request, current_user: Users = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     try:
         # 현재 날짜의 시작과 끝 시간 계산
         today = date.today()
@@ -150,7 +151,7 @@ async def create_clock_out(request: Request, current_user: Users = Depends(get_c
 # 출퇴근 기록 목록 조회
 @router.get("")
 async def get_commute_records(
-    current_user_id: int = Depends(get_current_user_id), skip: int = 0, limit: int = 100
+    current_user_id: int = Depends(get_current_user_id), skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)
 ):
     try:
         # 전체 출퇴근 기록 수 조회
@@ -190,6 +191,7 @@ async def update_commute_record(
     commute_id: int,
     commute_update: CommuteUpdate,
     current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
 ):
     try:
         # 업데이트할 필드만 선택
@@ -257,7 +259,7 @@ async def update_commute_record(
 # 출퇴근 기록 삭제
 @router.delete("/{commute_id}")
 async def delete_commute_record(
-    commute_id: int, current_user_id: int = Depends(get_current_user_id)
+    commute_id: int, current_user_id: int = Depends(get_current_user_id), db: AsyncSession = Depends(get_db)
 ):
     try:
         # 출퇴근 기록 존재 여부 확인

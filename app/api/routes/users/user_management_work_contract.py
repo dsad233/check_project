@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.common.dto.response_dto import ResponseDTO
-from app.core.database import async_session
-from app.cruds.user_management.users_work_contract_crud import find_work_contract_by_user_id, find_user_by_user_id, \
+from app.core.database import get_db
+from app.cruds.user_management.work_contract_crud import find_work_contract_by_user_id, find_user_by_user_id, \
     find_work_contract_part_timer_by_user_id, create_work_contract_with_rest_days, \
     find_work_contract_by_work_contract_id, update_work_contract_with_rest_days
 from app.exceptions.exceptions import BadRequestError
@@ -10,18 +11,20 @@ from app.middleware.tokenVerify import validate_token, get_current_user
 from app.schemas.user_work_contract_schemas import RequestPatchWorkContract, RequestCreateWorkContract, \
     ResponseUserWorkContractDto, ResponseCreatedWorkContractDto, WorkContractDto
 from app.enums.users import EmploymentStatus
+from app.service.user_management.work_contract_service import UserManagementWorkContractService
 
 router = APIRouter(dependencies=[Depends(validate_token)])
-db = async_session()
 
+user_management_work_contract_service = UserManagementWorkContractService()
 
 class UserManagementWorkContract:
     router = router
 
     @router.get("/{user_id}", response_model=ResponseDTO[ResponseUserWorkContractDto])
-    async def get_user_management_work_contract(
-        user_id: int,
-        current_user: dict = Depends(get_current_user)
+    async def get_work_contract(
+            user_id: int,
+            db: AsyncSession = Depends(get_db),
+            current_user: dict = Depends(get_current_user)
     ):
         try:
             user = await find_user_by_user_id(session=db, user_id=user_id)
@@ -46,31 +49,18 @@ class UserManagementWorkContract:
 
 
     @router.post("", response_model=ResponseDTO[ResponseCreatedWorkContractDto])
-    async def create_user_management_work_contract(
-        request_create_work_contract: RequestCreateWorkContract,
-        current_user: dict = Depends(get_current_user)
+    async def create_work_contract(
+            request_create_work_contract: RequestCreateWorkContract,
+            session: AsyncSession = Depends(get_db),
+            current_user: dict = Depends(get_current_user)
     ):
-        user_id = request_create_work_contract.user_id
-        work_contract = await find_work_contract_by_user_id(session=db, user_id=user_id)
-
-        if work_contract:
-            work_contract_id = work_contract.id
-            return ResponseDTO(
-                status="FAILED",
-                message="이미 근로계약이 존재합니다.",
-                data=ResponseCreatedWorkContractDto.build(work_contract_id=work_contract_id)
-            )
-
-        request_create_work_contract_dict = request_create_work_contract.model_dump()
-        request_fixed_rest_days = request_create_work_contract_dict.pop("fixed_rest_days")
-
-        word_contract_id = await create_work_contract_with_rest_days(
-            session=db,
-            work_contract_dict=request_create_work_contract_dict,
-            fixed_rest_days=request_fixed_rest_days,
+        work_contract = request_create_work_contract.to_model()
+        created_work_contract_id = await user_management_work_contract_service.create_work_contract(
+            session=session,
+            work_contract=work_contract
         )
 
-        data = ResponseCreatedWorkContractDto.build(work_contract_id=word_contract_id)
+        data = ResponseCreatedWorkContractDto.build(work_contract_id=created_work_contract_id)
 
         return ResponseDTO(
             status="SUCCESS",
@@ -80,10 +70,11 @@ class UserManagementWorkContract:
 
 
     @router.patch("", response_model=ResponseDTO[WorkContractDto])
-    async def patch_user_management_work_contract(
-        work_contract_id: int,
-        request_patch_work_contract: RequestPatchWorkContract,
-        current_user: dict = Depends(get_current_user)
+    async def patch_work_contract(
+            work_contract_id: int,
+            request_patch_work_contract: RequestPatchWorkContract,
+            db: AsyncSession = Depends(get_db),
+            current_user: dict = Depends(get_current_user)
     ):
         work_contract = await find_work_contract_by_work_contract_id(
             session=db,

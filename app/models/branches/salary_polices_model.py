@@ -9,9 +9,9 @@ from sqlalchemy import (
     String,
 )
 from app.core.database import Base
-from pydantic import BaseModel, Field  # Optional과 List 제거
+from pydantic import BaseModel, Field
 
-from app.models.branches.allowance_policies_model import AllowancePoliciesDto, AllowancePoliciesResponse
+from app.models.branches.allowance_policies_model import AllowancePoliciesResponse
 from app.models.branches.parttimer_policies_model import ParttimerPoliciesDto
 
 
@@ -56,6 +56,8 @@ class CombinedPoliciesResponse(BaseModel):
     parttimer_policies: ParttimerPoliciesDto | None = None
     salary_templates_policies: list[SalaryTemplatesPoliciesDto] | None = None  # 리스트 타입으로 변경
     allowance_policies: AllowancePoliciesResponse | None = None
+    part_name: list[str] | None = None
+    
 
     class Config:
         from_attributes = True
