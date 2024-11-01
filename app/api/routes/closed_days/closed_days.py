@@ -9,7 +9,7 @@ from app.core.database import async_session, get_db
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 from app.middleware.tokenVerify import get_current_user, validate_token
-from app.models.closed_days.closed_days_model import ClosedDays, ClosedDayCreate
+from app.models.closed_days.closed_days_model import ClosedDays, BranchClosedDay
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
 from calendar import monthrange
@@ -24,17 +24,35 @@ router = APIRouter(dependencies=[Depends(validate_token)])
 async def create_branch_closed_day(
     request: Request,
     branch_id: int,
-    closed_days: ClosedDayCreate,
+    closed_days: BranchClosedDay,
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        for day_item in closed_days.closed_days:
-            new_closed_day = ClosedDays(
-                branch_id=branch_id,
-                closed_day_date=day_item.closed_day_date,
-                memo=day_item.memo or "임시 휴점",
+        for day_item in closed_days.hospital_closed_days:
+            # 기존 삭제된 데이터가 있는지 확인
+            stmt = select(ClosedDays).where(
+                and_(
+                    ClosedDays.branch_id == branch_id,
+                    ClosedDays.closed_day_date == day_item,
+                    ClosedDays.user_id.is_(None),
+                    ClosedDays.deleted_yn == 'Y'
+                )
             )
-            db.add(new_closed_day)
+            result = await db.execute(stmt)
+            existing_closed_day = result.scalar_one_or_none()
+
+            if existing_closed_day:
+                # 기존 데이터가 있다면 복구
+                existing_closed_day.deleted_yn = 'N'
+                existing_closed_day.memo = "임시 휴점"
+            else:
+                # 새로운 데이터 생성
+                new_closed_day = ClosedDays(
+                    branch_id=branch_id,
+                    closed_day_date=day_item,
+                    memo = "임시 휴점",
+                )
+                db.add(new_closed_day)
 
         await db.commit()
         return {"message": "휴무일이 성공적으로 생성되었습니다."}
@@ -49,11 +67,11 @@ async def create_branch_closed_day(
 async def delete_branch_closed_days(
     request: Request,
     branch_id: int,
-    closed_days: ClosedDayCreate,
+    closed_days: BranchClosedDay,
     db: AsyncSession = Depends(get_db),
 ):
     try:
-        dates_to_delete = [day.closed_day_date for day in closed_days.closed_days]
+        dates_to_delete = closed_days.hospital_closed_days
 
         # 먼저 해당 레코드들이 존재하는지 확인
         stmt = select(ClosedDays.closed_day_date).where(
