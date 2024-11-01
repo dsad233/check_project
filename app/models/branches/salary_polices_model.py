@@ -13,7 +13,6 @@ from pydantic import BaseModel, Field
 from app.schemas.branches_schemas import AllowancePoliciesResponse
 from app.models.branches.parttimer_policies_model import ParttimerPoliciesDto
 
-
 class SalaryTemplatesPolicies(Base):
     """
     임금 명세서 설정 모델

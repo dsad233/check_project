@@ -15,6 +15,7 @@ async def create(
     *, session: AsyncSession, branch_id: int, request: AutoOvertimePolicies = AutoOvertimePolicies()
 ) -> AutoOvertimePolicies:
     
+    request.branch_id = branch_id
     session.add(request)
     await session.commit()
     await session.flush()

@@ -12,7 +12,8 @@ from app.cruds.users.users_crud import find_all_by_branch_id_and_role
 from app.enums.users import Role
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto, AdminUsersDto
-from app.models.parts.parts_model import Parts, PartUpdate
+from app.schemas.parts_schemas import PartRequest
+from app.models.parts.parts_model import Parts
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
 from app.service.user_management.service import UserManagementService
@@ -502,7 +503,7 @@ class UserManagement:
     @router.patch("/{id}/parts")
     async def update_user_parts(
             id: int,
-            part_update: PartUpdate,
+            part_update: PartRequest,
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user)
     ):

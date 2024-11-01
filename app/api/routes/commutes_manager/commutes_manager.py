@@ -12,13 +12,12 @@ from app.core.permissions.auth_utils import available_higher_than
 from app.middleware.tokenVerify import validate_token
 from app.enums.users import Role, StatusKor
 from app.models.branches.work_policies_model import WorkPolicies
-# from app.models.branches.work_policies_model import WorkPolicies, WorkSchedule
 from app.models.users.users_model import Users
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.leave_histories_model import LeaveHistories
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.users.users_work_contract_model import WorkContract
-from app.models.users.overtimes_model import OverTime_History, Overtimes
+from app.models.users.overtimes_model import Overtimes
 
 router = APIRouter()
 
@@ -27,10 +26,9 @@ async def get_user_query(session, branch_id, part_id, user_name, phone_number):
     # part_id가 있는데 branch_id가 없으면 에러
     if part_id and not branch_id:
         raise HTTPException(
-            status_code=400,
-            detail="지점을 선택하지 않고 파트를 선택할 수 없습니다."
+            status_code=400, detail="지점을 선택하지 않고 파트를 선택할 수 없습니다."
         )
-        
+
     query = (
         select(Users)
         .options(
@@ -83,7 +81,7 @@ async def get_user_data(session, user_id, branch_id, start_date, end_date):
                 or_(
                     WorkContract.contract_end_date.is_(None),
                     WorkContract.contract_end_date >= start_date.date(),
-                )
+                ),
             )
         )
         .order_by(WorkContract.contract_start_date.desc())
@@ -95,7 +93,9 @@ async def get_user_data(session, user_id, branch_id, start_date, end_date):
     work_policy_result = await session.execute(
         select(WorkPolicies)
         .options(selectinload(WorkPolicies.work_schedules))
-        .where(and_(WorkPolicies.branch_id == branch_id, WorkPolicies.deleted_yn == "N"))
+        .where(
+            and_(WorkPolicies.branch_id == branch_id, WorkPolicies.deleted_yn == "N")
+        )
     )
     work_policy = work_policy_result.scalar_one_or_none()
 
@@ -213,7 +213,7 @@ async def process_daily_record(
         ):
             record_data["status"] = "직원 정기휴무"
             return record_data
-        
+
     # 출근 기록 체크
     commute = next((c for c in commutes if c.clock_in.date() == current_date), None)
     if commute:
@@ -237,12 +237,14 @@ async def process_daily_record(
         # 지각 체크
         if contract and contract.weekly_work_start_time:
             weekday = current_date.weekday()
-            
+
             # 근무일인지 체크 (휴무일이 아닌 날)
             should_check_attendance = False  # 기본값을 False로
-            if (weekday < 5 and not contract.weekly_is_rest) or \
-               (weekday == 5 and not contract.saturday_is_rest) or \
-               (weekday == 6 and not contract.sunday_is_rest):
+            if (
+                (weekday < 5 and not contract.weekly_is_rest)
+                or (weekday == 5 and not contract.saturday_is_rest)
+                or (weekday == 6 and not contract.sunday_is_rest)
+            ):
                 should_check_attendance = True  # 근무일인 경우에만 True
 
             if should_check_attendance:
@@ -253,28 +255,37 @@ async def process_daily_record(
         # 초과근무 체크
         if commute.clock_out and contract and contract.weekly_work_end_time:
             weekday = current_date.weekday()
-            
+
             # 근무일인지 체크 (휴무일이 아닌 날)
             should_check_overtime = False  # 기본값을 False로
-            if (weekday < 5 and not contract.weekly_is_rest) or \
-               (weekday == 5 and not contract.saturday_is_rest) or \
-               (weekday == 6 and not contract.sunday_is_rest):
+            if (
+                (weekday < 5 and not contract.weekly_is_rest)
+                or (weekday == 5 and not contract.saturday_is_rest)
+                or (weekday == 6 and not contract.sunday_is_rest)
+            ):
                 should_check_overtime = True  # 근무일인 경우에만 True
 
             if should_check_overtime:
                 clock_out_time = commute.clock_out.replace(tzinfo=None).time()
-                
+
                 # 해당 날짜의 승인된 초과근무가 있는지 확인
                 approved_overtime = next(
-                    (ot for ot in overtimes 
-                     if ot.application_date == current_date 
-                     and ot.is_approved == "Y"), 
-                    None
+                    (
+                        ot
+                        for ot in overtimes
+                        if ot.application_date == current_date and ot.is_approved == "Y"
+                    ),
+                    None,
                 )
-                
+
                 # 초과근무가 승인되었고, 퇴근 시간이 정규 근무 종료 시간을 초과한 경우
-                is_overtime = True if approved_overtime and clock_out_time > contract.weekly_work_end_time else False
-                
+                is_overtime = (
+                    True
+                    if approved_overtime
+                    and clock_out_time > contract.weekly_work_end_time
+                    else False
+                )
+
                 record_data["overtime"] = is_overtime
 
         return record_data

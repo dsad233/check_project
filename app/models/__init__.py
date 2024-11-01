@@ -11,7 +11,7 @@ from app.models.users.users_work_contract_model import WorkContract, FixedRestDa
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
-from .parts.parts_model import Parts, PartUpdate, PartCreate
+from .parts.parts_model import Parts
 from .parts.user_salary import UserSalary
 from .branches.branches_model import Branches
 
@@ -193,13 +193,15 @@ SalaryTemplatesPolicies.part = relationship("Parts", back_populates="salary_temp
 BranchHistories.branch = relationship("Branches", back_populates="branch_histories")
 
 Users.leaves = relationship("UserLeavesDays", back_populates="user", foreign_keys="UserLeavesDays.user_id")
-Users.approved_leaves = relationship("UserLeavesDays", back_populates="approver", foreign_keys="UserLeavesDays.approver_id")
 
 UserLeavesDays.user = relationship("Users", back_populates="leaves", foreign_keys="UserLeavesDays.user_id")
-UserLeavesDays.approver = relationship("Users", back_populates="approved_leaves", foreign_keys="UserLeavesDays.approver_id")
 UserLeavesDays.branch = relationship("Branches", back_populates="user_leaves")
+UserLeavesDays.part = relationship("Parts", back_populates="user_leaves", foreign_keys=[UserLeavesDays.part_id])
 
-Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys="[UserLeavesDays.branch_id]")
+# 파트 추가
+Parts.user_leaves = relationship("UserLeavesDays", back_populates="part", foreign_keys=[UserLeavesDays.part_id])
+
+Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys=[UserLeavesDays.branch_id])
 
 # users.part_timer
 Users.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="users", uselist=False)
@@ -222,9 +224,10 @@ WorkContract.work_contract_history = relationship("WorkContractHistory", back_po
 WorkContract.contract = relationship("Contract", back_populates="work_contract")
 Contract.work_contract = relationship("WorkContract", back_populates="contract")
 
+
 LeaveHistories.manager = relationship("Users", foreign_keys=[LeaveHistories.manager_id], back_populates="managed_leave_histories")
 Users.managed_leave_histories = relationship("LeaveHistories", foreign_keys=[LeaveHistories.manager_id], back_populates="manager")
 
 
-WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract")
+WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract") 
 WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")

@@ -40,6 +40,7 @@ from app.cruds.leave_policies import auto_annual_leave_approval_crud, account_ba
 from app.cruds.branches.policies import allowance_crud, holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud
 from app.cruds.parts import parts_crud
 from app.cruds.branches import branches_crud, branch_histories_crud
+from app.service import parts_service
 from app.enums.parts import PartAutoAnnualLeaveGrant
 from app.enums.branches import BranchHistoryType
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -58,10 +59,10 @@ async def get_auto_leave_policies_and_parts(*, session: AsyncSession, branch_id:
     condition_based_grant_policies: list[ConditionBasedAnnualLeaveGrant] = await condition_based_annual_leave_grant_crud.find_all_by_branch_id(session=session, branch_id=branch_id)
 
     # 파트 조회
-    account_parts = await parts_crud.find_all_by_branch_id_and_auto_annual_leave_grant(session=session, branch_id=branch_id, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.ACCOUNTING_BASED_GRANT)
-    entry_date_parts = await parts_crud.find_all_by_branch_id_and_auto_annual_leave_grant(session=session, branch_id=branch_id, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.ENTRY_DATE_BASED_GRANT)
-    condition_parts = await parts_crud.find_all_by_branch_id_and_auto_annual_leave_grant(session=session, branch_id=branch_id, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.CONDITIONAL_GRANT)
-    manual_parts = await parts_crud.find_all_by_branch_id_and_auto_annual_leave_grant(session=session, branch_id=branch_id, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.MANUAL_GRANT)
+    account_parts = await parts_crud.find_all_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.ACCOUNTING_BASED_GRANT)
+    entry_date_parts = await parts_crud.find_all_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.ENTRY_DATE_BASED_GRANT)
+    condition_parts = await parts_crud.find_all_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.CONDITIONAL_GRANT)
+    manual_parts = await parts_crud.find_all_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.MANUAL_GRANT)
 
     return AutoLeavePoliciesAndPartsDto(
         auto_approval_policies=AutoAnnualLeaveApprovalDto.model_validate(auto_annual_leave_approval_policies or {}),
@@ -79,6 +80,7 @@ async def get_auto_leave_policies_and_parts(*, session: AsyncSession, branch_id:
         ),
         manual_based_parts=[PartIdWithName.model_validate(part) for part in (manual_parts or [])]
     )
+        
     
 
 async def update_auto_leave_policies_and_parts(
@@ -145,11 +147,10 @@ async def update_auto_leave_policies_and_parts(
         else:
             grant_type = PartAutoAnnualLeaveGrant.MANUAL_GRANT
 
-        await parts_crud.update_auto_annual_leave_grant(
+        await parts_service.update_auto_annual_leave_grant(
             session=session,
-            branch_id=branch_id,
             part_id=part.id,
-            auto_annual_leave_grant=grant_type
+            request=grant_type
         )
 
     history = await get_auto_leave_policies_and_parts(session=session, branch_id=branch_id)
@@ -194,24 +195,29 @@ async def create_branch(
         *, 
         session: AsyncSession, 
         request: BranchRequest
-) -> BranchResponse:
+) -> bool:
     """지점 + 정책 생성"""
+    duplicate_branch = await branches_crud.find_by_name(session=session, name=request.name)
+    if duplicate_branch is not None:
+        raise BadRequestError(detail=f"{request.name}은(는) 이미 존재합니다.")
+    
     branch = await branches_crud.create(session=session, request=Branches(**request.model_dump()))
     branch_id = branch.id
     # 정책 생성
     if branch_id is not None:
-        await holiday_work_crud.create(session=session, branch_id=branch_id)
-        await overtime_crud.create(session=session, branch_id=branch_id)
-        await work_crud.create(session=session, branch_id=branch_id)
-        await auto_overtime_crud.create(session=session, branch_id=branch_id)
+        await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
         await allowance_crud.create(session=session, branch_id=branch_id)
         await auto_annual_leave_approval_crud.create(session=session, branch_id=branch_id)
-        await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
-        await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+        await auto_overtime_crud.create(session=session, branch_id=branch_id)
         await condition_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
-        await create_parttimer_policies(session, branch_id)
-
-    return branch
+        await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+        await holiday_work_crud.create(session=session, branch_id=branch_id)
+        await overtime_crud.create(session=session, branch_id=branch_id)
+        await create_parttimer_policies(session=session, branch_id=branch_id)
+        await work_crud.create(session=session, branch_id=branch_id)
+        return True
+    
+    return False
 
 
 async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:
@@ -247,6 +253,11 @@ async def update_branch(*, session: AsyncSession, branch_id: int, request: Branc
     branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
+    
+    if branch.name != request.name:
+        duplicate_branch = await branches_crud.find_by_name(session=session, name=request.name)
+        if duplicate_branch is not None:
+            raise BadRequestError(detail=f"{request.name}은(는) 이미 존재합니다.")
     
     return await branches_crud.update(session=session, branch_id=branch_id, request=Branches(**request.model_dump()), old=branch)
 

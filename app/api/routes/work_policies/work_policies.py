@@ -6,43 +6,11 @@ from fastapi import APIRouter, Depends, Request
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 from sqlalchemy.ext.asyncio import AsyncSession
-from pydantic import BaseModel
-from app.exceptions.exceptions import (
-    BadRequestError,
-    NotFoundError,
-    UnauthorizedError,
-    ForbiddenError,
-)
 from app.core.database import get_db
 from app.schemas.branches_schemas import (
     CombinedPoliciesDto,
     CombinedPoliciesUpdateDto,
     ScheduleHolidayUpdateDto,
-)
-from app.models.branches.holiday_work_policies_model import (
-    HolidayWorkPolicies,
-)
-from app.models.branches.overtime_policies_model import (
-    OverTimePolicies,
-)
-from app.models.branches.work_policies_model import (
-    BreakTime,
-    WorkPolicies,
-    WorkPoliciesDto,
-    WorkPoliciesUpdateDto,
-    WorkSchedule,
-)
-from app.models.branches.auto_overtime_policies_model import (
-    AutoOvertimePolicies,
-)
-from app.schemas.branches_schemas import (
-    AutoOvertimePoliciesDto,
-    HolidayWorkPoliciesDto,
-    OverTimePoliciesDto,
-)
-from app.schemas.branches_schemas import (
-    CombinedPoliciesDto,
-    CombinedPoliciesUpdateDto,
 )
 from app.service import branch_service
 logger = logging.getLogger(__name__)
@@ -51,22 +19,23 @@ router = APIRouter()
 
 
 @router.get("/get", response_model=CombinedPoliciesDto, summary="근무정책 조회")
-# @available_higher_than(Role.INTEGRATED_ADMIN)
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def get_work_policies(
     *,
+    context: Request,
     session: AsyncSession = Depends(get_db),
-    branch_id: int,
-    user: Annotated[Users, Depends(get_current_user)],
+    branch_id: int, 
 ) -> CombinedPoliciesDto:
 
     return await branch_service.get_branch_policies(session=session, branch_id=branch_id)
 
 
-@router.patch("/update", response_model=str)
+@router.patch("/update", response_model=str, summary="근무정책 수정")
+@available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_work_policies(
     *,
+    context: Request,
     session: AsyncSession = Depends(get_db),
-    user: Annotated[Users, Depends(get_current_user)],
     branch_id: int,
     policies_in: CombinedPoliciesUpdateDto,
 ) -> str:
@@ -85,6 +54,7 @@ async def update_schedule_holiday(
 ) -> str:
     
     return await branch_service.update_schedule_holiday(session=session, branch_id=branch_id, request=policies_in)
+
 
 
 
@@ -174,10 +144,10 @@ async def update_schedule_holiday(
     #                 **policies_in.auto_overtime_policies.model_dump(exclude_unset=True),
     #             ),
     #         )
-    policies_in: CombinedPoliciesUpdateDto,
-) -> str:
-    
-    return await branch_service.update_branch_policies(session=session, branch_id=branch_id, request=policies_in)
+    #     policies_in: CombinedPoliciesUpdateDto,
+    # ) -> str:
+        
+    #     return await branch_service.update_branch_policies(session=session, branch_id=branch_id, request=policies_in)
     
     
     # try:
@@ -310,47 +280,6 @@ async def update_schedule_holiday(
     #                 **policies_in.overtime_policies.model_dump(exclude_unset=True),
     #             ),
     #         )
-
-    #     # AllowancePolicies 업데이트
-    #     allowance_policies = await allowance_crud.find_by_branch_id(
-    #         session=session, branch_id=branch_id
-    #     )
-    #     if allowance_policies is None:
-    #         await allowance_crud.create(
-    #             session=session,
-    #             branch_id=branch_id,
-    #             allowance_policies_create=AllowancePolicies(
-    #                 branch_id=branch_id,
-    #                 **policies_in.default_allowance_policies.model_dump(),
-    #                 **policies_in.holiday_allowance_policies.model_dump(),
-    #             ),
-    #         )
-    #     else:
-    #         await allowance_crud.update(
-    #             session=session,
-    #             branch_id=branch_id,
-    #             allowance_policies_update=AllowancePolicies(
-    #                 branch_id=branch_id,
-    #                 **policies_in.default_allowance_policies.model_dump(
-    #                     exclude_unset=True
-    #                 ),
-    #                 **policies_in.holiday_allowance_policies.model_dump(
-    #                     exclude_unset=True
-    #                 ),
-    #             ),
-    #         )
-
-    #     await session.commit()
-    #     return f"{branch_id} 번 지점의 근무정책 업데이트 완료"
-
-    # except Exception as e:
-    #     await session.rollback()
-    #     logger.error(f"Database error occurred: {str(e)}")
-    #     raise HTTPException(
-    #         status_code=500, detail="근무정책 업데이트에 실패하였습니다."
-    #     )
-    
-    
 
     #     # AllowancePolicies 업데이트
     #     allowance_policies = await allowance_crud.find_by_branch_id(
