@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.enums.users import Status
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
-from app.models.branches.work_policies_model import WorkPolicies, WorkSchedule
+from app.models.branches.work_policies_model import BranchWorkSchedule, WorkPolicies, WorkSchedule
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.parts.parts_model import Parts
 from app.models.users.leave_histories_model import LeaveHistories
@@ -253,12 +253,12 @@ class ClosedDayService:
 
         # 병원 정기 휴무일 조회
         query = (
-            select(WorkSchedule.day_of_week)
+            select(BranchWorkSchedule.day_of_week)
             .select_from(Branches)
             .join(WorkPolicies, Branches.id == WorkPolicies.branch_id)
                 .filter(Branches.id == branch_id)
-            .join(WorkSchedule, WorkPolicies.id == WorkSchedule.work_policy_id)
-                .filter(WorkSchedule.is_holiday == True)
+            .join(BranchWorkSchedule, WorkPolicies.id == BranchWorkSchedule.work_policy_id)
+                .filter(BranchWorkSchedule.is_holiday == True)
         )
 
         result = await self.session.execute(query)
