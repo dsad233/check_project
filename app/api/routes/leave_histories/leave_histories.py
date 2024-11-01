@@ -7,7 +7,7 @@ from decimal import Decimal
 from app.common.dto.search_dto import BaseSearchDto
 from app.core.database import get_db
 from app.core.permissions.auth_utils import available_higher_than
-from app.middleware.tokenVerify import validate_token, get_current_user_id, get_current_user
+from app.middleware.tokenVerify import get_current_user_id, get_current_user
 from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto, LeaveHistoriesApprove, LeaveHistoriesUpdate
 from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.users.users_model import Users
@@ -16,9 +16,6 @@ from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import Numeric
-
-from app.schemas.branches_schemas import ManualGrantRequest
 from app.service import user_service
 
 router = APIRouter()
@@ -36,27 +33,39 @@ async def get_current_user_leaves(
     try:
         if year is None:
             year = date.today().year
+            
+        # 해당 연도의 시작일과 종료일 설정
+        start_date = date(year, 1, 1)
+        end_date = date(year, 12, 31)
 
         # 모든 기록 조회
         leave_query = select(UserLeavesDays).where(
             UserLeavesDays.user_id == current_user_id,
             UserLeavesDays.branch_id == branch_id,
             UserLeavesDays.deleted_yn == 'N',
-            func.extract('year', UserLeavesDays.created_at) == year 
+            UserLeavesDays.created_at >= start_date,
+            UserLeavesDays.created_at <= end_date
         ).order_by(UserLeavesDays.created_at.desc())
         
         result = await db.execute(leave_query)
-        leave_info = result.scalars().all()
+        leave_info = result.scalar_one_or_none()
+        
+        print(f"leave_info: {leave_info}")
 
         if not leave_info:
-            raise HTTPException(status_code=404, detail="해당 연도의 연차 정보를 찾을 수 없습니다.")
-        
-        # 가장 최근 레코드 사용
-        latest_info = leave_info[0]
+            return {
+                "user_id": current_user_id,
+                "branch_id": branch_id,
+                "year": year,
+                "increased_days": 0.0,
+                "decreased_days": 0.0,
+                "total_leave_days": 0.0,
+                "message": f"{year}년도의 연차 정보가 없습니다."
+            }
 
         # 모든 increased_days 합산
-        total_increased = float(latest_info.increased_days) if latest_info.increased_days is not None else 0.0
-        total_decreased = float(latest_info.decreased_days) if latest_info.decreased_days is not None else 0.0
+        total_increased = float(leave_info.increased_days) if leave_info.increased_days is not None else 0.0
+        total_decreased = float(leave_info.decreased_days) if leave_info.decreased_days is not None else 0.0
 
         return UserLeavesDaysResponse(
             user_id=current_user_id,
@@ -65,7 +74,7 @@ async def get_current_user_leaves(
             increased_days=total_increased,  # 합산된 증가 일수
             decreased_days=total_decreased,  # 합산된 감소 일수
             total_leave_days=total_increased - total_decreased,  # 사용 가능한 연차 일수
-            leave_category_id=latest_info.leave_category_id
+            leave_category_id=leave_info.leave_category_id
         )
 
     except Exception as err:
@@ -532,55 +541,6 @@ async def approve_leave(
         await db.rollback()
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
-        
-        # stmt = select(LeaveHistories).where((LeaveHistories.id == leave_id) & (LeaveHistories.status == "pending") & (LeaveHistories.deleted_yn == "N") & (LeaveHistories.branch_id == branch_id))
-        # result = await db.execute(stmt)
-        # leave_history = result.first()
-        
-        # if not leave_history:
-        #     raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
-        
-        # find_user = await db.execute(select(Users).where(Users.id == leave_history.user_id, Users.deleted_yn == "N"))
-        # result_user = find_user.scalar_one_or_none()
-        # print(f"result_user: {result_user}")
-        
-        # if not result_user:
-        #     raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-        
-        # if leave_approve.status == "approved":
-        #     leave_history.status = "approved"
-        #     leave_history.manager_id = current_user.id
-        #     leave_history.manager_name = current_user.name
-        #     leave_history.approve_date = datetime.now(UTC).date()
-        #     leave_history.admin_description = leave_approve.admin_description
-            
-        #     leave_query = select(UserLeavesDays).where(UserLeavesDays.user_id == leave_history.user_id)
-        #     leave_result = await db.execute(leave_query)
-        #     leave_record = leave_result.scalar_one_or_none()
-            
-        #     leave_record.decreased_days += float(leave_history.decreased_days)
-        #     leave_record.total_leave_days -= float(leave_history.decreased_days)
-            
-        #     await db.commit()
-        #     return {"message": "연차 신청을 승인하였습니다."}
-        
-        # elif leave_approve.status == "rejected":
-        #     leave_history.status = "rejected"
-        #     leave_history.manager_id = current_user.id
-        #     leave_history.manager_name = current_user.name
-        #     leave_history.approve_date = datetime.now(UTC).date()
-        #     leave_history.admin_description = leave_approve.admin_description
-            
-        #     await db.commit()
-        #     return {"message": "연차 신청을 반려하였습니다."}
-        
-        # else:
-        #     raise HTTPException(status_code=400, detail="잘못된 상태값입니다.")
-        
-    # except Exception as err:
-    #     await db.rollback()
-    #     print(err)
-    #     raise HTTPException(status_code=500, detail=str(err))
 
 @router.patch("/leave-histories/{leave_id}", summary="연차 수정", description="연차를 수정합니다.")
 async def update_leave(
