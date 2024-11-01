@@ -32,11 +32,3 @@ class AutoOvertimePolicies(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
-
-class AutoOvertimePoliciesDto(BaseModel):
-    top_auto_applied: bool = Field(description="통합관리자 자동적용", default=False)
-    total_auto_applied: bool = Field(description="관리자 자동적용", default=False)
-    part_auto_applied: bool = Field(description="사원 자동적용", default=False)
-
-    class Config:
-        from_attributes = True

@@ -13,7 +13,7 @@ from app.schemas.user_work_contract_schemas import RequestPatchWorkContract, Req
 from app.enums.users import EmploymentStatus
 from app.service.user_management.work_contract_service import UserManagementWorkContractService
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 user_management_work_contract_service = UserManagementWorkContractService()
 
@@ -57,14 +57,17 @@ class UserManagementWorkContract:
             current_user: dict = Depends(get_current_user)
     ):
         work_contract = request_create_work_contract.to_model()
-        created_work_contract_id = await user_management_work_contract_service.create_work_contract(
+        created_work_contract_id, created_work_contract_history_id = await user_management_work_contract_service.create_work_contract(
             session=session,
             work_contract=work_contract,
             change_reason=change_reason,
             note=note
         )
 
-        data = ResponseCreatedWorkContractDto.build(work_contract_id=created_work_contract_id)
+        data = ResponseCreatedWorkContractDto.build(
+            work_contract_id=created_work_contract_id,
+            work_contract_history_id=created_work_contract_history_id
+        )
 
         return ResponseDTO(
             status="SUCCESS",

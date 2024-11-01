@@ -17,7 +17,7 @@ from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
 from app.service.user_management.service import UserManagementService
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 user_management_service = UserManagementService()
 
 

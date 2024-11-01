@@ -1,22 +1,45 @@
-from datetime import UTC, datetime, timedelta
-from typing import Annotated, List
-from zoneinfo import ZoneInfo
+from datetime import datetime
+from typing import Annotated, List, Tuple
 
+from fastapi import APIRouter, Depends, HTTPException, Body, Request
+from sqlalchemy import and_, func, select, extract
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy import and_, func, select, extract, update
 
-from app.core.database import async_session, get_db
+from app.api.routes.closed_days.dto.closed_days_response_dto import EntireClosedDayResponseDTO, HospitalClosedDaysResponseDTO, UserClosedDayDetailDTO
+from app.core.database import get_db
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 from app.middleware.tokenVerify import get_current_user, validate_token
 from app.models.closed_days.closed_days_model import ClosedDays, BranchClosedDay, UserClosedDays
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
-from calendar import monthrange
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+from app.service.closed_day_service import ClosedDayService
 
+router = APIRouter()
+
+# 병원 월간 휴무일 조회
+@router.get("/{branch_id}/closed-days/hospitals")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def get_all_closed_days(request : Request, branch_id : int, closed_day_service: ClosedDayService = Depends(ClosedDayService), year: int = datetime.now().year, month : int = datetime.now().month) -> HospitalClosedDaysResponseDTO:
+    return HospitalClosedDaysResponseDTO.to_DTO(await closed_day_service.get_all_hospital_closed_days(branch_id, year, month)) 
+
+# 직원 월간 휴무일 조회
+@router.get("/{branch_id}/closed-days/users")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def get_all_user_closed_days(request : Request, branch_id : int, closed_day_service: ClosedDayService = Depends(ClosedDayService), year: int = datetime.now().year, month : int = datetime.now().month) -> List[UserClosedDayDetailDTO]:
+    return await closed_day_service.get_all_user_closed_days_group_by_user_id(branch_id, year, month)
+    
+# 지점별 휴무일 전체(병원 + 직원) 조회 
+@router.get("/{branch_id}/closed-days")
+@available_higher_than(Role.EMPLOYEE)
+async def get_all_closed_days(request : Request, branch_id : int, service: ClosedDayService = Depends(ClosedDayService), year: int = datetime.now().year, month : int = datetime.now().month):
+    user_closed_days = await service.get_all_user_closed_days_group_by_date(branch_id, year, month)
+    hospital_closed_days = await service.get_all_hospital_closed_days(branch_id, year, month)
+    return EntireClosedDayResponseDTO.to_DTO(user_closed_days, hospital_closed_days)
+    
 
 # 지점 휴점일 생성 (관리자)
 @router.post("/{branch_id}/closed-days", status_code=201)

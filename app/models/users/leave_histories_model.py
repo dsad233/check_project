@@ -38,8 +38,10 @@ class LeaveHistories(Base):
     leave_category_id = Column(
         Integer, ForeignKey("leave_categories.id"), nullable=False
     )
-    decreased_days = Column(Numeric(10, 2), default=0.00)
+    manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    manager_name = Column(String(10), nullable=True)
     
+    decreased_days = Column(Numeric(10, 2), default=0.00)
     application_date = Column(Date, nullable=False)
     start_date = Column(Date, nullable=True) # 추가 사항
     end_date = Column(Date, nullable=True) # 추가 사항
@@ -67,6 +69,7 @@ class LeaveHistoriesResponse(BaseModel):
     part_name: str
     
     application_date: datetime
+    leave_category_id: int
     leave_category_name: str
     decreased_days: float
     start_date: datetime
@@ -74,6 +77,8 @@ class LeaveHistoriesResponse(BaseModel):
     
     status: str
     applicant_description: Optional[str]
+    manager_id: Optional[int]
+    manager_name: Optional[str]
     admin_description: Optional[str]
     approve_date: Optional[datetime]
 

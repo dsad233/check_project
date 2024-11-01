@@ -45,47 +45,43 @@ async def find_by_branch_id_and_name(*, session: AsyncSession, branch_id: int, n
     return result.scalar_one_or_none()
 
 async def create(*, session: AsyncSession, request: SalaryTemplate, branch_id: int) -> SalaryTemplate:
-    # salary_template = await find_by_branch_id_and_name(session=session, branch_id=branch_id, name=salary_template_create.name)
-    # if salary_template is not None:
-    #     raise BadRequestError(f"이미 존재하는 템플릿입니다.")
+
     session.add(request)
     await session.commit()
     await session.refresh(request)
     return request
 
-async def update(*, session: AsyncSession, request: SalaryTemplate, branch_id: int, id: int) -> bool:
-    # 기존 정책 조회
-    salary_template = await find_by_id(
-        session=session, id=id
-    )
-    if salary_template is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {id}번 연봉 템플릿이 존재하지 않습니다.")
+async def update(*, session: AsyncSession, request: SalaryTemplate, branch_id: int, id: int, old: SalaryTemplate) -> bool:
+    
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in SalaryTemplate.__table__.columns:
         if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
             new_value = getattr(request, column.name)
-            if new_value is not None and getattr(salary_template, column.name) != new_value:
+            if new_value is not None and getattr(old, column.name) != new_value:
                 changed_fields[column.name] = new_value
     if changed_fields:
         # 변경된 필드가 있을 경우에만 업데이트 수행
         stmt = sa_update(SalaryTemplate).where(SalaryTemplate.branch_id == branch_id).where(SalaryTemplate.id == id).values(**changed_fields)
         await session.execute(stmt)
-        salary_template.updated_at = datetime.now()
+        old.updated_at = datetime.now()
         await session.commit()
-        await session.refresh(salary_template)
+        await session.refresh(old)
     else:
         pass
     return True
 
 
 async def delete(*, session: AsyncSession, branch_id: int, id: int) -> bool:
-    salary_template = await find_by_id(session=session, id=id)
-    if salary_template is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {id}번 연봉 템플릿이 존재하지 않습니다.")
     
-    salary_template.deleted_yn = "Y"
-    salary_template.updated_at = datetime.now()
+    await session.execute(
+            sa_update(SalaryTemplate)
+            .where(SalaryTemplate.id == id)
+            .values(
+                deleted_yn="Y",
+                updated_at=datetime.now()
+            )
+        )
     await session.commit()
     return True
 

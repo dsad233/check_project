@@ -20,7 +20,7 @@ from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.users.users_work_contract_model import WorkContract
 from app.models.users.overtimes_model import OverTime_History, Overtimes
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 
 async def get_user_query(session, branch_id, part_id, user_name, phone_number):

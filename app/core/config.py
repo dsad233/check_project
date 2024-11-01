@@ -4,7 +4,22 @@ from pydantic_settings import BaseSettings
 from pydantic import Field
 import base64
 
+# API 공개 경로 정의
+PUBLIC_PATHS = [
+    "/callback",
+    "/auth/login",
+    "/healthcheck",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/favicon.ico"
+]
+
+
 class BaseAppSettings(BaseSettings):
+    # PUBLIC_PATHS를 설정 클래스의 속성으로 추가
+    PUBLIC_PATHS: list[str] = PUBLIC_PATHS
+
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
     MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")

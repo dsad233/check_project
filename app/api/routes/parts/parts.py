@@ -16,7 +16,9 @@ from app.models.users.users_model import Users
 from app.core.database import get_db
 from app.models.branches.salary_polices_model import SalaryTemplatesPolicies
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+from app.common.dto.response_dto import ResponseDTO
+
+router = APIRouter()
 # db = async_session()
 
 
@@ -128,7 +130,11 @@ async def createPart(
                 db.add(salary_template_policy)
                 
                 await db.commit()
-                return {"message": "부서 생성에 성공하였습니다.", "status": "success"}
+                # return {"message": "부서 생성에 성공하였습니다.", "status": "success"}
+                return ResponseDTO(
+                    status = "SUCCESS",
+                    message = "부서 생성에 성공하였습니다."
+                )
             
             except IntegrityError as ie:
                 await db.rollback()
