@@ -18,6 +18,7 @@ from app.api.routes.users import users, user_management
 from app.api.routes.users.user_management_contract import user_management_contract
 from app.api.routes.users.user_management_document import user_management_document
 from app.api.routes.users.user_management_work_contract import user_management_work_contract
+from app.api.routes.users.user_management_salary_contract import user_management_salary_contract
 from app.api.routes.work_policies import work_policies
 from app.api.routes.hour_wage_template import hour_wage_template
 from app.api.routes.attendance import attendance
@@ -86,6 +87,8 @@ admin_router.include_router(parts_policy.router, prefix="/branches/{branch_id}/p
 admin_router.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket: 급여 구간 CRUD'])
 admin_router.include_router(user_management_document.router, prefix='/user-management/document', tags=['User_Management_Document: 문서 관련(발송/승인/반려/취소) '])
 admin_router.include_router(user_management_contract.router, prefix='/user-management/contract', tags=['User_Management_Contract: 계약 CRUD, 계약 메일 발송'])
+admin_router.include_router(user_management_salary_contract.permanent_router, prefix='/user-management/salary-contract', tags=['User_Management_Salary_Contract: (정규직) 급여 계약 CRUD'])
+admin_router.include_router(user_management_salary_contract.temporary_router, prefix='/user-management/salary-contract', tags=['User_Management_Salary_Contract: (계약직) 급여 계약 CRUD'])
 admin_router.include_router(user_management_work_contract.router, prefix='/user-management/work-contract', tags=['User_Management_Work_Contract: 근로 계약 CRUD'])
 admin_router.include_router(user_management.router, prefix='/user-management', tags=['User_Management: 사용자 CRUD, 본인 정보/관리자 정보'])
 
