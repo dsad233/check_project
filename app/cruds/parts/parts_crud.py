@@ -57,11 +57,11 @@ async def update_auto_annual_leave_grant(
     
 
 async def find_all_by_auto_annual_leave_grant(
-    *, session: AsyncSession, request: str
+    *, session: AsyncSession, auto_annual_leave_grant: str
 ) -> list[Parts]:
     stmt = (
         select(Parts)
-        .where(Parts.auto_annual_leave_grant == request)
+        .where(Parts.auto_annual_leave_grant == auto_annual_leave_grant)
         .where(Parts.deleted_yn == 'N')
     )
     result = await session.execute(stmt)
