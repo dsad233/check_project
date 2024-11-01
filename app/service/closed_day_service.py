@@ -7,7 +7,7 @@ from app.core.database import get_db
 from app.enums.users import Status
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
-from app.models.branches.work_policies_model import BranchWorkSchedule, WorkPolicies, WorkSchedule
+from app.models.branches.work_policies_model import BranchWorkSchedule, WorkPolicies
 from app.models.closed_days.closed_days_model import ClosedDays
 from app.models.parts.parts_model import Parts
 from app.models.users.leave_histories_model import LeaveHistories
