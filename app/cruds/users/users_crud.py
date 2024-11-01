@@ -110,7 +110,6 @@ async def minus_total_leave_days(
             total_leave_days=Users.total_leave_days - count,
             updated_at=datetime.now()
         )
-        .returning(Users)
     )
     # 변경사항 저장
     await session.commit()
