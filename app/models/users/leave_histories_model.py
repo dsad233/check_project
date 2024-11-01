@@ -33,6 +33,7 @@ class LeaveHistories(Base):
     )
     
     id = Column(Integer, primary_key=True, autoincrement=True)
+    part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     leave_category_id = Column(
