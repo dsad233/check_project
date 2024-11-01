@@ -33,6 +33,7 @@ from app.api.routes.salary_policies import salary_policies
 from app.api.routes.db_monitor.db_connections_monitor import router as monitor_router
 from enum import Enum
 from app.api.routes.public.public_users import router as public_users_router
+from app.api.routes.employee.parts.employee_parts import router as employee_parts_router
 
 class APIPrefix(str, Enum):
     PUBLIC = "/public"
@@ -108,8 +109,12 @@ admin_router.include_router(personnel_record_category.router, prefix='/branches/
 
 
 # 일반 사원 접근 라우터 (employee)
-employee_router = APIRouter(prefix="/employee", tags=["Employee"])
-
+employee_router = APIRouter(prefix="/employee")
+employee_router.include_router(
+    employee_parts_router,
+    prefix="/branches/{branch_id}/parts",
+    tags=["Employee Parts: 사원용 부서 정보 리스트로 리턴 - FE 요청 사항"]
+)
 # MSO 전용
 mso_router = APIRouter(prefix="/mso", tags=["MSO"])
 	# 추후 추가 가능
