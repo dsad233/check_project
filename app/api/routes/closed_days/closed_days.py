@@ -65,7 +65,7 @@ async def get_all_user_closed_days(request : Request, branch_id : int, closed_da
 # 지점별 휴무일 전체(병원 + 직원) 조회 
 @router.get("/{branch_id}/closed-days")
 @available_higher_than(Role.EMPLOYEE)
-async def get_all_closed_days(request : Request, branch_id : int, service: ClosedDayService = Depends(ClosedDayService), year: int = datetime.now().year, month : int = datetime.now().month):
+async def get_all_closed_days(request : Request, branch_id : int, service: ClosedDayService = Depends(ClosedDayService), year: int = datetime.now().year, month : int = datetime.now().month) -> EntireClosedDayResponseDTO:
     user_closed_days = await service.get_all_user_closed_days_group_by_date(branch_id, year, month)
     hospital_closed_days = await service.get_all_hospital_closed_days(branch_id, year, month)
     return EntireClosedDayResponseDTO.to_DTO(user_closed_days, hospital_closed_days)

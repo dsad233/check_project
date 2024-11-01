@@ -21,7 +21,7 @@ class ClosedDayService:
     def __init__(self, session: AsyncSession = Depends(get_db)):
         self.session = session
 
-    async def get_all_user_closed_days_group_by_user_id(self, branch_id: int, year: int, month: int) -> dict[int, List[UserClosedDayDetail]]:
+    async def get_all_user_closed_days_group_by_user_id(self, branch_id: int, year: int, month: int) -> List[UserClosedDayDetail]:
         '''
         특정 지점에서 모든 직원의 월간 휴무일 조회를 user_id별로 조회
         '''
