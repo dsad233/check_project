@@ -198,6 +198,7 @@ UserLeavesDays.user = relationship("Users", back_populates="leaves", foreign_key
 UserLeavesDays.branch = relationship("Branches", back_populates="user_leaves")
 UserLeavesDays.part = relationship("Parts", back_populates="user_leaves", foreign_keys=[UserLeavesDays.part_id])
 
+# 파트 추가
 Parts.user_leaves = relationship("UserLeavesDays", back_populates="part", foreign_keys=[UserLeavesDays.part_id])
 
 Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys=[UserLeavesDays.branch_id])
@@ -223,9 +224,10 @@ WorkContract.work_contract_history = relationship("WorkContractHistory", back_po
 WorkContract.contract = relationship("Contract", back_populates="work_contract")
 Contract.work_contract = relationship("WorkContract", back_populates="contract")
 
+
 LeaveHistories.manager = relationship("Users", foreign_keys=[LeaveHistories.manager_id], back_populates="managed_leave_histories")
 Users.managed_leave_histories = relationship("LeaveHistories", foreign_keys=[LeaveHistories.manager_id], back_populates="manager")
 
 
-WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract")
+WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract") 
 WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")
