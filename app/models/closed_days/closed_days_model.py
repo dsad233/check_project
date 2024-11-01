@@ -1,7 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
 from app.core.database import Base
 from datetime import date, datetime
-from typing import Optional, List
+from typing import Dict, Optional, List
 from pydantic import BaseModel, Field, field_validator
 
 class ClosedDays(Base):
@@ -36,6 +36,23 @@ class BranchClosedDay(BaseModel):
     #     if v is not None and len(v.strip()) == 0:
     #         raise ValueError("메모는 비어있을 수 없습니다.")
     #     return v
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+class UserClosedDays(BaseModel):
+    user_closed_days: Dict[int, List[date]]
+    
+    @field_validator("user_closed_days")
+    @classmethod
+    def validate_dates(cls, user_dates: Dict[int, List[date]]) -> Dict[int, List[date]]:
+        today = date.today()
+        for user_id, dates in user_dates.items():
+            for d in dates:
+                if d < today:
+                    raise ValueError(f"사용자 ID {user_id}의 휴무일 등록과 삭제는 오늘 이후의 날짜여야 합니다.")
+        return user_dates
     
     model_config = {
         "from_attributes": True
