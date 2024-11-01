@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel, Field
 from sqlalchemy import (
@@ -40,8 +41,8 @@ class UserLeavesDays(Base):
 class UserLeavesDaysResponse(BaseModel):
     user_id: int = Field(..., gt=0) # 사용자 ID
     branch_id: int = Field(..., gt=0) # 지점 ID
-    leave_category_id: int = Field(..., gt=0) # 휴무 카테고리 ID
-    increased_days: float = Field(default=0.00, ge=0) # 증가 일수
-    decreased_days: float = Field(default=0.00, ge=0) # 감소 일수
-    total_leave_days: float = Field(default=0.00, ge=0) # 총 휴무 일수
-    year: int = Field(..., gt=0) # 연도
+    leave_category_id: Optional[int] = Field(None, gt=0) # 휴무 카테고리 ID
+    increased_days: Optional[float] = Field(default=0.00, ge=0) # 증가 일수
+    decreased_days: Optional[float] = Field(default=0.00, ge=0) # 감소 일수
+    total_leave_days: Optional[float] = Field(default=0.00, ge=0) # 총 휴무 일수
+    year: Optional[int] = Field(None, gt=0) # 연도
