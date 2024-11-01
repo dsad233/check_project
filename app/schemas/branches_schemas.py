@@ -247,3 +247,53 @@ class LeaveExcludedPartResponse(BaseModel):
 
     class Config:
         from_attributes = True
+    
+class HolidayAllowancePoliciesDto(BaseModel):
+    doctor_holiday_work_pay: int = Field(description="의사 휴일수당", default=0)
+    common_holiday_work_pay: int = Field(description="일반 휴일수당", default=0)
+
+    class Config:
+        from_attributes = True
+
+class AllowancePoliciesDto(DefaultAllowancePoliciesDto, HolidayAllowancePoliciesDto):
+    pass
+
+class AllowancePoliciesResponse(BaseModel):
+    branch_id: Optional[int] = None
+    payment_day: Optional[int] = None
+    job_duty: bool = Field(description="직무수당", default=False)
+    meal: bool = Field(description="식대", default=False)
+    base_salary: bool = Field(description="기본급 사용여부", default=False)
+    
+    is_additional_holiday_hundred: bool = Field(description="휴일 근로 수당 100원 단위", default=False)
+    is_unused_annual_leave_hundred: bool = Field(description="미사용 연차 수당 100원 단위", default=False)
+    is_annual_leave_deduction_hundred: bool = Field(description="연차사용공제 100원 단위", default=False)
+    is_attendance_deduction_hundred: bool = Field(description="근태공제 100원 단위", default=False)
+    
+    display_meal_calc: bool = Field(description="식대 계산 표시", default=False)
+    display_night_calc: bool = Field(description="야간 수당 계산 표시", default=False)
+
+    class Config:
+        from_attributes = True
+
+
+class CombinedPoliciesDto(BaseModel):
+    work_policies: WorkPoliciesDto
+    auto_overtime_policies: AutoOvertimePoliciesDto
+    holiday_work_policies: HolidayWorkPoliciesDto
+    overtime_policies: OverTimePoliciesDto
+    default_allowance_policies: DefaultAllowancePoliciesDto
+    holiday_allowance_policies: HolidayAllowancePoliciesDto
+
+
+class CombinedPoliciesUpdateDto(BaseModel):
+    work_policies: WorkPoliciesUpdateDto
+    auto_overtime_policies: AutoOvertimePoliciesDto
+    holiday_work_policies: HolidayWorkPoliciesDto
+    overtime_policies: OverTimePoliciesDto
+    default_allowance_policies: DefaultAllowancePoliciesDto
+    holiday_allowance_policies: HolidayAllowancePoliciesDto
+
+
+class ScheduleHolidayUpdateDto(BaseModel):
+    work_policies: WorkPoliciesUpdateDto

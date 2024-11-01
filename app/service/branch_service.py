@@ -4,6 +4,12 @@ from app.models.branches.entry_date_based_annual_leave_grant_model import EntryD
 from app.models.branches.condition_based_annual_leave_grant_model import ConditionBasedAnnualLeaveGrant
 from app.models.histories.branch_histories_model import BranchHistories
 from app.models.branches.branches_model import Branches
+from app.models.branches.work_policies_model import BranchBreakTime, WorkPolicies, BranchWorkSchedule
+from app.schemas.branches_schemas import AllowancePoliciesResponse, ScheduleHolidayUpdateDto, WorkPoliciesDto, AutoOvertimePoliciesDto, HolidayWorkPoliciesDto, OverTimePoliciesDto, AllowancePoliciesDto
+from app.models.branches.auto_overtime_policies_model import AutoOvertimePolicies
+from app.models.branches.holiday_work_policies_model import HolidayWorkPolicies
+from app.models.branches.overtime_policies_model import OverTimePolicies
+from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.common.dto.search_dto import BaseSearchDto
 from app.common.dto.pagination_dto import PaginationDto
 from app.schemas.branches_schemas import (AutoLeavePoliciesAndPartsDto, 
@@ -257,3 +263,168 @@ async def get_branch_by_id(*, session: AsyncSession, branch_id: int) -> Branches
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     return branch
+
+async def get_branch_policies(*, session: AsyncSession, branch_id: int) -> CombinedPoliciesDto:
+    """지점 정책 조회"""
+    work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    holiday_work_policies = await holiday_work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    overtime_policies = await overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+    allowance_policies = await allowance_crud.find_by_branch_id(session=session, branch_id=branch_id)
+
+    return CombinedPoliciesDto(
+        work_policies=WorkPoliciesDto.model_validate(work_policies or {}),
+        auto_overtime_policies=AutoOvertimePoliciesDto.model_validate(auto_overtime_policies or {}),
+        holiday_work_policies=HolidayWorkPoliciesDto.model_validate(holiday_work_policies or {}),
+        overtime_policies=OverTimePoliciesDto.model_validate(overtime_policies or {}),
+        default_allowance_policies=DefaultAllowancePoliciesDto.model_validate(allowance_policies or {}),
+        holiday_allowance_policies=HolidayAllowancePoliciesDto.model_validate(allowance_policies or {})
+    )
+
+
+async def update_branch_policies(*, session: AsyncSession, branch_id: int, request: CombinedPoliciesDto) -> str:
+    """지점 정책 수정"""
+    try:
+        # WorkPolicies 업데이트
+        work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        if work_policies is None:
+            await work_crud.create(session=session, branch_id=branch_id)
+            work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+            if work_policies is None:
+                raise HTTPException(status_code=500, detail="근무정책 생성에 실패하였습니다.")
+        else:
+            await work_crud.update(
+                session=session,
+                branch_id=branch_id,
+                work_policies_update=request.work_policies  # WorkPoliciesUpdateDto 타입으로 전달
+            )
+
+        # AutoOvertimePolicies 업데이트
+        auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        if auto_overtime_policies is None:
+            await auto_overtime_crud.create(
+                session=session, 
+                branch_id=branch_id, 
+                request=AutoOvertimePolicies(
+                    branch_id=branch_id, 
+                    **request.auto_overtime_policies.model_dump()
+                )
+            )
+        else:
+            await auto_overtime_crud.update(
+                session=session, 
+                branch_id=branch_id, 
+                request=AutoOvertimePolicies(
+                    branch_id=branch_id, 
+                    **request.auto_overtime_policies.model_dump(exclude_unset=True)
+                ),
+                old=auto_overtime_policies
+            )
+
+        # HolidayWorkPolicies 업데이트
+        holiday_work_policies = await holiday_work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        if holiday_work_policies is None:
+            await holiday_work_crud.create(
+                session=session, 
+                branch_id=branch_id, 
+                request=HolidayWorkPolicies(
+                    branch_id=branch_id, 
+                    **request.holiday_work_policies.model_dump()
+                )
+            )
+        else:
+            await holiday_work_crud.update(
+                session=session, 
+                branch_id=branch_id, 
+                request=HolidayWorkPolicies(
+                    branch_id=branch_id, 
+                    **request.holiday_work_policies.model_dump(exclude_unset=True)
+                ),
+                old=holiday_work_policies
+            )
+
+        # OverTimePolicies 업데이트
+        overtime_policies = await overtime_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        if overtime_policies is None:
+            await overtime_crud.create(
+                session=session, 
+                branch_id=branch_id, 
+                request=OverTimePolicies(
+                    branch_id=branch_id, 
+                    **request.overtime_policies.model_dump()
+                )
+            )
+        else:
+            await overtime_crud.update(
+                session=session, 
+                branch_id=branch_id, 
+                request=OverTimePolicies(
+                    branch_id=branch_id, 
+                    **request.overtime_policies.model_dump(exclude_unset=True)
+                ),
+                old=overtime_policies
+            )
+
+        # AllowancePolicies 업데이트
+        allowance_policies = await allowance_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        if allowance_policies is None:
+            await allowance_crud.create(
+                session=session, 
+                branch_id=branch_id, 
+                request=AllowancePolicies(
+                    branch_id=branch_id, 
+                    **request.default_allowance_policies.model_dump(),
+                    **request.holiday_allowance_policies.model_dump()
+                )
+            )
+        else:
+            await allowance_crud.update(
+                session=session, 
+                branch_id=branch_id, 
+                request=AllowancePolicies(
+                    branch_id=branch_id, 
+                    **request.default_allowance_policies.model_dump(exclude_unset=True),
+                    **request.holiday_allowance_policies.model_dump(exclude_unset=True)
+                ),
+                old=allowance_policies  # old 매개변수 추가
+            )
+
+        await session.commit()
+        return f"{branch_id} 번 지점의 근무정책 업데이트 완료"
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Database error occurred: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="근무정책 업데이트에 실패하였습니다."
+        )
+
+# 근무 캘린더에서 고정 휴점일을 변경할 때 사용
+async def update_schedule_holiday(*, session: AsyncSession, branch_id: int, request: ScheduleHolidayUpdateDto) -> str:
+    """지점 정책 수정"""
+    try:
+        # WorkPolicies 업데이트
+        work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+        if work_policies is None:
+            await work_crud.create(session=session, branch_id=branch_id)
+            work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
+            if work_policies is None:
+                raise HTTPException(status_code=500, detail="근무정책 생성에 실패하였습니다.")
+        else:
+            await work_crud.update_schedule_holiday(
+                session=session,
+                branch_id=branch_id,
+                work_policies_update=request.work_policies  # WorkPoliciesUpdateDto 타입으로 전달
+            )
+
+        await session.commit()
+        return f"{branch_id} 번 지점의 근무정책 업데이트 완료"
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Database error occurred: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="근무정책 업데이트에 실패하였습니다."
+        )
