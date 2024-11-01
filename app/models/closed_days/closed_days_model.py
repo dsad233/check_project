@@ -17,31 +17,26 @@ class ClosedDays(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
-class ClosedDayItem(BaseModel):
-    closed_day_date: date
-    memo: Optional[str] = None
 
-    model_config = {
-        "from_attributes": True
-    }
-
-    @field_validator("closed_day_date")
-    @classmethod
-    def validate_date(cls, v):
-        if v < date.today():
-            raise ValueError("휴무일 등록과 삭제는 오늘 이후의 날짜여야 합니다.")
-        return v
+class BranchClosedDay(BaseModel):
+    hospital_closed_days: List[date]
     
-    @field_validator("memo")
+    @field_validator("hospital_closed_days")
     @classmethod
-    def validate_memo(cls, v):
-        if v is not None and len(v.strip()) == 0:
-            raise ValueError("메모는 비어있을 수 없습니다.")
-        return v
+    def validate_date(cls, dates: List[date]) -> List[date]:
+        today = date.today()
+        for d in dates:
+            if d < today:
+                raise ValueError("휴무일 등록과 삭제는 오늘 이후의 날짜여야 합니다.")
+        return dates
 
-class ClosedDayCreate(BaseModel):
-    closed_days: List[ClosedDayItem]
-
+    # @field_validator("memo")
+    # @classmethod
+    # def validate_memo(cls, v):
+    #     if v is not None and len(v.strip()) == 0:
+    #         raise ValueError("메모는 비어있을 수 없습니다.")
+    #     return v
+    
     model_config = {
         "from_attributes": True
     }
