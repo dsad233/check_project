@@ -14,7 +14,7 @@ import json
 from typing import List
 
 logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/documents", dependencies=[Depends(validate_token)])
+router = APIRouter(prefix="/documents", )
 document_service = DocumentService()
 
 @router.get("", response_model=DocumentListResponse)

@@ -1,19 +1,11 @@
-import logging
-from datetime import datetime
-from typing import List
-from fastapi import Depends
-from sqlalchemy import func, select, insert, delete
+from sqlalchemy import select, insert, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.leave_excluded_parts_model import LeaveExcludedPart
-from app.exceptions.exceptions import NotFoundError, BadRequestError
 
-logger = logging.getLogger(__name__)
 
 async def find_all_by_leave_category_id(
     *, session: AsyncSession, leave_category_id: int
-) -> List[LeaveExcludedPart]:
+) -> list[LeaveExcludedPart]:
     
     stmt = select(LeaveExcludedPart).where(LeaveExcludedPart.leave_category_id == leave_category_id)
     result = await session.execute(stmt)
@@ -21,11 +13,8 @@ async def find_all_by_leave_category_id(
 
 
 async def create_all_part_id(
-    *, session: AsyncSession, leave_category_id: int, part_ids: List[int]
-) -> None:
-    
-    if not part_ids:
-        return
+    *, session: AsyncSession, leave_category_id: int, part_ids: list[int]
+) -> list[int]:
 
     # 벌크 삽입 사용
     insert_stmt = insert(LeaveExcludedPart).values([
@@ -35,13 +24,12 @@ async def create_all_part_id(
     await session.execute(insert_stmt)
     await session.commit()
 
+    return part_ids
+
 
 async def delete_all_part_id(
-    *, session: AsyncSession, leave_category_id: int, part_ids: List[int]
-) -> None:
-
-    if not part_ids:
-        return
+    *, session: AsyncSession, leave_category_id: int, part_ids: list[int]
+) -> list[int]:
 
     # 벌크 삭제 사용
     delete_stmt = delete(LeaveExcludedPart).where(
@@ -50,3 +38,5 @@ async def delete_all_part_id(
     )
     await session.execute(delete_stmt)
     await session.commit()
+
+    return part_ids

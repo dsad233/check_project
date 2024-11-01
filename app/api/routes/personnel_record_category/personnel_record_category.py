@@ -12,7 +12,7 @@ from app.models.branches.personnel_record_categories_model import PersonnelRecor
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 async def check_role(*, session: AsyncSession, current_user_id: int, branch_id: int):
     user = await users_crud.find_by_id(session=session, user_id=current_user_id)

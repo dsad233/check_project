@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.models.branches.branches_model import Branches
 from app.common.dto.search_dto import BaseSearchDto
+from app.models.branches.work_policies_model import WorkPolicies
 
 
 logger = logging.getLogger(__name__)
@@ -83,6 +84,10 @@ async def find_by_id_with_policies(
     *, session: AsyncSession, branch_id: int
 ) -> Optional[Branches]:
     stmt = select(Branches).options(
+        selectinload(Branches.work_policies).options(
+            selectinload(WorkPolicies.work_schedules),
+            selectinload(WorkPolicies.break_times),
+        ),
         selectinload(Branches.overtime_policies),
         selectinload(Branches.holiday_work_policies),
         selectinload(Branches.auto_overtime_policies),
@@ -90,9 +95,9 @@ async def find_by_id_with_policies(
         selectinload(Branches.entry_date_based_annual_leave_grant),
         selectinload(Branches.condition_based_annual_leave_grant),
         selectinload(Branches.auto_annual_leave_approval),
-        selectinload(Branches.work_policies),
         selectinload(Branches.allowance_policies)
-        ).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    ).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    
     result = await session.execute(stmt)
     branch = result.scalar_one_or_none()
     return branch
@@ -150,3 +155,11 @@ async def update(*, session: AsyncSession, branch_id: int, request: Branches, ol
         pass
     
     return True
+
+
+async def find_by_id_with_parts(
+    *, session: AsyncSession, branch_id: int
+) -> Optional[Branches]:
+    stmt = select(Branches).options(selectinload(Branches.parts)).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()

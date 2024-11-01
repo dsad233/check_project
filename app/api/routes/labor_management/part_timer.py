@@ -1,31 +1,25 @@
 from datetime import datetime
-from typing import Annotated, List
 from fastapi import APIRouter, Body, Depends, HTTPException, Path, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.routes.labor_management.dto.page_info_dto import PageInfoDto
 from app.api.routes.labor_management.dto.part_timer_commute_history_correction_request import PartTimerCommuteHistoryCorrectionRequestDTO
 from app.api.routes.labor_management.dto.part_timer_commute_history_correction_response import PartTimerCommuteHistoryCorrectionResponseDTO
-from app.api.routes.labor_management.dto.part_timers_summaries_with_page import PartTimersSummariesWithPageInfoDTO
-from app.cruds.labor_management.dto.part_timers_response_dto import PartTimerSummaryResponseDTO
-from app.cruds.labor_management.dto.part_timer_work_history_response_dto import PartTimerWorkHistoryResponseDTO, PartTimerWorkHistorySummaryDTO
+from app.api.routes.labor_management.dto.part_timers_summaries_with_page import PartTimersSummariesDTO, PartTimersSummariesWithPageInfoDTO
+from app.cruds.labor_management.dto.part_timer_work_history_response_dto import PartTimerWorkHistoryResponseDTO
 
 from app.core.permissions.auth_utils import available_higher_than
 
-from app.cruds.labor_management.repositories.mock_part_timer_repository import MockPartTimerRepository
 from app.cruds.labor_management.repositories.part_timer_repository import PartTimerRepository
 from app.cruds.labor_management.repositories.part_timer_repository_interface import IPartTimerRepository
 from app.enums.users import Role
 from app.exceptions.exceptions import NotFoundError
-from app.middleware.tokenVerify import get_current_user, validate_token
+from app.middleware.tokenVerify import validate_token
 from app.core.database import get_db
-from app.models.users.users_model import Users
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 # 리포지토리 의존성 함수 정의
 def get_part_timer_repository(db: AsyncSession = Depends(get_db)) -> IPartTimerRepository:
-    # TODO: 실제 DB 레포지토리 구현
     return PartTimerRepository(db)
     # return MockPartTimerRepository.get_instance()
 
@@ -67,9 +61,9 @@ async def get_part_timer_by_user_info(
     branch_id: int = Query(...),
     part_id: int = Query(...),
     year: int = Query(datetime.now().year),
-    month: int = Query(datetime.now().month)) -> List[PartTimerSummaryResponseDTO]:
+    month: int = Query(datetime.now().month)) -> PartTimersSummariesDTO:
 
-    return await repo.get_part_timer_by_user_info(year, month, user_name, phone_number, branch_id, part_id)
+    return PartTimersSummariesDTO.toDTO(await repo.get_part_timer_by_user_info(year, month, user_name, phone_number, branch_id, part_id))
 
 @router.get("/part-timer/work-history", summary="파트타이머 근로 내역 조회", description="특정 파트타이머가 언제 출퇴근을 했는 지를 상세하게 볼 수 있는 API")
 @available_higher_than(Role.ADMIN)

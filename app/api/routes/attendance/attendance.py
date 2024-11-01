@@ -25,7 +25,7 @@ from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.orm import joinedload
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 
 def calculate_total_ot(is_doctor: bool, record: Row) -> int:
     """

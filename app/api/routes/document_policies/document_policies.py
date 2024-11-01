@@ -9,7 +9,7 @@ from app.models.branches.document_policies_model import DocumentPolicies
 from app.models.users.users_model import Users
 from sqlalchemy.ext.asyncio import AsyncSession
 
-router = APIRouter(dependencies=[Depends(validate_token)])
+router = APIRouter()
 # document = async_session()
 
 

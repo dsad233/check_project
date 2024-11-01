@@ -7,7 +7,7 @@ from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
-from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay, WorkContractBreakTime
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -78,7 +78,7 @@ Parts.hour_wage_templates = relationship("HourWageTemplate", back_populates="par
 Parts.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="part")
 
 Parts.salary_templates = relationship("SalaryTemplate", back_populates="part")
-Users.leave_histories = relationship("LeaveHistories", back_populates="user")
+Users.leave_histories = relationship("LeaveHistories", foreign_keys=[LeaveHistories.user_id], back_populates="user")
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
@@ -102,8 +102,8 @@ Branches.salary_templates_policies = relationship("SalaryTemplatesPolicies", bac
 ParttimerPolicies.branch = relationship("Branches", back_populates="parttimer_policies")
 SalaryTemplatesPolicies.branch = relationship("Branches", back_populates="salary_templates_policies")
 # 다 대 일 관계
-LeaveHistories.user = relationship("Users", back_populates="leave_histories")
-LeaveHistories.leave_category = relationship("LeaveCategory", back_populates="leave_histories")
+LeaveHistories.user = relationship("Users", foreign_keys=[LeaveHistories.user_id], back_populates="leave_histories")
+LeaveHistories.leave_category = relationship("LeaveCategory", foreign_keys=[LeaveHistories.leave_category_id], back_populates="leave_histories")
 
 Users.branch = relationship("Branches", back_populates="users")
 Users.part = relationship("Parts", back_populates="users")
@@ -221,3 +221,10 @@ WorkContract.work_contract_history = relationship("WorkContractHistory", back_po
 
 WorkContract.contract = relationship("Contract", back_populates="work_contract")
 Contract.work_contract = relationship("WorkContract", back_populates="contract")
+
+LeaveHistories.manager = relationship("Users", foreign_keys=[LeaveHistories.manager_id], back_populates="managed_leave_histories")
+Users.managed_leave_histories = relationship("LeaveHistories", foreign_keys=[LeaveHistories.manager_id], back_populates="manager")
+
+
+WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract")
+WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")

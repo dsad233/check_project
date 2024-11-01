@@ -5,6 +5,7 @@ from app.core.database import get_db
 from app.cruds.user_management.work_contract_crud import find_user_by_user_id
 from app.cruds.users.users_crud import find_by_email, add_user
 from app.enums.modusign import SIGNINGMETHOD_OBJECT_TYPE
+from app.enums.users import Role
 from app.models.users.users_model import Users
 from app.schemas.modusign_schemas import TemplateResponse, SigningMethod
 # from app.service.document_service import DocumentService as ModusignDocumentService
@@ -43,6 +44,20 @@ class UserManagementService:
             raise HTTPException(status_code=404, detail="User not found")
 
         return user
+
+    async def update_user_role(
+            self,
+            user_id: int,
+            session: AsyncSession,
+            role: Role = Role.EMPLOYEE,
+    ) -> int:
+        user = await self.get_user(user_id=user_id, session=session)
+        user.role = role
+
+        await session.flush()
+        await session.commit()
+
+        return user.id
 
     # async def register_user(
     #         self,
