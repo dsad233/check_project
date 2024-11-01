@@ -1,4 +1,3 @@
-from datetime import datetime
 from typing import List
 
 from pydantic import BaseModel
@@ -35,34 +34,11 @@ class UserClosedDayDetail(BaseModel):
     part_name: str
     category: str
 
-class UserClosedDaysResponseDTO(BaseModel):
-    user_closed_days: dict[str, List[UserClosedDayDetail]]
-
-    @classmethod
-    def to_DTO(cls, user_closed_days: dict[str, List[UserClosedDayDetail]]):
-        return cls(user_closed_days=user_closed_days)
-
-# Example usage
-# user_closed_days = {
-#     '2024-01-01': [
-#         UserClosedDayDetail(user_id=1, user_name="박다인", part_name="코디", category="정규휴무"),
-#         UserClosedDayDetail(user_id=2, user_name="성동제", part_name="양진아", category="연차")
-#     ],
-#     '2024-01-02': [
-#         UserClosedDayDetail(user_id=3, user_name="장석찬", part_name="코디", category="연차 종일"),
-#         UserClosedDayDetail(user_id=4, user_name="이다희", part_name="간호", category="연차 종일")
-#     ],
-#     '2024-01-03': [
-#         UserClosedDayDetail(user_id=5, user_name="고혜솔", part_name="간호", category="조퇴")
-#     ]
-# }
-
-# dto = UserClosedDaysResponseDTO.to_DTO(user_closed_days)
 
 class EntireClosedDayResponseDTO(BaseModel):
-    user_closed_days: UserClosedDaysResponseDTO
-    hospital_closed_days: HospitalClosedDaysResponseDTO
+    user_closed_days: dict[str, List[UserClosedDayDetail]]
+    hospital_closed_days: List[str]
 
     @classmethod
-    def to_DTO(cls, user_closed_days: List[UserClosedDayDetailDTO], hospital_closed_days: List[str]):
+    def to_DTO(cls, user_closed_days: dict[str, List[UserClosedDayDetail]], hospital_closed_days: List[str]):
         return cls(user_closed_days=user_closed_days, hospital_closed_days=hospital_closed_days)
