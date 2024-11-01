@@ -35,7 +35,7 @@ from enum import Enum
 from app.api.routes.public.public_users import router as public_users_router
 from app.api.routes.employee.parts.employee_parts import router as employee_parts_router
 from app.api.routes.employee.overtimes.employee_overtimes import router as employee_overtimes_router
-
+from app.api.routes.employee.commutes.employee_commutes import router as employee_commutes_router
 
 
 class APIPrefix(str, Enum):
@@ -121,6 +121,11 @@ employee_router.include_router(
 employee_router.include_router(
     employee_overtimes_router,
         prefix="/overtimes"
+)
+
+employee_router.include_router(
+    employee_commutes_router,
+    prefix="/commutes"
 )
 
 
