@@ -1,6 +1,7 @@
 from typing import Optional
 from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from app.models.parts.parts_model import Parts
 from datetime import datetime
 
@@ -57,11 +58,11 @@ async def update_auto_annual_leave_grant(
     
 
 async def find_all_by_auto_annual_leave_grant(
-    *, session: AsyncSession, auto_annual_leave_grant: str
+    *, session: AsyncSession, request: str
 ) -> list[Parts]:
     stmt = (
         select(Parts)
-        .where(Parts.auto_annual_leave_grant == auto_annual_leave_grant)
+        .where(Parts.auto_annual_leave_grant == request)
         .where(Parts.deleted_yn == 'N')
     )
     result = await session.execute(stmt)
@@ -110,3 +111,12 @@ async def create_part(
     await session.refresh(request)
 
     return request
+
+
+async def get_part_with_users(
+    *, session: AsyncSession, part_id: int
+) -> Parts:
+    
+    stmt = select(Parts).options(selectinload(Parts.users)).where(Parts.id == part_id).where(Parts.deleted_yn == 'N')
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
