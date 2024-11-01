@@ -31,6 +31,7 @@ from app.api.routes.modusign import document, template, webhook
 from app.api.routes.salary_policies import salary_policies
 from app.api.routes.db_monitor.db_connections_monitor import router as monitor_router
 from enum import Enum
+from app.api.routes.public.public_users import router as public_users_router
 
 class APIPrefix(str, Enum):
     PUBLIC = "/public"
@@ -53,7 +54,11 @@ public_router = APIRouter()
 public_router.include_router(auth.router, prefix="/auth", tags=["Auth : 로그인/로그아웃"])
 public_router.include_router(monitor_router, tags=["Monitoring : DB 모니터링"])
 public_router.include_router(webhook_callback.router, prefix="/callback", tags=["Callback"])
-
+public_router.include_router(
+    public_users_router,  # 변경된 부분
+    prefix="/users",
+    tags=["Users/me: 공통 -  FE에서 사용자 정보 가져오는 API"]
+)
 @public_router.get("/healthcheck", summary="healthcheck", tags=["default: healthcheck"])
 def health_check():
     return {"status": "healthy"}
