@@ -60,21 +60,21 @@ async def get_current_user_leaves(
                 "total_leave_days": 0.0,
                 "message": f"{year}년도의 연차 정보가 없습니다."
             }
-
+            
         # 모든 increased_days 합산
         total_increased = float(leave_info.increased_days) if leave_info.increased_days is not None else 0.0
         total_decreased = float(leave_info.decreased_days) if leave_info.decreased_days is not None else 0.0
 
         return UserLeavesDaysResponse(
             user_id=current_user_id,
-            branch_id=branch_id, 
+            branch_id=branch_id,
             year=year,
-            increased_days=total_increased,  # 합산된 증가 일수
-            decreased_days=total_decreased,  # 합산된 감소 일수
-            total_leave_days=total_increased - total_decreased,  # 사용 가능한 연차 일수
-            leave_category_id=leave_info.leave_category_id
+            increased_days=total_increased,
+            decreased_days=total_decreased,
+            total_leave_days=total_increased - total_decreased
         )
-
+        
+        
     except Exception as err:
         print(err)
         raise HTTPException(status_code=500, detail=str(err))
