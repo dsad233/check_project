@@ -195,7 +195,7 @@ async def create_branch(
         *, 
         session: AsyncSession, 
         request: BranchRequest
-) -> BranchResponse:
+) -> bool:
     """지점 + 정책 생성"""
     duplicate_branch = await branches_crud.find_by_name(session=session, name=request.name)
     if duplicate_branch is not None:
@@ -205,18 +205,19 @@ async def create_branch(
     branch_id = branch.id
     # 정책 생성
     if branch_id is not None:
-        await holiday_work_crud.create(session=session, branch_id=branch_id)
-        await overtime_crud.create(session=session, branch_id=branch_id)
-        await work_crud.create(session=session, branch_id=branch_id)
-        await auto_overtime_crud.create(session=session, branch_id=branch_id)
+        await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
         await allowance_crud.create(session=session, branch_id=branch_id)
         await auto_annual_leave_approval_crud.create(session=session, branch_id=branch_id)
-        await account_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
-        await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+        await auto_overtime_crud.create(session=session, branch_id=branch_id)
         await condition_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
-        await create_parttimer_policies(session, branch_id)
-
-    return branch
+        await entry_date_based_annual_leave_grant_crud.create(session=session, branch_id=branch_id)
+        await holiday_work_crud.create(session=session, branch_id=branch_id)
+        await overtime_crud.create(session=session, branch_id=branch_id)
+        await create_parttimer_policies(session=session, branch_id=branch_id)
+        await work_crud.create(session=session, branch_id=branch_id)
+        return True
+    
+    return False
 
 
 async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:

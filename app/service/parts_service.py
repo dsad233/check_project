@@ -72,12 +72,37 @@ async def update_part(
 async def create_part(
     *, session: AsyncSession, request: PartRequest, branch_id: int
 ) -> PartResponse:
-    duplicate_part = await parts_crud.find_by_name_and_branch_id(session=session, name=request.name, branch_id=branch_id)
+    duplicate_part = await parts_crud.find_by_name_and_branch_id(
+        session=session, 
+        name=request.name, 
+        branch_id=branch_id
+    )
     if duplicate_part is not None:
         raise BadRequestError(detail=f"{request.name}은(는) 이미 존재합니다.")
     
-    part = await parts_crud.create_part(session=session, request=Parts(branch_id=branch_id, **request.model_dump()))
-    part_id = part.id
+    try:
+        # 파트 생성
+        part = await parts_crud.create_part(
+            session=session, 
+            request=Parts(branch_id=branch_id, **request.model_dump())
+        )
+        part_id = part.id
 
-    await salary_polices_crud.create_salary_templates_policies(db=session, part_ids=[part_id], branch_id=branch_id)
-    return part
+        # 급여 템플릿 정책 생성
+        if part_id:
+            await salary_polices_crud.create_salary_templates_policies(
+                session=session, 
+                part_ids=[part_id], 
+                branch_id=branch_id
+            )
+            await session.commit()  # 모든 변경사항 커밋
+            
+            # 생성된 part 객체 refresh
+            await session.refresh(part)
+            
+            # Parts 모델을 PartResponse로 변환
+            return PartResponse.model_validate(part)
+            
+    except Exception as e:
+        await session.rollback()
+        raise e
