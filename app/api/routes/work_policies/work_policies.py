@@ -10,6 +10,7 @@ from app.core.database import get_db
 from app.schemas.branches_schemas import (
     CombinedPoliciesDto,
     CombinedPoliciesUpdateDto,
+    ScheduleHolidayUpdateDto,
 )
 from app.service import branch_service
 logger = logging.getLogger(__name__)
@@ -40,6 +41,113 @@ async def update_work_policies(
 ) -> str:
     
     return await branch_service.update_branch_policies(session=session, branch_id=branch_id, request=policies_in)
+
+
+@router.patch("/holiday", response_model=str, summary="고정 휴점일 수정")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def update_schedule_holiday(
+    *,
+    context: Request,
+    session: AsyncSession = Depends(get_db),
+    branch_id: int,
+    policies_in: ScheduleHolidayUpdateDto,
+) -> str:
+    
+    return await branch_service.update_schedule_holiday(session=session, branch_id=branch_id, request=policies_in)
+
+
+
+
+    
+    # try:
+    #     # WorkPolicies 업데이트
+    #     work_policies = await work_crud.find_by_branch_id(
+    #         session=session, branch_id=branch_id
+    #     )
+    #     if work_policies is None:
+    #         new_policy = WorkPolicies(
+    #             branch_id=branch_id,
+    #             weekly_work_days=policies_in.work_policies.weekly_work_days,
+    #             deleted_yn="N",
+    #         )
+    #         session.add(new_policy)
+    #         await session.flush()
+
+    #         for schedule_dto in policies_in.work_policies.work_schedules:
+    #             new_schedule = WorkSchedule(
+    #                 work_policy_id=new_policy.id,
+    #                 day_of_week=schedule_dto.day_of_week,
+    #                 start_time=schedule_dto.start_time,
+    #                 end_time=schedule_dto.end_time,
+    #                 is_holiday=schedule_dto.is_holiday,
+    #             )
+    #             new_policy.work_schedules.append(new_schedule)
+
+    #         for break_dto in policies_in.work_policies.break_times:
+    #             new_break = BreakTime(
+    #                 work_policy_id=new_policy.id,
+    #                 is_doctor=break_dto.is_doctor,
+    #                 break_type=break_dto.break_type,
+    #                 start_time=break_dto.start_time,
+    #                 end_time=break_dto.end_time,
+    #             )
+    #             new_policy.break_times.append(new_break)
+    #     else:
+    #         update_policy = WorkPolicies(
+    #             branch_id=branch_id,
+    #             weekly_work_days=policies_in.work_policies.weekly_work_days,
+    #         )
+
+    #         update_policy.work_schedules = [
+    #             WorkSchedule(
+    #                 day_of_week=s.day_of_week,
+    #                 start_time=s.start_time,
+    #                 end_time=s.end_time,
+    #                 is_holiday=s.is_holiday,
+    #             )
+    #             for s in policies_in.work_policies.work_schedules
+    #         ]
+
+    #         update_policy.break_times = [
+    #             BreakTime(
+    #                 is_doctor=b.is_doctor,
+    #                 break_type=b.break_type,
+    #                 start_time=b.start_time,
+    #                 end_time=b.end_time,
+    #             )
+    #             for b in policies_in.work_policies.break_times
+    #         ]
+
+    #         await work_crud.update(
+    #             session=session, branch_id=branch_id, work_policies_update=update_policy
+    #         )
+
+    #     # AutoOvertimePolicies 업데이트
+    #     auto_overtime_policies = await auto_overtime_crud.find_by_branch_id(
+    #         session=session, branch_id=branch_id
+    #     )
+    #     if auto_overtime_policies is None:
+    #         await auto_overtime_crud.create(
+    #             session=session,
+    #             branch_id=branch_id,
+    #             auto_overtime_policies_create=AutoOvertimePolicies(
+    #                 branch_id=branch_id,
+    #                 **policies_in.auto_overtime_policies.model_dump(),
+    #             ),
+    #         )
+    #     else:
+    #         await auto_overtime_crud.update(
+    #             session=session,
+    #             branch_id=branch_id,
+    #             auto_overtime_policies_update=AutoOvertimePolicies(
+    #                 branch_id=branch_id,
+    #                 **policies_in.auto_overtime_policies.model_dump(exclude_unset=True),
+    #             ),
+    #         )
+    #     policies_in: CombinedPoliciesUpdateDto,
+    # ) -> str:
+        
+    #     return await branch_service.update_branch_policies(session=session, branch_id=branch_id, request=policies_in)
     
     
     # try:

@@ -15,6 +15,7 @@ async def create(
     *, session: AsyncSession, branch_id: int, request: HolidayWorkPolicies = HolidayWorkPolicies()
 ) -> HolidayWorkPolicies:
     
+    request.branch_id = branch_id
     session.add(request)
     await session.commit()
     await session.flush()

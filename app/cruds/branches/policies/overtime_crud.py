@@ -14,6 +14,7 @@ async def create(
     *, session: AsyncSession, branch_id: int, request: OverTimePolicies = OverTimePolicies()
 ) -> OverTimePolicies:
     
+    request.branch_id = branch_id
     session.add(request)
     await session.commit()
     await session.flush()
