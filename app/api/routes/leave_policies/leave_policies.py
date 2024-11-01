@@ -27,8 +27,11 @@ async def get_auto_leave_policies(
     session: AsyncSession = Depends(get_db),
     context: Request
 ) -> AutoLeavePoliciesAndPartsDto:
+    try:
     
-    return await branch_service.get_auto_leave_policies_and_parts(session=session, branch_id=branch_id)
+        return await branch_service.get_auto_leave_policies_and_parts(session=session, branch_id=branch_id)
+    except Exception as error:
+        print(f"에러 발생!!!!!!!! {error}")
 
 @router.patch("/update", response_model=bool, summary="자동 휴무 정책 및 파트 정책 수정")
 @available_higher_than(Role.INTEGRATED_ADMIN)

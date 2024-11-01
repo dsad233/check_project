@@ -59,10 +59,10 @@ async def get_auto_leave_policies_and_parts(*, session: AsyncSession, branch_id:
     condition_based_grant_policies: list[ConditionBasedAnnualLeaveGrant] = await condition_based_annual_leave_grant_crud.find_all_by_branch_id(session=session, branch_id=branch_id)
 
     # 파트 조회
-    account_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.ACCOUNTING_BASED_GRANT)
-    entry_date_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.ENTRY_DATE_BASED_GRANT)
-    condition_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.CONDITIONAL_GRANT)
-    manual_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, request=PartAutoAnnualLeaveGrant.MANUAL_GRANT)
+    account_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.ACCOUNTING_BASED_GRANT)
+    entry_date_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.ENTRY_DATE_BASED_GRANT)
+    condition_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.CONDITIONAL_GRANT)
+    manual_parts = await parts_service.get_parts_by_auto_annual_leave_grant(session=session, auto_annual_leave_grant=PartAutoAnnualLeaveGrant.MANUAL_GRANT)
 
     return AutoLeavePoliciesAndPartsDto(
         auto_approval_policies=AutoAnnualLeaveApprovalDto.model_validate(auto_annual_leave_approval_policies or {}),
@@ -80,6 +80,7 @@ async def get_auto_leave_policies_and_parts(*, session: AsyncSession, branch_id:
         ),
         manual_based_parts=[PartIdWithName.model_validate(part) for part in (manual_parts or [])]
     )
+        
     
 
 async def update_auto_leave_policies_and_parts(
