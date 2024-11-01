@@ -6,6 +6,7 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
+from app.models.db_monitor.connection_logs import ConnectionLogs
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -36,6 +37,38 @@ config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 def get_url():
     return str(settings.DATABASE_URL)
+
+async def run_async_migrations() -> None:
+    """In this scenario we need to create an Engine
+    and associate a connection with the context."""
+
+    connectable = async_engine_from_config(
+        config.get_section(config.config_ini_section, {}),
+        prefix="sqlalchemy.",
+        poolclass=pool.NullPool,
+    )
+
+    async with connectable.connect() as connection:
+        # 트랜잭션 설정을 포함하여 context 구성
+        await connection.run_sync(lambda conn: context.configure(
+            connection=conn,
+            target_metadata=target_metadata,
+            transaction_per_migration=True,  # 각 마이그레이션마다 별도의 트랜잭션
+            transactional_ddl=True,         # DDL 명령어들을 트랜잭션으로 감싸기
+        ))
+        
+        # 트랜잭션 내에서 마이그레이션 실행
+        async with connection.begin() as transaction:
+            try:
+                await connection.run_sync(context.run_migrations)
+            except Exception as e:
+                await transaction.rollback()
+                print(f"Migration failed: {e}")
+                raise
+            else:
+                await transaction.commit()
+
+    await connectable.dispose()
 
 
 def run_migrations_offline() -> None:
