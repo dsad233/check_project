@@ -77,7 +77,7 @@ def custom_openapi():
     openapi_schema["tags"] = [
         {
             "name": tag,
-            "description": f"{tag} 관련 API",
+            # "description": f"{tag} 관련 API",
             "x-display-name": tag,
             "x-collapsed": True
         }
