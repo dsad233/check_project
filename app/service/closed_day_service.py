@@ -278,11 +278,125 @@ class ClosedDayService:
         
 
 
+    async def get_user_and_hospital_closed_days(self, branch_id: int, user_id: int, year: int, month: int) -> tuple[dict[str, List[UserClosedDayDetail]], List[str]]:
+        '''
+        특정 사용자의 휴무일과 병원 휴무일을 조회
+        '''
+        # 직원의 특정 휴무일 조회
+        query = (
+            select(ClosedDays.closed_day_date, Users.id, Users.name, Parts.name)
+            .join(Users, ClosedDays.user_id == Users.id)
+            .filter(
+                and_(
+                    ClosedDays.branch_id == branch_id,
+                    ClosedDays.user_id == user_id,  # 본인 것만 조회
+                    func.extract('year', ClosedDays.closed_day_date) == year,
+                    func.extract('month', ClosedDays.closed_day_date) == month,
+                    ClosedDays.deleted_yn == "N"
+                )
+            )
+            .join(Parts, Users.part_id == Parts.id)
+        )
+        result = await self.session.execute(query)
+        closed_days = result.fetchall()
+
+        date_to_users = {}
+        for closed_day_date, user_id, user_name, part_name in closed_days:
+            date_str = closed_day_date.strftime("%Y-%m-%d")
+            if date_str not in date_to_users:
+                date_to_users[date_str] = []
+            date_to_users[date_str].append(UserClosedDayDetail(
+                user_id=user_id,
+                user_name=user_name,
+                part_name=part_name,
+                category="휴무"
+            ))
+
+        # 연차 조회
+        query = (
+            select(LeaveHistories.start_date, LeaveHistories.end_date, LeaveCategory.name, Users.name, Parts.name)
+            .join(LeaveCategory, LeaveHistories.leave_category_id == LeaveCategory.id)
+            .join(Users, LeaveHistories.user_id == Users.id)
+            .join(Parts, Users.part_id == Parts.id)
+            .filter(
+                and_(
+                    LeaveHistories.status == Status.APPROVED,
+                    LeaveHistories.user_id == user_id,  # 본인 것만 조회
+                    func.extract('year', LeaveHistories.start_date) == year,
+                    func.extract('month', LeaveHistories.start_date) == month
+                )
+            )
+        )
+        result = await self.session.execute(query)
+        leave_histories = result.fetchall()
+
+        for start_date, end_date, leave_category_name, user_name, part_name in leave_histories:
+            current_date = start_date
+            while current_date <= end_date:
+                date_str = current_date.strftime("%Y-%m-%d")
+                if date_str not in date_to_users:
+                    date_to_users[date_str] = []
+                date_to_users[date_str].append(UserClosedDayDetail(
+                    user_id=user_id,
+                    user_name=user_name,
+                    part_name=part_name,
+                    category=leave_category_name
+                ))
+                current_date += timedelta(days=1)
+
+        # 정기 휴무 조회
+        query = (
+            select(WorkContract.contract_start_date, FixedRestDay.rest_day, FixedRestDay.every_over_week, Users.name, Parts.name)
+            .join(FixedRestDay, FixedRestDay.work_contract_id == WorkContract.id)
+            .join(Users, WorkContract.user_id == Users.id)
+            .join(Parts, Users.part_id == Parts.id)
+            .filter(
+                and_(
+                    WorkContract.user_id == user_id,  # 본인 것만 조회
+                    WorkContract.is_fixed_rest_day == True
+                )
+            )
+        )
+
+        result = await self.session.execute(query)
+        fixed_rest_days = result.fetchall()
+
+        for contract_start_date, rest_day, every_over_week, user_name, part_name in fixed_rest_days:
+            first_day_of_month = date(year, month, 1)
+            days_in_month = monthrange(year, month)[1]
+
+            for day in range(days_in_month):
+                current_day = first_day_of_month + timedelta(days=day)
+                if current_day.strftime('%A').upper() == rest_day.name and current_day >= contract_start_date:
+                    date_str = current_day.strftime('%Y-%m-%d')
+                    if every_over_week:
+                        weeks_since_start = ((current_day - contract_start_date).days // 7)
+                        if weeks_since_start % 2 == 0:
+                            if date_str not in date_to_users:
+                                date_to_users[date_str] = []
+                            date_to_users[date_str].append(UserClosedDayDetail(
+                                user_id=user_id,
+                                user_name=user_name,
+                                part_name=part_name,
+                                category="정규휴무"
+                            ))
+                    else:
+                        if date_str not in date_to_users:
+                            date_to_users[date_str] = []
+                        date_to_users[date_str].append(UserClosedDayDetail(
+                            user_id=user_id,
+                            user_name=user_name,
+                            part_name=part_name,
+                            category="정규휴무"
+                        ))
+
+        # 병원 휴무일 조회
+        hospital_closed_days = await self.get_all_hospital_closed_days(branch_id, year, month)
+
+        return dict(sorted(date_to_users.items())), hospital_closed_days
 
 
 
-        
-        
-        
+
 
         

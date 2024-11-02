@@ -13,7 +13,6 @@ router = APIRouter()
 semaphore = asyncio.Semaphore(1)
 
 @router.get("", response_model=list[PartResponse], summary="부서 조회")
-@available_higher_than(Role.EMPLOYEE)
 async def get_parts(
     context: Request,
     branch_id: int,
