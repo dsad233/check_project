@@ -37,6 +37,7 @@ from app.api.routes.employee.overtimes.employee_overtimes import router as emplo
 from app.api.routes.employee.commutes.employee_commutes import router as employee_commutes_router
 from app.api.routes.employee.leave_histories.employee_leave_histories import router as employee_leave_histories_router
 from app.api.routes.employee.branches.employee_branches import router as employee_branches_router
+from app.api.routes.employee.closed_days.employee_closed_days import router as employee_closed_days_router
 
 class APIPrefix(str, Enum):
     PUBLIC = "/public"
@@ -132,6 +133,7 @@ employee_router.include_router(
 )
 
 employee_router.include_router(employee_branches_router)
+employee_router.include_router(employee_closed_days_router, prefix="/my-branch")
 
 # MSO 전용
 mso_router = APIRouter(prefix="/mso", tags=["MSO"])
