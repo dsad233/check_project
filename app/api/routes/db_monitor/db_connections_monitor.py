@@ -13,7 +13,6 @@ import os
 import pytz
 
 router = APIRouter()
-scheduler = AsyncIOScheduler()
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -21,58 +20,6 @@ class ConnectionData(BaseModel):
     timestamp: datetime
     connection_count: int
 
-async def collect_connection_data():
-    async with async_session() as db:
-        try:
-            # 현재 연결 수 조회
-            result = await db.execute(
-                text("SHOW STATUS LIKE 'Threads_connected'")
-            )
-            count = result.fetchone()
-            if count is None:
-                print("No connection count found")
-                return
-                
-            current_count = int(count[1])
-            kst = pytz.timezone('Asia/Seoul')
-            current_time = datetime.now(kst)
-
-            # DB에 저장
-            new_log = ConnectionLogs(
-                connection_count=current_count,
-                created_at=current_time
-            )
-            db.add(new_log)
-
-            # 3일 이전 데이터 삭제
-            three_days_ago = current_time - timedelta(days=3)
-            delete_stmt = delete(ConnectionLogs).where(ConnectionLogs.created_at < three_days_ago)
-            await db.execute(delete_stmt)
-            
-            await db.commit()
-            print(f"[{current_time}] Collected connection count: {current_count}")
-
-        except Exception as e:
-            print(f"Error collecting connection data: {str(e)}")
-            await db.rollback()
-
-# 스케줄러 시작/종료 함수
-def start_scheduler():
-    try:
-        scheduler.add_job(
-            collect_connection_data,
-            CronTrigger(minute='*/5'),  # 매 5분마다 실행
-            timezone=pytz.timezone('Asia/Seoul'),
-            id='collect_connection_data'
-        )
-        scheduler.start()
-        print("Scheduler started successfully")
-    except Exception as e:
-        print(f"Error starting scheduler: {str(e)}")
-
-def shutdown_scheduler():
-    scheduler.shutdown()
-    print("Scheduler shutdown completed")
 
 @router.get("/metrics/connections", response_model=List[ConnectionData])
 async def get_connections(db: AsyncSession = Depends(get_db)):

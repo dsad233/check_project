@@ -3,12 +3,13 @@ from datetime import datetime
 from sqlalchemy import func, select, update as sa_update
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
-from sqlalchemy.orm import selectinload
+from sqlalchemy.orm import selectinload, joinedload
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.models.branches.branches_model import Branches
 from app.common.dto.search_dto import BaseSearchDto
 from app.models.branches.work_policies_model import WorkPolicies
-
+from app.models.parts.parts_model import Parts
+from app.models.users.users_model import Users
 
 logger = logging.getLogger(__name__)
 
@@ -157,9 +158,36 @@ async def update(*, session: AsyncSession, branch_id: int, request: Branches, ol
     return True
 
 
-async def find_by_id_with_parts(
-    *, session: AsyncSession, branch_id: int
-) -> Optional[Branches]:
-    stmt = select(Branches).options(selectinload(Branches.parts)).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+# async def find_all_with_parts_users_auto_annual_leave_policies(
+#     *, session: AsyncSession
+# ) -> list[Branches]:
+#     stmt = select(Branches).options(
+#         selectinload(Branches.parts.and_(Parts.deleted_yn == "N")
+#                      ).selectinload(Parts.users.and_(Users.deleted_yn == "N")),
+#         selectinload(Branches.account_based_annual_leave_grant),
+#         selectinload(Branches.entry_date_based_annual_leave_grant),
+#         selectinload(Branches.condition_based_annual_leave_grant)
+#         ).where(Branches.deleted_yn == "N")
+#     result = await session.execute(stmt)
+#     return result.scalars().all()
+
+
+async def find_all_with_parts_users_auto_annual_leave_policies(
+    *, session: AsyncSession
+) -> list[Branches]:
+    stmt = (
+       select(Branches)
+       .options(
+           selectinload(
+               Branches.parts.and_(Parts.deleted_yn == "N")
+            ).selectinload(
+               Parts.users.and_(Users.deleted_yn == "N")
+           ),
+           selectinload(Branches.account_based_annual_leave_grant),
+           selectinload(Branches.entry_date_based_annual_leave_grant),
+           selectinload(Branches.condition_based_annual_leave_grant)
+       )
+       .where(Branches.deleted_yn == "N")
+   )
     result = await session.execute(stmt)
-    return result.scalar_one_or_none()
+    return result.scalars().all()

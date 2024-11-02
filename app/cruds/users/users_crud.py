@@ -73,47 +73,37 @@ async def update_user(
         logger.error(f"Failed to update user: {e}")
         await session.rollback()
         raise e
+    
 
-async def plus_total_leave_days(
+async def update_total_leave_days(
     *, session: AsyncSession, user_id: int, count: int
 ) -> bool:
     await session.execute(
         sa_update(Users)
         .where(Users.id == user_id)
         .values(
-            total_leave_days=Users.total_leave_days + count,
+            total_leave_days=count,
             updated_at=datetime.now()
         )
     )
-    await session.commit()
+    await session.flush()
     return True
 
-# async def minus_remaining_annual_leave(
-#     *, session: AsyncSession, user: Users, count: int
-# ) -> Users:
-#     if user.remaining_annual_leave < count:
-#         raise BadRequestError(detail="잔여 연차가 부족합니다.")
-#     user.remaining_annual_leave -= count
-#     await session.flush()
-#     await session.commit()
-#     await session.refresh(user)
-#     return user
 
-async def minus_total_leave_days(
-    *, session: AsyncSession, user_id: int, count: int
+async def update_users_total_leave_days(
+    *, session: AsyncSession, user_ids: list[int], count: int
 ) -> bool:
-    # 연차 차감
     await session.execute(
         sa_update(Users)
-        .where(Users.id == user_id)
+        .where(Users.id.in_(user_ids))
         .values(
-            total_leave_days=Users.total_leave_days - count,
+            total_leave_days=count,
             updated_at=datetime.now()
         )
     )
-    # 변경사항 저장
     await session.commit()
     return True
+
 
 async def get_users_count(
     *, session: AsyncSession, branch_id: int
