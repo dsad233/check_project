@@ -160,8 +160,8 @@ ClosedDays.part = relationship("Parts", back_populates="closed_days")
 SalaryTemplate.branch = relationship("Branches", back_populates="salary_templates")
 SalaryTemplate.part = relationship("Parts", back_populates="salary_templates")
 
-Parts.users = relationship("Users", secondary=user_parts, back_populates="parts")
-Users.parts = relationship("Parts", secondary=user_parts, back_populates="users")
+# Parts.users = relationship("Users", secondary=user_parts, back_populates="parts")
+# Users.parts = relationship("Parts", secondary=user_parts, back_populates="users") # 이후 사용 예정 주석 처리
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
