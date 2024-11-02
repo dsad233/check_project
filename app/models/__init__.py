@@ -1,7 +1,7 @@
 from app.core.database import Base
 from sqlalchemy.orm import relationship
 
-from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
@@ -82,6 +82,7 @@ Users.leave_histories = relationship("LeaveHistories", foreign_keys=[LeaveHistor
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
+Users.early_clock_in = relationship("EarlyClockIn", back_populates="user", uselist=False)
 
 Users.documents = relationship("Document", back_populates="user")
 Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
@@ -126,7 +127,7 @@ DocumentPolicies.branch = relationship("Branches", back_populates="document_poli
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
-
+EarlyClockIn.branch = relationship("Branches", back_populates="early_clock_in")
 Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
 Overtimes.manager = relationship("Users", foreign_keys=[Overtimes.manager_id], back_populates="managed_overtimes")
 
