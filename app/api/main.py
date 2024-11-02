@@ -31,6 +31,11 @@ from app.api.routes.modusign import document, template, webhook
 from app.api.routes.salary_policies import salary_policies
 from app.api.routes.db_monitor.db_connections_monitor import router as monitor_router
 from enum import Enum
+from app.api.routes.public.public_users import router as public_users_router
+from app.api.routes.employee.parts.employee_parts import router as employee_parts_router
+from app.api.routes.employee.overtimes.employee_overtimes import router as employee_overtimes_router
+from app.api.routes.employee.commutes.employee_commutes import router as employee_commutes_router
+from app.api.routes.employee.leave_histories.employee_leave_histories import router as employee_leave_histories_router
 
 class APIPrefix(str, Enum):
     PUBLIC = "/public"
@@ -53,7 +58,11 @@ public_router = APIRouter()
 public_router.include_router(auth.router, prefix="/auth", tags=["Auth : 로그인/로그아웃"])
 public_router.include_router(monitor_router, tags=["Monitoring : DB 모니터링"])
 public_router.include_router(webhook_callback.router, prefix="/callback", tags=["Callback"])
-
+public_router.include_router(
+    public_users_router,  # 변경된 부분
+    prefix="/users",
+    tags=["Users/me: 공통 -  FE에서 사용자 정보 가져오는 API"]
+)
 @public_router.get("/healthcheck", summary="healthcheck", tags=["default: healthcheck"])
 def health_check():
     return {"status": "healthy"}
@@ -100,7 +109,27 @@ admin_router.include_router(personnel_record_category.router, prefix='/branches/
 
 
 # 일반 사원 접근 라우터 (employee)
-employee_router = APIRouter(prefix="/employee", tags=["Employee"])
+employee_router = APIRouter(prefix="/employee", tags=["Employee :  🙃 사원용 API  - 추후 세부 로직 확인 맞는지 확인 필요 🙃"])
+employee_router.include_router(
+    employee_parts_router,
+    prefix="/branches/{branch_id}/parts"
+)
+
+employee_router.include_router(
+    employee_overtimes_router,
+        prefix="/overtimes"
+)
+
+employee_router.include_router(
+    employee_commutes_router,
+    prefix="/commutes"
+)
+
+employee_router.include_router(
+    employee_leave_histories_router,
+    prefix="/branches/leave-histories"
+)
+
 
 # MSO 전용
 mso_router = APIRouter(prefix="/mso", tags=["MSO"])

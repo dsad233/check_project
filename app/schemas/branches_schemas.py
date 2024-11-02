@@ -7,9 +7,15 @@ from datetime import datetime, time
 
 
 class AccountBasedGrantDto(BaseModel):
-    account_based_january_1st: Literal['초기화', "다음해로 이월"] = Field(description="매 년 1월 1일기준", default="초기화")
-    account_based_less_than_year: Literal['당해년도 일괄 부여', "매 월 1개씩 부여"] = Field(description="근속년수 1년 미만", default="당해년도 일괄 부여")
-    account_based_decimal_point: Literal['0.5 기준 올림', "절삭", "올림", "반올림"] = Field(description="소수점처리", default="0.5 기준 올림")
+    account_based_january_1st: Literal["초기화", "다음해로 이월"] = Field(
+        description="매 년 1월 1일기준", default="초기화"
+    )
+    account_based_less_than_year: Literal["당해년도 일괄 부여", "매 월 1개씩 부여"] = (
+        Field(description="근속년수 1년 미만", default="당해년도 일괄 부여")
+    )
+    account_based_decimal_point: Literal["0.5 기준 올림", "절삭", "올림", "반올림"] = (
+        Field(description="소수점처리", default="0.5 기준 올림")
+    )
 
     class Config:
         from_attributes = True
@@ -31,7 +37,9 @@ class ConditionBasedGrantDto(BaseModel):
 
 
 class EntryDateBasedGrantDto(BaseModel):
-    entry_date_based_remaining_leave: Literal['초기화', "다음해로 이월"] = Field(description="매 년 입사일 기준", default="초기화")
+    entry_date_based_remaining_leave: Literal["초기화", "다음해로 이월"] = Field(
+        description="매 년 입사일 기준", default="초기화"
+    )
 
     class Config:
         from_attributes = True
@@ -73,6 +81,7 @@ class BranchHistoryResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class BranchHistoriesResponse(BaseModel):
     data: list[BranchHistoryResponse]
@@ -222,7 +231,9 @@ class OverTimePoliciesDto(BaseModel):
 
 
 class DefaultAllowancePoliciesDto(BaseModel):
-    comprehensive_overtime: bool = Field(description="포괄산정 연장근무수당", default=False)
+    comprehensive_overtime: bool = Field(
+        description="포괄산정 연장근무수당", default=False
+    )
     annual_leave: bool = Field(description="연차수당", default=False)
     holiday_work: bool = Field(description="휴일수당", default=False)
     job_duty: bool = Field(description="직무수당", default=False)
@@ -231,7 +242,8 @@ class DefaultAllowancePoliciesDto(BaseModel):
 
     class Config:
         from_attributes = True
-    
+
+
 class HolidayAllowancePoliciesDto(BaseModel):
     doctor_holiday_work_pay: int = Field(description="의사 휴일수당", default=0)
     common_holiday_work_pay: int = Field(description="일반 휴일수당", default=0)
@@ -239,8 +251,10 @@ class HolidayAllowancePoliciesDto(BaseModel):
     class Config:
         from_attributes = True
 
+
 class AllowancePoliciesDto(DefaultAllowancePoliciesDto, HolidayAllowancePoliciesDto):
     pass
+
 
 class AllowancePoliciesResponse(BaseModel):
     branch_id: Optional[int] = None
@@ -248,12 +262,20 @@ class AllowancePoliciesResponse(BaseModel):
     job_duty: bool = Field(description="직무수당", default=False)
     meal: bool = Field(description="식대", default=False)
     base_salary: bool = Field(description="기본급 사용여부", default=False)
-    
-    is_additional_holiday_hundred: bool = Field(description="휴일 근로 수당 100원 단위", default=False)
-    is_unused_annual_leave_hundred: bool = Field(description="미사용 연차 수당 100원 단위", default=False)
-    is_annual_leave_deduction_hundred: bool = Field(description="연차사용공제 100원 단위", default=False)
-    is_attendance_deduction_hundred: bool = Field(description="근태공제 100원 단위", default=False)
-    
+
+    is_additional_holiday_hundred: bool = Field(
+        description="휴일 근로 수당 100원 단위", default=False
+    )
+    is_unused_annual_leave_hundred: bool = Field(
+        description="미사용 연차 수당 100원 단위", default=False
+    )
+    is_annual_leave_deduction_hundred: bool = Field(
+        description="연차사용공제 100원 단위", default=False
+    )
+    is_attendance_deduction_hundred: bool = Field(
+        description="근태공제 100원 단위", default=False
+    )
+
     display_meal_calc: bool = Field(description="식대 계산 표시", default=False)
     display_night_calc: bool = Field(description="야간 수당 계산 표시", default=False)
 
@@ -277,3 +299,7 @@ class CombinedPoliciesUpdateDto(BaseModel):
     overtime_policies: OverTimePoliciesDto
     default_allowance_policies: DefaultAllowancePoliciesDto
     holiday_allowance_policies: HolidayAllowancePoliciesDto
+
+
+class ScheduleHolidayUpdateDto(BaseModel):
+    work_policies: WorkPoliciesUpdateDto

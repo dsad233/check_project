@@ -23,6 +23,6 @@ class TZDateTime(TypeDecorator):
 class ConnectionLogs(Base):
     __tablename__ = "connection_logs"
 
-    id = Column(Integer, primary_key=True, index=True)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     connection_count = Column(Integer, nullable=False)
     created_at = Column(TZDateTime, nullable=False)

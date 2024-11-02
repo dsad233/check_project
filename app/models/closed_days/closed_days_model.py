@@ -1,12 +1,8 @@
-from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Date, DateTime, ForeignKey
 from app.core.database import Base
-from datetime import date
-from typing import Optional
-
+from datetime import date, datetime
+from typing import Dict, Optional, List
 from pydantic import BaseModel, Field, field_validator
-from sqlalchemy.orm import relationship
-from datetime import datetime
-
 
 class ClosedDays(Base):
     __tablename__ = "closed_days"
@@ -21,36 +17,43 @@ class ClosedDays(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
 
+
+class BranchClosedDay(BaseModel):
+    hospital_closed_days: List[date]
     
-
-
-class ClosedDayBase(BaseModel):
-
-    closed_day_date: Optional[date] = Field(None, description="휴무일 날짜")
-    memo: Optional[str] = Field(None, max_length=500, description="휴무일에 대한 메모")
-
-    @field_validator("closed_day_date")
+    @field_validator("hospital_closed_days")
     @classmethod
-    def validate_date(cls, v):
-        if v is not None and v < date.today():
-            raise ValueError("휴무일은 오늘 이후의 날짜여야 합니다.")
-        return v
+    def validate_date(cls, dates: List[date]) -> List[date]:
+        today = date.today()
+        for d in dates:
+            if d < today:
+                raise ValueError("휴무일 등록과 삭제는 오늘 이후의 날짜여야 합니다.")
+        return dates
 
-    @field_validator("memo")
+    # @field_validator("memo")
+    # @classmethod
+    # def validate_memo(cls, v):
+    #     if v is not None and len(v.strip()) == 0:
+    #         raise ValueError("메모는 비어있을 수 없습니다.")
+    #     return v
+    
+    model_config = {
+        "from_attributes": True
+    }
+
+class UserClosedDays(BaseModel):
+    user_closed_days: Dict[int, List[date]]
+    
+    @field_validator("user_closed_days")
     @classmethod
-    def validate_memo(cls, v):
-        if v is not None and len(v.strip()) == 0:
-            raise ValueError("메모는 비어있을 수 없습니다.")
-        return v
-
-
-class ClosedDayCreate(ClosedDayBase):
-    closed_day_date: date = Field(..., description="휴무일 날짜")
-    memo : Optional[str] = Field(None, description= "휴무일에 대한 메모")
-
-    class Config:
-        from_attributes = True
-
-
-class ClosedDayUpdate(ClosedDayBase):
-    pass
+    def validate_dates(cls, user_dates: Dict[int, List[date]]) -> Dict[int, List[date]]:
+        today = date.today()
+        for user_id, dates in user_dates.items():
+            for d in dates:
+                if d < today:
+                    raise ValueError(f"사용자 ID {user_id}의 휴무일 등록과 삭제는 오늘 이후의 날짜여야 합니다.")
+        return user_dates
+    
+    model_config = {
+        "from_attributes": True
+    }
