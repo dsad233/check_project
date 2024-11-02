@@ -71,6 +71,7 @@ Branches.condition_based_annual_leave_grant = relationship("ConditionBasedAnnual
 Branches.branch_histories = relationship("BranchHistories", back_populates="branch")
 LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 Branches.salary_templates = relationship("SalaryTemplate", back_populates="branch")
+Branches.early_clock_in = relationship("EarlyClockIn", back_populates="branch")
 
 Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
@@ -127,6 +128,7 @@ CommutePolicies.branch = relationship("Branches", back_populates="commute_polici
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
 EarlyClockIn.branch = relationship("Branches", back_populates="early_clock_in")
+EarlyClockIn.user = relationship("Users", back_populates="early_clock_in")
 Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
 Overtimes.manager = relationship("Users", foreign_keys=[Overtimes.manager_id], back_populates="managed_overtimes")
 
