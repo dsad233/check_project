@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
 from sqlalchemy import select, func, update
 from datetime import UTC, datetime, date, timedelta
-from typing import Optional
+from typing import Optional, Annotated
 from decimal import Decimal
 
 from app.common.dto.search_dto import BaseSearchDto
@@ -25,10 +25,10 @@ router = APIRouter()
 @router.get("/leave-histories/current-user-leaves", response_model=UserLeavesDaysResponse, summary="현재 사용자의 연차 일수 정보 조회", description="현재 사용자의 연차 일수 정보를 조회합니다.")
 async def get_current_user_leaves(
     *,
-    branch_id: int = Query(..., description="지점 ID를 입력합니다."),
-    year: Optional[int] = Query(None, description="연도를 입력합니다. 예) 2024"),
-    current_user_id: int = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
+    branch_id: Annotated[int, Query(description="지점 ID를 입력합니다.")],
+    year: Annotated[Optional[int], Query(None, description="연도를 입력합니다. 예) 2024")],
+    current_user_id: Annotated[int, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)]
 ):
     try:
         if year is None:
@@ -82,7 +82,7 @@ async def get_current_user_leaves(
 @router.get("/leave-histories", summary="연차 신청 목록 조회", description="연차 신청 목록을 조회합니다.")
 async def get_leave_histories(
     search: LeaveHistoriesSearchDto = Depends(), # 검색 조건
-    date: Optional[date] = Query(None, description="시작일 계산을 위한 날짜를 입력합니다. 공백인 경우 오늘을 포함한 주의 일요일-토요일 기간을 조회합니다. 예) YYYY-MM-DD"), # 시작일 계산을 위한 날짜 입력
+    date: Optional[date] = Query(None, description="시작일 계산을 위한 날짜를 입력니다. 공백인 경우 오늘을 포함한 주의 일요일-토요일 기간을 조회합니다. 예) YYYY-MM-DD"), # 시작일 계산을 위한 날짜 입력
     branch_id: Optional[int] = Query(None, description="검색할 지점 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 지점
     part_id: Optional[str] = Query(None, description="검색할 파트 ID를 입력합니다. 공백인 경우 전체 조회합니다."), # 파트
     search_name: Optional[str] = Query(None, description="검색할 이름을 입력합니다. 공백인 경우 전체 조회합니다."), # 이름
@@ -367,8 +367,19 @@ async def create_leave_history(
         if not user:
             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
         
+        print(user.data[0].total_leave_days)
+        
+        if user.data[0].total_leave_days is None:
+            raise HTTPException(
+                status_code=400,
+                detail="사용자의 총 연차 일수가 설정되어 있지 않습니다."
+            )
+
         if user.data[0].total_leave_days < decreased_days:
-            raise HTTPException(status_code=400, detail="사용 가능한 연차 일수가 부족합니다.")
+            raise HTTPException(
+                status_code=400,
+                detail=f"신청 일수({decreased_days}일)가 남은 연차 일수({user.data[0].total_leave_days}일)보다 많습니다."
+            )
         
         # LeaveHistories 생성 및 flush
         create = LeaveHistories(
@@ -439,7 +450,7 @@ async def approve_leave(
         if current_user.role.strip() == "MSO 관리자":
             pass
         
-        query = select(LeaveHistories).where(LeaveHistories.id == leave_id, LeaveHistories.branch_id == branch_id, LeaveHistories.deleted_yn == "N")
+        query = select(LeaveHistories).where(LeaveHistories.id == leave_id, LeaveHistories.deleted_yn == "N")
         result = await db.execute(query)
         leave_history = result.scalar_one_or_none()
         
@@ -450,19 +461,12 @@ async def approve_leave(
         if leave_history.start_date >= now:
             leave_history.status = leave_approve.status
             leave_history.admin_description = leave_approve.admin_description
-            leave_history.approve_date = datetime.now()
+            leave_history.manager_id = current_user.id
+            leave_history.manager_name = current_user.name
+            leave_history.approve_date = datetime.now(UTC)
             
             if leave_approve.status == Status.APPROVED:
-                decreased_days = Decimal(str(leave_history.decreased_days))
-                await db.execute(
-                    update(Users)
-                    .where(Users.id == leave_history.user_id)
-                    .values(
-                        total_leave_days=Users.total_leave_days - decreased_days,
-                        updated_at=datetime.now(UTC)
-                    )
-                )
-            if leave_history.status == Status.APPROVED:
+                # 사용 가능한 연차 일수 확인
                 existing_leave_days = await db.execute(
                     select(UserLeavesDays)
                     .where(
@@ -476,10 +480,11 @@ async def approve_leave(
                 if not leave_days_record:
                     raise HTTPException(status_code=404, detail="사용자의 연차 정보를 찾을 수 없습니다.")
                 
-                if leave_days_record.total_leave_days < leave_history.decreased_days:
+                decreased_days = Decimal(str(leave_history.decreased_days))
+                if leave_days_record.total_leave_days < decreased_days:
                     raise HTTPException(
                         status_code=400, 
-                        detail=f"승인 불가: 신청 일수({leave_history.decreased_days}일)가 남은 연차 일수({leave_days_record.total_leave_days}일)보다 많습니다."
+                        detail=f"승인 불가: 신청 일수({decreased_days}일)가 남은 연차 일수({leave_days_record.total_leave_days}일)보다 많습니다."
                     )
 
                 # UserLeavesDays 업데이트
@@ -491,27 +496,49 @@ async def approve_leave(
                 await db.execute(
                     update(Users)
                     .where(Users.id == leave_history.user_id)
-                    .values(total_leave_days=Users.total_leave_days - decreased_days, updated_at=datetime.now(UTC))
+                    .values(
+                        total_leave_days=Users.total_leave_days - decreased_days,
+                        updated_at=datetime.now(UTC)
+                    )
                 )
 
                 # LeaveHistories 업데이트
-                leave_history.status = Status.APPROVED
                 leave_history.decreased_days += decreased_days
-                leave_history.manager_id = current_user.id
-                leave_history.manager_name = current_user.name
-                leave_history.approve_date = datetime.now(UTC)
-                leave_history.admin_description = leave_approve.admin_description
-                leave_history.updated_at = datetime.now(UTC)
                 message = "연차 승인에 성공하였습니다."
                 
-            else:  # Status.REJECTED
-                leave_history.status = Status.REJECTED
-                leave_history.manager_id = current_user.id
-                leave_history.manager_name = current_user.name
-                leave_history.approve_date = datetime.now(UTC)
-                leave_history.admin_description = leave_approve.admin_description
-                leave_history.updated_at = datetime.now(UTC)
-                message = "연차 반려에 성공하였습니다."
+            else:  
+                if leave_approve.status == Status.REJECTED:
+                    
+                    if leave_history.status == Status.APPROVED:
+                        decreased_days = Decimal(str(leave_history.decreased_days))
+                        
+                        print(f"decreased_days: {decreased_days}")
+                        
+                        # UserLeavesDays 업데이트
+                        leave_days_record.decreased_days -= decreased_days
+                        leave_days_record.total_leave_days += decreased_days
+                        leave_days_record.updated_at = datetime.now(UTC)
+                        
+                        # Users 업데이트
+                        await db.execute(
+                            update(Users)
+                            .where(Users.id == leave_history.user_id)
+                            .values(
+                                total_leave_days=Users.total_leave_days + decreased_days,
+                                updated_at=datetime.now(UTC)
+                            )
+                        )
+                        await db.flush()
+                        
+                    # 반려 상태로 업데이트
+                    leave_history.status = Status.REJECTED
+                    leave_history.manager_id = current_user.id
+                    leave_history.manager_name = current_user.name
+                    leave_history.approve_date = datetime.now(UTC)
+                    leave_history.admin_description = leave_approve.admin_description
+                    leave_history.updated_at = datetime.now(UTC)
+                    message = "연차 반려에 성공하였습니다."
+
                 
             await db.commit()
             return {"message": message}
