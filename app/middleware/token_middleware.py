@@ -69,7 +69,7 @@ class TokenMiddleware(BaseHTTPMiddleware):
                     select(Users)
                     .options(
                         joinedload(Users.branch),
-                        selectinload(Users.parts)
+                        selectinload(Users.part)
                     )
                     .where(
                         (Users.id == user_id) &
