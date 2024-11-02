@@ -63,6 +63,7 @@ class EarlyClockIn(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer,ForeignKey('users.id'), nullable=True)
+    branch_id = Column(Integer,ForeignKey('branches.id'), nullable=True)
     early_clock_in = Column(DateTime, nullable=False, index=True)
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
