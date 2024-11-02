@@ -132,7 +132,7 @@ employee_router.include_router(
 
 employee_router.include_router(
     employee_leave_histories_router,
-    prefix="/branches/leave-histories"
+    prefix="/my-branch/leave-histories"
 )
 
 employee_router.include_router(employee_branches_router)
