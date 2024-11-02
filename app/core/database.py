@@ -26,7 +26,8 @@ engine = create_async_engine(settings.DATABASE_URL,
 async_session = async_sessionmaker(
     engine, 
     autoflush=False, 
-    autocommit=False, 
+    autocommit=False,
+    expire_on_commit=False,
     class_=AsyncSession
 )
 
@@ -38,6 +39,7 @@ async def get_db():
     try:
         yield db
     finally:
+        await db.commit()
         await db.close()
 
 # Alembic 설정 및 마이그레이션 실행 함수
