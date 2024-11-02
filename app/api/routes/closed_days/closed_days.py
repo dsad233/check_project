@@ -1,11 +1,6 @@
 from datetime import datetime
 from typing import Annotated, List, Tuple
-from datetime import datetime
-from typing import Annotated, List, Tuple
 
-from fastapi import APIRouter, Depends, HTTPException, Body, Request
-from fastapi import APIRouter, Depends, HTTPException, Body, Request
-from sqlalchemy import and_, func, select, extract
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy import and_, func, select, extract, update
 
@@ -18,8 +13,6 @@ from app.models.closed_days.closed_days_model import ClosedDays, BranchClosedDay
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
 from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.service.closed_day_service import ClosedDayService
 
 from app.service.closed_day_service import ClosedDayService
 
