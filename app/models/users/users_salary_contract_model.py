@@ -11,7 +11,7 @@ class SalaryContract(Base):
     user_id = Column(Integer, ForeignKey("users.id"))
 
     contract_start_date = Column(Date, nullable=False) # 계약 시작일
-    contract_end_date = Column(Date, nullable=False) # 계약 종료일
+    contract_end_date = Column(Date, nullable=True) # 계약 종료일
 
     annual_salary = Column(Integer, nullable=False) # 연봉
     monthly_salary = Column(Integer, nullable=False) # 월급

@@ -45,6 +45,7 @@ from .branches.salary_polices_model import SalaryTemplatesPolicies
 from .branches.parttimer_policies_model import ParttimerPolicies
 
 from .branches.personnel_record_categories_model import PersonnelRecordCategory
+from .users.users_salary_contract_model import SalaryContract
 from .users.users_work_contract_history_model import WorkContractHistory
 
 # 일 대 다 관계
@@ -228,3 +229,6 @@ Users.manager_leave_histories = relationship("LeaveHistories", foreign_keys=[Lea
 
 WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract") 
 WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")
+
+Users.salary_contracts = relationship("SalaryContract", back_populates="user")
+SalaryContract.user = relationship("Users", back_populates="salary_contracts")

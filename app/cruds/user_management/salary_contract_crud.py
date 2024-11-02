@@ -1,4 +1,5 @@
-from sqlalchemy import select
+from fastapi import HTTPException
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.users.users_salary_contract_model import SalaryContract
 from app.schemas.user_management.salary_contract import SalaryContractDto
@@ -8,11 +9,11 @@ class UserManagementSalaryContractRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def find_by_id(self, id: int) -> SalaryContract:
+    async def find_by_id(self, salary_contract_id: int) -> SalaryContract:
         stmt = (
             select(SalaryContract)
             .filter(
-                SalaryContract.id == id,
+                SalaryContract.id == salary_contract_id,
                 SalaryContract.deleted_yn == "N"
             )
         )
@@ -32,6 +33,10 @@ class UserManagementSalaryContractRepository:
         result = await self.session.execute(stmt)
         return result.scalars().one()
 
+    async def find_dto_by_id(self, salary_contract_id: int) -> SalaryContractDto:
+        salary_contract = await self.find_by_id(salary_contract_id=salary_contract_id)
+        return SalaryContractDto.build(salary_contract=salary_contract)
+
     async def find_dto_by_user_id(self, user_id: int) -> SalaryContractDto:
         salary_contract = await self.find_by_user_id(user_id)
         return SalaryContractDto.build(salary_contract=salary_contract)
@@ -42,11 +47,23 @@ class UserManagementSalaryContractRepository:
         await self.session.refresh(salary_contract)
         return salary_contract
 
-    async def partial_update(self, user_id: int, update_params: dict) -> SalaryContractDto:
-        salary_contract = await self.find_by_user_id(user_id)
+    async def partial_update(self, salary_contract_id: int, user_id: int, update_params: dict) -> SalaryContractDto:
+        # 업데이트 쿼리 생성
+        stmt = (
+            update(SalaryContract)
+            .filter(
+                SalaryContract.id == salary_contract_id,
+                SalaryContract.user_id == user_id
+            )
+            .values(**update_params)
+        )
 
-        for key, value in update_params.items():
-            setattr(salary_contract, key, value)
-
+        # 업데이트 실행 및 변경된 행의 개수 확인
+        result = await self.session.execute(stmt)
         await self.session.commit()
-        return SalaryContractDto.build(salary_contract=salary_contract)
+
+        if result.rowcount == 0:
+            # 변경된 행이 없으면 404 에러 발생
+            raise HTTPException(status_code=404, detail="Salary contract not found")
+
+        return await self.find_dto_by_id(salary_contract_id=salary_contract_id)

@@ -23,7 +23,7 @@ class UserManagementSalaryContract:
 
     @permanent_router.get(
         path="/{user_id}",
-        response_model=SalaryContractDto,
+        response_model=ResponseDTO[SalaryContractDto],
         summary="정규직 사용자 임금계약 정보 조회"
     )
     async def get_salary_contract(
@@ -36,31 +36,32 @@ class UserManagementSalaryContract:
         )
 
         return ResponseDTO(
-            messages="사용자의 급여 계약 정보를 조회하였습니다.",
+            message="사용자의 급여 계약 정보를 조회하였습니다.",
             status="SUCCESS",
             data=salary_contract
         )
 
     @permanent_router.post(
         path="",
-        summary="정규직 사용자 임금계약 정보 생성"
+        summary="정규직 사용자 임금계약 정보 생성",
+        response_model=ResponseDTO
     )
     async def create_salary_contract(
             request_create_salary_contract: Annotated[RequestCreateSalaryContractDto, ...],
             service: Annotated[UserManagementSalaryContractService, Depends(get_user_management_salary_contract_service)],
             current_user: Annotated[Users, Depends(get_current_user)]
     ):
-        salary_contract: SalaryContract = RequestCreateSalaryContractDto.to_domain()
+        salary_contract: SalaryContract = request_create_salary_contract.to_domain()
         await service.create_salary_contract(salary_contract=salary_contract)
 
         return ResponseDTO(
-            messages="사용자의 급여 계약 정보를 생성하였습니다.",
             status="SUCCESS",
+            message="사용자의 급여 계약 정보를 생성하였습니다.",
         )
 
     @permanent_router.patch(
         path="/{user_id}",
-        response_model=SalaryContractDto,
+        response_model=ResponseDTO[SalaryContractDto],
         summary="정규직 사용자 임금계약 정보 수정"
     )
     async def partial_update_salary_contract(
@@ -70,14 +71,16 @@ class UserManagementSalaryContract:
             current_user: Annotated[Users, Depends(get_current_user)]
     ):
         update_params: dict = request_update_salary_contract.model_dump(exclude_unset=True)
+        salary_contract_id: int = update_params.pop("salary_contract_id")
 
         updated_salary_contract_dto: SalaryContractDto = await service.partial_update_salary_contract(
+            salary_contract_id=salary_contract_id,
             user_id=user_id,
             update_params=update_params
         )
 
         return ResponseDTO(
-            messages="사용자의 급여 계약 정보를 수정하였습니다.",
+            message="사용자의 급여 계약 정보를 수정하였습니다.",
             status="SUCCESS",
             data=updated_salary_contract_dto
         )
