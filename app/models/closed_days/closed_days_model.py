@@ -57,3 +57,32 @@ class UserClosedDays(BaseModel):
     model_config = {
         "from_attributes": True
     }
+    
+class EarlyClockIn(Base):
+    __tablename__ = "early_clock_in"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer,ForeignKey('users.id'), nullable=True)
+    branch_id = Column(Integer,ForeignKey('branches.id'), nullable=True)
+    early_clock_in = Column(DateTime, nullable=False, index=True)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
+class UserEarlyClockIn(BaseModel):
+    early_clock_in_users: Dict[int, List[datetime]]
+    
+    @field_validator("early_clock_in_users")
+    @classmethod
+    def validate_time(cls, early_clock_in_users: Dict[int, List[datetime]]) -> Dict[int, List[datetime]]:
+        for user_id, times in early_clock_in_users.items():
+            for time in times:
+                # 시간을 9:00 ~ 10:40 사이로 제한
+                if time.time() < datetime.strptime("09:00", "%H:%M").time() or \
+                   time.time() > datetime.strptime("10:40", "%H:%M").time():
+                    raise ValueError(f"조기 출근 시간은 09:00 ~ 10:40 사이여야 합니다. (입력된 시간: {time.strftime('%H:%M')})")
+        return early_clock_in_users
+    
+    model_config = {
+        "from_attributes": True
+    }

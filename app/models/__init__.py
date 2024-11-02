@@ -1,7 +1,7 @@
 from app.core.database import Base
 from sqlalchemy.orm import relationship
 
-from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
@@ -45,6 +45,7 @@ from .branches.salary_polices_model import SalaryTemplatesPolicies
 from .branches.parttimer_policies_model import ParttimerPolicies
 
 from .branches.personnel_record_categories_model import PersonnelRecordCategory
+from .users.users_salary_contract_model import SalaryContract
 from .users.users_work_contract_history_model import WorkContractHistory
 
 # 일 대 다 관계
@@ -69,6 +70,7 @@ Branches.condition_based_annual_leave_grant = relationship("ConditionBasedAnnual
 Branches.branch_histories = relationship("BranchHistories", back_populates="branch")
 LeaveCategory.leave_histories = relationship("LeaveHistories", back_populates="leave_category")
 Branches.salary_templates = relationship("SalaryTemplate", back_populates="branch")
+Branches.early_clock_in = relationship("EarlyClockIn", back_populates="branch")
 
 Parts.salary_policies = relationship("SalaryPolicies", back_populates="part")
 Parts.users = relationship("Users", back_populates="part")
@@ -81,6 +83,7 @@ Users.leave_histories = relationship("LeaveHistories", foreign_keys=[LeaveHistor
 Users.applied_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.applicant_id], back_populates="applicant")
 Users.managed_overtimes = relationship("Overtimes", foreign_keys=[Overtimes.manager_id], back_populates="manager")
 Users.salaries = relationship("UserSalary", back_populates="user", uselist=False)
+Users.early_clock_in = relationship("EarlyClockIn", back_populates="user", uselist=False)
 
 Users.documents = relationship("Document", back_populates="user")
 Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
@@ -125,7 +128,8 @@ DocumentPolicies.branch = relationship("Branches", back_populates="document_poli
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
 ClosedDays.branch = relationship("Branches", back_populates="closed_days")
-
+EarlyClockIn.branch = relationship("Branches", back_populates="early_clock_in")
+EarlyClockIn.user = relationship("Users", back_populates="early_clock_in")
 Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
 Overtimes.manager = relationship("Users", foreign_keys=[Overtimes.manager_id], back_populates="managed_overtimes")
 
@@ -156,8 +160,8 @@ ClosedDays.part = relationship("Parts", back_populates="closed_days")
 SalaryTemplate.branch = relationship("Branches", back_populates="salary_templates")
 SalaryTemplate.part = relationship("Parts", back_populates="salary_templates")
 
-Parts.users = relationship("Users", secondary=user_parts, back_populates="parts")
-Users.parts = relationship("Parts", secondary=user_parts, back_populates="users")
+# Parts.users = relationship("Users", secondary=user_parts, back_populates="parts")
+# Users.parts = relationship("Parts", secondary=user_parts, back_populates="users") # 이후 사용 예정 주석 처리
 Users.menu_permissions = relationship("Parts", secondary=user_menus, back_populates="users_with_permissions")
 Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_populates="menu_permissions")
 
@@ -228,3 +232,6 @@ Users.manager_leave_histories = relationship("LeaveHistories", foreign_keys=[Lea
 
 WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract") 
 WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")
+
+Users.salary_contracts = relationship("SalaryContract", back_populates="user")
+SalaryContract.user = relationship("Users", back_populates="salary_contracts")

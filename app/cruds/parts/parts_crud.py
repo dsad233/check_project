@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from app.models.parts.parts_model import Parts
 from datetime import datetime
+from app.models.users.users_model import Users
 
 
 async def find_by_id(
@@ -117,6 +118,6 @@ async def get_part_with_users(
     *, session: AsyncSession, part_id: int
 ) -> Parts:
     
-    stmt = select(Parts).options(selectinload(Parts.users)).where(Parts.id == part_id).where(Parts.deleted_yn == 'N')
+    stmt = select(Parts).options(selectinload(Parts.users.and_(Users.deleted_yn == 'N'))).where(Parts.id == part_id).where(Parts.deleted_yn == 'N')
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
