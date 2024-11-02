@@ -2,8 +2,6 @@ from datetime import datetime
 from typing import Annotated, List, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
-from sqlalchemy import and_, func, select, extract
-from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy import and_, func, select, extract, update
 
 from app.api.routes.closed_days.dto.closed_days_response_dto import EntireClosedDayResponseDTO, HospitalClosedDaysResponseDTO, UserClosedDayDetailDTO
