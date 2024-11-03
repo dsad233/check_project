@@ -1,6 +1,6 @@
 from app.core.database import Base
 from sqlalchemy.orm import relationship
-
+from sqlalchemy import desc
 from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
 from app.models.commutes.commutes_model import Commutes
 from app.models.users.overtimes_model import Overtimes, OverTime_History
@@ -11,10 +11,10 @@ from app.models.users.users_work_contract_model import WorkContract, FixedRestDa
 from .users.users_contract_info_model import ContractInfo
 
 # models.py에서 정의된 모델들
-from .users.users_model import Users, user_parts, user_menus
+from .users.users_model import Users, user_parts, user_menus, PersonnelRecordHistory
 from .parts.parts_model import Parts
 from .parts.user_salary import UserSalary
-from .branches.branches_model import Branches
+from .branches.branches_model import Branches, PersonnelRecordCategory
 
 # policies/branchpolicies.py에서 정의된 모델들
 from .parts.salary_policies_model import SalaryPolicies
@@ -44,8 +44,6 @@ from .parts.hour_wage_template_model import HourWageTemplate
 # salary_policies
 from .branches.salary_polices_model import SalaryTemplatesPolicies
 from .branches.parttimer_policies_model import ParttimerPolicies
-
-from .branches.personnel_record_categories_model import PersonnelRecordCategory
 from .users.users_salary_contract_model import SalaryContract
 from .users.users_work_contract_history_model import ContractHistory
 
@@ -91,6 +89,21 @@ Users.documents = relationship("Document", back_populates="user")
 # Users.contracts_manager_id = relationship("Contract", foreign_keys=[Contract.manager_id], back_populates="manager")
 # DocumentPolicies.contracts = relationship("Contract", back_populates="document_policies")
 Users.overtime_history = relationship("OverTime_History", back_populates="user")
+Users.personnel_record_histories = relationship(
+    "PersonnelRecordHistory",
+    foreign_keys="PersonnelRecordHistory.user_id",
+    back_populates="user",
+    order_by=desc("created_at"),
+    lazy="select"
+)
+Users.created_personnel_record_histories = relationship(
+    "PersonnelRecordHistory",
+    foreign_keys="PersonnelRecordHistory.created_by",
+    back_populates="created_by_user",
+    order_by=desc("created_at"),
+    lazy="select"
+)
+PersonnelRecordCategory.personnel_record_histories = relationship("PersonnelRecordHistory", back_populates="personnel_record_category")
 
 Parts.salaries = relationship("UserSalary", back_populates="part")
 Branches.salaries = relationship("UserSalary", back_populates="branch")
@@ -249,3 +262,23 @@ ContractInfo.part = relationship("Parts", back_populates="contract_infos")
 ContractInfo.contracts = relationship("Contract", back_populates="contract_info")
 Contract.contract_info = relationship("ContractInfo", back_populates="contracts")
 
+Users.salary_contracts = relationship("SalaryContract", back_populates="user")
+SalaryContract.user = relationship("Users", back_populates="salary_contracts")
+
+# 인사기록 근로자
+PersonnelRecordHistory.user = relationship(
+    "Users",
+    foreign_keys=[PersonnelRecordHistory.user_id],
+    back_populates="personnel_record_histories",
+    lazy="joined"
+)
+
+# 인사기록 담당자
+PersonnelRecordHistory.created_by_user = relationship(
+    "Users",
+    foreign_keys=[PersonnelRecordHistory.created_by],
+    back_populates="created_personnel_record_histories",
+    lazy="joined"
+)
+
+PersonnelRecordHistory.personnel_record_category = relationship("PersonnelRecordCategory", back_populates="personnel_record_histories")

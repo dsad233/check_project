@@ -102,6 +102,21 @@ class Users(Base):
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")   # Y인 경우 삭제 회원으로 분류
 
+
+class PersonnelRecordHistory(Base):
+    __tablename__ = "personnel_record_histories"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    personnel_record_category_id = Column(Integer, ForeignKey("personnel_record_categories.id"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    worker_comment = Column(String(255), nullable=False)
+    admin_comment = Column(String(255), nullable=False)
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")
+
+
 # 유저 정보 추가를 위한 Pydantic 모델
 class UserCreate(BaseModel):
     name: str
