@@ -12,6 +12,7 @@ from app.middleware.token_middleware import TokenMiddleware
 from app.middleware.role_branch_middleware import RoleBranchMiddleware
 from app.core.config import settings
 from app.schedulers.schedulers import scheduler
+from app.utils.slack_utils import SlackAPI
 
 
 @asynccontextmanager
@@ -110,6 +111,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
+
+# # 슬랙 메시지 웹훅으로 자동화 전송
+# @app.webhooks.post("/slack")
+# async def send_slack(context : str):
+#     try:
+#         channel_id = "D07Q87U8Z1V"
+#         await SlackAPI.post_message(channel_id=channel_id, text=context)
+#     except Exception as err:
+#         print(err)
 
 # Register exception handlers
 add_exception_handlers(app)

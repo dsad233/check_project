@@ -31,6 +31,7 @@ reportlab = "^4.2.5"
 python-multipart = "^0.0.16"
 requests = "^2.32.3"
 apscheduler = "^3.10.4"
+slack-sdk = "^3.33.3"
 
 
 [build-system]

@@ -34,6 +34,7 @@ from app.api.routes.salary_policies import salary_policies
 from app.api.routes.modusign import document, template, webhook
 from app.api.routes.salary_policies import salary_policies
 from app.api.routes.db_monitor.db_connections_monitor import router as monitor_router
+from app.api.routes.send_slack import send_slack
 from enum import Enum
 from app.api.routes.public.public_users import router as public_users_router
 from app.api.routes.employee.parts.employee_parts import router as employee_parts_router
@@ -74,6 +75,8 @@ public_router.include_router(
 @public_router.get("/healthcheck", summary="healthcheck", tags=["default: healthcheck"])
 def health_check():
     return {"status": "healthy"}
+
+public_router.include_router(send_slack.router, prefix="/slack", tags=["Send_Slack"])
 
 
 #관리자 라우터 (admin)
