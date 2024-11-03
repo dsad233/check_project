@@ -262,9 +262,6 @@ ContractInfo.part = relationship("Parts", back_populates="contract_infos")
 ContractInfo.contracts = relationship("Contract", back_populates="contract_info")
 Contract.contract_info = relationship("ContractInfo", back_populates="contracts")
 
-Users.salary_contracts = relationship("SalaryContract", back_populates="user")
-SalaryContract.user = relationship("Users", back_populates="salary_contracts")
-
 # 인사기록 근로자
 PersonnelRecordHistory.user = relationship(
     "Users",
