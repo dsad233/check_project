@@ -271,10 +271,10 @@ async def get_approve_leave(
             base_query = base_query.join(Parts, LeaveHistories.part_id == Parts.id)\
                 .where(Parts.id == part_id)
         if search_name:
-            base_query = base_query.join(Users)\
+            base_query = base_query.join(Users, LeaveHistories.user_id == Users.id)\
                 .where(Users.name.ilike(f"%{search_name}%"))
         if search_phone:
-            base_query = base_query.join(Users)\
+            base_query = base_query.outerjoin(Users, LeaveHistories.user_id == Users.id)\
                 .where(Users.phone_number.ilike(f"%{search_phone}%"))
         if search.kind:
             base_query = base_query.join(LeaveHistories.leave_category)\
@@ -301,32 +301,47 @@ async def get_approve_leave(
             user_result = await db.execute(user_query)
             user, branch, part = user_result.first()
             
-            category_query = select(LeaveCategory).where(
-                LeaveCategory.id == leave_history.leave_category_id
+            user_leave_query = select(UserLeavesDays).where(UserLeavesDays.user_id == user.id, UserLeavesDays.deleted_yn == 'N')
+            user_leave_result = await db.execute(user_leave_query)
+            user_leave = user_leave_result.scalar_one_or_none()
+            
+            category_query = select(func.sum(LeaveHistories.decreased_days).label('total_decreased_days'))\
+                .join(LeaveCategory, LeaveHistories.leave_category_id == LeaveCategory.id)\
+                .join(UserLeavesDays, UserLeavesDays.user_id == LeaveHistories.user_id)\
+                .where(
+                    LeaveCategory.id == leave_history.leave_category_id,
+                    LeaveHistories.user_id == user.id,
+                    UserLeavesDays.deleted_yn == 'N',
+                    LeaveCategory.is_paid == True
             )
             category_result = await db.execute(category_query)
-            leave_category = category_result.scalar_one_or_none()
+            paid_total_decreased_days = category_result.scalar_one_or_none() or 0
+
             
+            if user_leave is None:
+                user_leave.increased_days = 0.00
+                user_leave.decreased_days = 0.00
+                user_leave.total_leave_days = 0.00
+                db.add(user_leave)
+                await db.flush()
+                
             leave_history_data = {
                 "id": leave_history.id,
-                "search_branch_id": branch.id,
+                "branch_id": branch.id,
                 "branch_name": branch.name,
                 "user_id": user.id,
                 "user_name": user.name,
+                "user_gender": user.gender,
+                "user_hire_date": user.hire_date,
+                "user_resignation_date": user.resignation_date,
                 "part_id": part.id,
                 "part_name": part.name,
                 "application_date": leave_history.application_date,
-                "start_date": leave_history.start_date,
-                "end_date": leave_history.end_date,
-                "leave_category_id": leave_history.leave_category_id,
-                "leave_category_name": leave_category.name,
-                "decreased_days": float(leave_history.decreased_days) if leave_history.decreased_days is not None else 0.0,
-                "status": leave_history.status,
-                "applicant_description": leave_history.applicant_description,
-                "manager_id": leave_history.manager_id,
-                "manager_name": leave_history.manager_name,
-                "admin_description": leave_history.admin_description,
-                "approve_date": leave_history.approve_date
+                "leave_category_is_paid": paid_total_decreased_days,
+                "user_total_leave_days": user_leave.total_leave_days + user_leave.decreased_days,
+                "user_can_use_leave_days": user_leave.total_leave_days,
+                "user_decreased_days": user_leave.decreased_days,
+                "user_increased_days": user_leave.increased_days
             }
             formatted_data.append(leave_history_data)
             
@@ -376,8 +391,6 @@ async def create_leave_history(
         if not user:
             raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
         
-        print(user.data[0].total_leave_days)
-        
         if user.data[0].total_leave_days is None:
             raise HTTPException(
                 status_code=400,
@@ -389,7 +402,8 @@ async def create_leave_history(
                 status_code=400,
                 detail=f"신청 일수({decreased_days}일)가 남은 연차 일수({user.data[0].total_leave_days}일)보다 많습니다."
             )
-        
+            
+
         # LeaveHistories 생성 및 flush
         create = LeaveHistories(
             branch_id=branch_id,
