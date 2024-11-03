@@ -35,14 +35,6 @@ async def find_by_email(
     user = result.scalar_one_or_none()
     return user
 
-async def find_all_by_branch_id(
-    *, session: AsyncSession, branch_id: int, request: BaseSearchDto
-) -> list[Users]:
-    stmt = select(Users).options(selectinload(Users.part)).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N").offset(request.offset).limit(request.record_size)
-    result = await session.execute(stmt)
-    users = result.scalars().all()
-    return users
-
 
 async def find_all_by_branch_id_and_role(
     *, session: AsyncSession, branch_id: int, role: str
@@ -211,6 +203,35 @@ async def get_personnel_record_users(
     total_count = await session.scalar(count_query)
 
     # 결과 조회
+    result = await session.execute(
+        base_query
+        .order_by(Users.created_at.desc())
+        .offset(request.offset)
+        .limit(request.record_size)
+    )
+
+    return result.unique().scalars().all(), total_count
+
+
+async def get_branch_users(
+    *, session: AsyncSession, request: BaseSearchDto, branch_id: int
+) -> tuple[list[Users], int]:
+    base_query = (
+        select(Users)
+        .join(Users.part)
+        .options(
+            joinedload(Users.part),
+        )
+        .where(
+            Users.deleted_yn == "N",
+            Parts.deleted_yn == "N",
+            Users.branch_id == branch_id
+        )
+    )
+
+    count_query = select(func.count()).select_from(base_query.subquery())
+    total_count = await session.scalar(count_query)
+
     result = await session.execute(
         base_query
         .order_by(Users.created_at.desc())

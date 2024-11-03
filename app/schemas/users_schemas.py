@@ -75,3 +75,12 @@ class PersonnelRecordUserResponse(BaseModel):
 class PersonnelRecordUsersResponse(BaseModel):
     data: list[PersonnelRecordUserResponse]
     pagination: PaginationDto
+
+
+class UserNameResponse(BaseModel):
+    name: str
+
+
+class UsersNameResponse(BaseModel):
+    data: list[UserNameResponse]
+    pagination: PaginationDto

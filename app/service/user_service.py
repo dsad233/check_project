@@ -1,8 +1,10 @@
 from app.cruds.users import users_crud
+from app.cruds.branches import branches_crud
 from app.schemas.users_schemas import (
     UserLeaveResponse, UsersLeaveResponse, PersonnelRecordHistoryResponse, 
     PersonnelRecordHistoriesResponse, PersonnelRecordHistoryCreateRequest, PersonnelRecordHistoryUpdateRequest,
-    PersonnelRecordHistoryCreateResponse, PersonnelRecordUsersRequest, PersonnelRecordUsersResponse, PersonnelRecordUserResponse
+    PersonnelRecordHistoryCreateResponse, PersonnelRecordUsersRequest, PersonnelRecordUsersResponse, PersonnelRecordUserResponse,
+    UsersNameResponse, UserNameResponse
 )
 from app.schemas.branches_schemas import ManualGrantRequest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,10 +20,9 @@ async def get_branch_users_leave(
     *, session: AsyncSession, branch_id: int, request: BaseSearchDto
 ) -> UsersLeaveResponse:
     """지점 내 유저들의 잔여 연차 수 및 연차 부여 방식 조회"""
-    users_count = await users_crud.get_users_count(session=session, branch_id=branch_id)
-    users = await users_crud.find_all_by_branch_id(session=session, branch_id=branch_id, request=request)
+    users, total_cnt = await users_crud.get_branch_users(session=session, request=request, branch_id=branch_id)
     if not users:
-        return UsersLeaveResponse(data=[], pagination=PaginationDto(total_count=users_count, record_size=request.record_size))
+        return UsersLeaveResponse(data=[], pagination=PaginationDto(total_record=total_cnt, record_size=request.record_size))
     
     return UsersLeaveResponse(data=[
         UserLeaveResponse(id=user.id, 
@@ -29,7 +30,7 @@ async def get_branch_users_leave(
                           part_name=user.part.name, 
                           grant_type=user.part.auto_annual_leave_grant, 
                           total_leave_days=user.total_leave_days) for user in users
-    ], pagination=PaginationDto(total_record=users_count, record_size=request.record_size))
+    ], pagination=PaginationDto(total_record=total_cnt, record_size=request.record_size))
 
 
 async def plus_total_leave_days(
@@ -166,3 +167,17 @@ async def get_personnel_record_users(
         pagination=PaginationDto(total_record=total_cnt, record_size=request.record_size)
     )
     
+
+async def get_branch_users_name(
+    *, session: AsyncSession, request: BaseSearchDto, branch_id: int
+) -> UsersNameResponse:
+    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    if not branch:
+        raise NotFoundError(detail=f"{branch_id}번 지점을 찾을 수 없습니다.")
+    
+    users, total_cnt = await users_crud.get_branch_users(session=session, request=request, branch_id=branch_id)
+
+    return UsersNameResponse(
+        data=[UserNameResponse(name=user.name) for user in users], 
+        pagination=PaginationDto(total_record=total_cnt, record_size=request.record_size)
+    )
