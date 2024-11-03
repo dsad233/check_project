@@ -14,7 +14,6 @@ from app.api.routes.overtimes import overtimes
 from app.api.routes.overtime_manager import overtime_manager
 from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
-from app.api.routes.personnel_record_category import personnel_record_category
 from app.api.routes.salary_bracket import salary_bracket
 from app.api.routes.users import users, user_management
 from app.api.routes.users.contract.contract_info import user_management_contract_info
@@ -119,7 +118,6 @@ admin_router.include_router(salary_policies.router, prefix='/branches/{branch_id
 admin_router.include_router(webhook.router, prefix='/modusign-webhook', tags=['Modusign_Webhook'])
 admin_router.include_router(document.router, prefix='/modusign-document', tags=['Modusign_Document'])
 admin_router.include_router(template.router, prefix='/modusign-template', tags=['Modusign_Template'])
-admin_router.include_router(personnel_record_category.router, prefix='/branches/{branch_id}/personnel-record-categories', tags=['Personnel_Record_Categories'])
 
 
 # 일반 사원 접근 라우터 (employee)
