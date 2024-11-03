@@ -75,8 +75,11 @@ class UserEarlyClockIn(BaseModel):
     @field_validator("early_clock_in_users")
     @classmethod
     def validate_time(cls, early_clock_in_users: Dict[int, List[datetime]]) -> Dict[int, List[datetime]]:
+        today = datetime.today()
         for user_id, times in early_clock_in_users.items():
             for time in times:
+                if time < today:
+                    raise ValueError(f"조기 출근 시간은 오늘 이후의 날짜여야 합니다.")
                 # 시간을 9:00 ~ 10:40 사이로 제한
                 if time.time() < datetime.strptime("09:00", "%H:%M").time() or \
                    time.time() > datetime.strptime("10:40", "%H:%M").time():

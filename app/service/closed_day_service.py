@@ -2,13 +2,13 @@ from typing import List
 from fastapi import Depends
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.api.routes.closed_days.dto.closed_days_response_dto import UserClosedDayDetail, UserClosedDayDetailDTO, UserClosedDaySummaryDTO
+from app.api.routes.closed_days.dto.closed_days_response_dto import EarlyClockInResponseDTO, UserClosedDayDetail, UserClosedDayDetailDTO, UserClosedDaySummaryDTO
 from app.core.database import get_db
 from app.enums.users import Status
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from app.models.branches.work_policies_model import BranchWorkSchedule, WorkPolicies
-from app.models.closed_days.closed_days_model import ClosedDays
+from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
 from app.models.parts.parts_model import Parts
 from app.models.users.leave_histories_model import LeaveHistories
 from app.models.users.users_model import Users
@@ -398,5 +398,68 @@ class ClosedDayService:
 
 
 
-
+    async def get_user_early_clock_in(self, branch_id: int, user_id: int, year: int, month: int) -> dict[str, EarlyClockInResponseDTO]:
+        """
+        특정 직원의 월간 조기 출근 기록 조회
+        """
+        query = (
+            select(EarlyClockIn.early_clock_in, Users.id, Users.name, Parts.name)
+            .join(Users, EarlyClockIn.user_id == Users.id)
+            .join(Parts, Users.part_id == Parts.id)
+            .filter(
+                and_(
+                    Users.branch_id == branch_id,
+                    EarlyClockIn.user_id == user_id,
+                    func.extract('year', EarlyClockIn.early_clock_in) == year,
+                    func.extract('month', EarlyClockIn.early_clock_in) == month,
+                    EarlyClockIn.deleted_yn == "N"
+                )
+            )
+        )
         
+        result = await self.session.execute(query)
+        early_clock_ins = result.fetchall()
+        
+        early_clock_in_days = {}
+        for clock_in_time, user_id, user_name, part_name in early_clock_ins:
+            date_str = clock_in_time.strftime("%Y-%m-%d")
+            time_str = clock_in_time.strftime("%H:%M")
+            
+            early_clock_in_days[date_str] = EarlyClockInResponseDTO(
+                user_id=user_id,
+                user_name=f"[{time_str}]{user_name}",
+                part_name=part_name
+            )
+        
+        return early_clock_in_days
+
+
+    async def get_user_early_clock_in_dates(self, branch_id: int, user_id: int, year: int, month: int) -> List[str]:
+        """
+        특정 직원의 월간 조기 출근 날짜만 조회
+        """
+        today = date.today()
+        
+        query = (
+            select(EarlyClockIn.early_clock_in)
+            .filter(
+                and_(
+                    EarlyClockIn.branch_id == branch_id,
+                    EarlyClockIn.user_id == user_id,
+                    func.extract('year', EarlyClockIn.early_clock_in) == year,
+                    func.extract('month', EarlyClockIn.early_clock_in) == month,
+                    func.date(EarlyClockIn.early_clock_in) >= today,
+                    EarlyClockIn.deleted_yn == "N"
+                )
+            )
+        )
+        
+        result = await self.session.execute(query)
+        early_clock_ins = result.fetchall()
+        
+        return sorted([clock_in.early_clock_in.strftime("%Y-%m-%d") for clock_in in early_clock_ins])
+                
+            
+            
+
+            

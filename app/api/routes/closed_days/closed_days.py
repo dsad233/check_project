@@ -1,15 +1,15 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, List, Tuple
 
 from fastapi import APIRouter, Depends, HTTPException, Body, Request
 from sqlalchemy import and_, func, select, extract, update
 
-from app.api.routes.closed_days.dto.closed_days_response_dto import EntireClosedDayResponseDTO, HospitalClosedDaysResponseDTO, UserClosedDayDetailDTO
+from app.api.routes.closed_days.dto.closed_days_response_dto import EarlyClockInListResponseDTO, EntireClosedDayResponseDTO, HospitalClosedDaysResponseDTO, SimpleEarlyClockInListResponseDTO, UserClosedDayDetailDTO
 from app.core.database import get_db
 from app.core.permissions.auth_utils import available_higher_than
 from app.enums.users import Role
 from app.middleware.tokenVerify import get_current_user, validate_token
-from app.models.closed_days.closed_days_model import ClosedDays, BranchClosedDay, UserClosedDays
+from app.models.closed_days.closed_days_model import ClosedDays, BranchClosedDay, EarlyClockIn, UserClosedDays, UserEarlyClockIn
 from app.models.branches.work_policies_model import WorkPolicies
 from app.models.users.users_model import Users
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -298,3 +298,98 @@ async def delete_employee_closed_days(
     except Exception as err:
         await db.rollback()
         raise HTTPException(status_code=500, detail="직원 휴무일 삭제 중 오류가 발생했습니다.")
+    
+
+# 직원 조기 출근 시간 생성
+@router.post("/{branch_id}/early-clock-in", status_code=201)
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def create_early_clock_in(
+    request: Request,
+    branch_id: int,
+    early_clock_in: UserEarlyClockIn,
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        today = date.today()
+        
+        for user_id, dates in early_clock_in.early_clock_in_users.items():
+            # 해당 직원이 이 지점 소속인지 확인
+            stmt = select(Users).where(
+                and_(
+                    Users.id == user_id,
+                    Users.branch_id == branch_id,
+                    Users.deleted_yn == 'N'
+                )
+            )
+            result = await db.execute(stmt)
+            user = result.scalar_one_or_none()
+            
+            if not user:
+                raise HTTPException(
+                    status_code=403, 
+                    detail=f"사용자 ID {user_id}는 해당 지점의 직원이 아닙니다."
+                )
+
+            # DB에서 해당 유저의 오늘 이후 모든 조기 출근 기록 조회 (deleted_yn 상관없이)
+            stmt = select(EarlyClockIn).where(
+                and_(
+                    EarlyClockIn.user_id == user_id,
+                    EarlyClockIn.branch_id == branch_id,
+                    func.date(EarlyClockIn.early_clock_in) >= today,
+                )
+            )
+            result = await db.execute(stmt)
+            existing_records = {record.early_clock_in.date(): record for record in result.scalars().all()}
+
+            # 요청된 날짜들을 날짜별로 정리
+            requested_dates = {d.date(): d for d in dates}
+
+            # 기존 레코드 처리
+            for date_key, record in existing_records.items():
+                if date_key in requested_dates:
+                    # 날짜는 같고 시간이 다른 경우
+                    if record.early_clock_in != requested_dates[date_key]:
+                        record.early_clock_in = requested_dates[date_key]
+                        record.updated_at = datetime.now()
+                    # 요청에 있는 데이터는 무조건 활성화
+                    record.deleted_yn = 'N'
+                else:
+                    # DB에는 있지만 요청에는 없는 경우
+                    record.deleted_yn = 'Y'
+                    record.updated_at = datetime.now()
+
+            # 완전히 새로운 날짜만 추가
+            for date_key, clock_in_time in requested_dates.items():
+                if date_key not in existing_records:
+                    new_early_clock_in = EarlyClockIn(
+                        user_id=user_id,
+                        branch_id=branch_id,
+                        early_clock_in=clock_in_time,
+                        deleted_yn='N'
+                    )
+                    db.add(new_early_clock_in)
+
+        await db.commit()
+        return {"message": "조기 출근 시간이 성공적으로 처리되었습니다."}
+    
+    except HTTPException as http_err:
+        await db.rollback()
+        raise http_err
+    except Exception as err:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail={"message": "조기 출근 시간 처리가 실패했습니다.", "error": str(err)})
+
+
+# 직원 월간 조기 출근 기록 조회
+@router.get("/{branch_id}/early-clock-in/{user_id}")
+@available_higher_than(Role.EMPLOYEE)
+async def get_user_early_clock_in_dates(
+    request: Request,
+    branch_id: int,
+    user_id: int,
+    service: ClosedDayService = Depends(ClosedDayService),
+    year: int = datetime.now().year,
+    month: int = datetime.now().month
+) -> SimpleEarlyClockInListResponseDTO:
+    early_clock_in_days = await service.get_user_early_clock_in_dates(branch_id, user_id, year, month)
+    return SimpleEarlyClockInListResponseDTO.to_DTO(early_clock_in_days)
