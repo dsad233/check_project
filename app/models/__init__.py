@@ -8,6 +8,7 @@ from app.models.users.part_timer.users_part_timer_work_contract_model import Par
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
 from app.models.users.users_work_contract_model import WorkContract, FixedRestDay, WorkContractBreakTime
+from .users.users_contract_info_model import ContractInfo
 
 # models.py에서 정의된 모델들
 from .users.users_model import Users, user_parts, user_menus
@@ -46,7 +47,7 @@ from .branches.parttimer_policies_model import ParttimerPolicies
 
 from .branches.personnel_record_categories_model import PersonnelRecordCategory
 from .users.users_salary_contract_model import SalaryContract
-from .users.users_work_contract_history_model import WorkContractHistory
+from .users.users_work_contract_history_model import ContractHistory
 
 # 일 대 다 관계
 Branches.auto_overtime_policies = relationship("AutoOvertimePolicies", back_populates="branch", uselist=False)
@@ -86,9 +87,9 @@ Users.salaries = relationship("UserSalary", back_populates="user", uselist=False
 Users.early_clock_in = relationship("EarlyClockIn", back_populates="user", uselist=False)
 
 Users.documents = relationship("Document", back_populates="user")
-Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
-Users.contracts_manager_id = relationship("Contract", foreign_keys=[Contract.manager_id], back_populates="manager")
-DocumentPolicies.contracts = relationship("Contract", back_populates="document_policies")
+# Users.contracts_user_id = relationship("Contract", foreign_keys=[Contract.user_id], back_populates="user")
+# Users.contracts_manager_id = relationship("Contract", foreign_keys=[Contract.manager_id], back_populates="manager")
+# DocumentPolicies.contracts = relationship("Contract", back_populates="document_policies")
 Users.overtime_history = relationship("OverTime_History", back_populates="user")
 
 Parts.salaries = relationship("UserSalary", back_populates="part")
@@ -169,13 +170,13 @@ Parts.users_with_permissions = relationship("Users", secondary=user_menus, back_
 WorkContract.fixed_rest_days = relationship("FixedRestDay", back_populates="work_contract")
 FixedRestDay.work_contract = relationship("WorkContract", foreign_keys=[FixedRestDay.work_contract_id], back_populates="fixed_rest_days")
 
-WorkContract.user = relationship("Users", back_populates="work_contract")
-Users.work_contract = relationship("WorkContract", back_populates="user")
+# WorkContract.user = relationship("Users", back_populates="work_contract")
+# Users.work_contract = relationship("WorkContract", back_populates="user")
 
 Document.user = relationship('Users', back_populates="documents")
-Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
-Contract.manager = relationship("Users", foreign_keys=[Contract.manager_id], back_populates="contracts_manager_id")
-Contract.document_policies = relationship("DocumentPolicies", back_populates="contracts")
+# Contract.user = relationship("Users", foreign_keys=[Contract.user_id], back_populates="contracts_user_id")
+# Contract.manager = relationship("Users", foreign_keys=[Contract.manager_id], back_populates="contracts_manager_id")
+# Contract.document_policies = relationship("DocumentPolicies", back_populates="contracts")
 OverTime_History.user = relationship("Users", back_populates="overtime_history",  uselist=False)
 
 ContractSendMailHistory.user = relationship("Users", foreign_keys=[ContractSendMailHistory.user_id], back_populates="contract_send_mail_histories")
@@ -216,14 +217,15 @@ Branches.personnel_record_categories = relationship("PersonnelRecordCategory", b
 PersonnelRecordCategory.branch = relationship("Branches", back_populates="personnel_record_categories")
 
 
-WorkContractHistory.user = relationship("Users", back_populates="work_contract_history")
-WorkContractHistory.work_contract = relationship("WorkContract", back_populates="work_contract_history")
+ContractHistory.user = relationship("Users", back_populates="contract_histories")
+ContractHistory.contract_info = relationship("ContractInfo", back_populates="contract_history")
 
-Users.work_contract_history = relationship("WorkContractHistory", back_populates="user")
-WorkContract.work_contract_history = relationship("WorkContractHistory", back_populates="work_contract")
+Users.contract_histories = relationship("ContractHistory", back_populates="user")
+ContractInfo.contract_history = relationship("ContractHistory", back_populates="contract_info")
 
-WorkContract.contract = relationship("Contract", back_populates="work_contract")
-Contract.work_contract = relationship("WorkContract", back_populates="contract")
+# WorkContract.work_contract_history = relationship("WorkContractHistory", back_populates="work_contract")
+# WorkContract.contract = relationship("Contract", back_populates="work_contract")
+# Contract.work_contract = relationship("WorkContract", back_populates="contract")
 
 
 LeaveHistories.manager = relationship("Users", foreign_keys=[LeaveHistories.manager_id], back_populates="manager_leave_histories")
@@ -233,5 +235,17 @@ Users.manager_leave_histories = relationship("LeaveHistories", foreign_keys=[Lea
 WorkContract.break_times = relationship("WorkContractBreakTime", back_populates="work_contract") 
 WorkContractBreakTime.work_contract = relationship("WorkContract", back_populates="break_times")
 
-Users.salary_contracts = relationship("SalaryContract", back_populates="user")
-SalaryContract.user = relationship("Users", back_populates="salary_contracts")
+# Users.salary_contracts = relationship("SalaryContract", back_populates="user")W
+# SalaryContract.user = relationship("Users", back_populates="salary_contracts")
+
+Users.user_contract_infos = relationship("ContractInfo", foreign_keys=[ContractInfo.user_id], back_populates="user")
+Users.manager_contract_infos = relationship("ContractInfo", foreign_keys=[ContractInfo.manager_id], back_populates="manager")
+ContractInfo.user = relationship("Users", foreign_keys=[ContractInfo.user_id], back_populates="user_contract_infos")
+ContractInfo.manager = relationship("Users", foreign_keys=[ContractInfo.manager_id], back_populates="manager_contract_infos")
+
+Parts.contract_infos = relationship("ContractInfo", back_populates="part")
+ContractInfo.part = relationship("Parts", back_populates="contract_infos")
+
+ContractInfo.contracts = relationship("Contract", back_populates="contract_info")
+Contract.contract_info = relationship("ContractInfo", back_populates="contracts")
+

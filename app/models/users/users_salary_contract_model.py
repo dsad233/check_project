@@ -1,6 +1,7 @@
 from datetime import datetime
+from email.policy import default
 
-from sqlalchemy import Column, Integer, ForeignKey, Date, DateTime, String
+from sqlalchemy import Column, Integer, ForeignKey, Date, DateTime, String, Float
 
 from app.core.database import Base
 
@@ -8,7 +9,7 @@ from app.core.database import Base
 class SalaryContract(Base):
     __tablename__ = "salary_contract"
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"))
+    # user_id = Column(Integer, ForeignKey("users.id"))
 
     contract_start_date = Column(Date, nullable=False) # 계약 시작일
     contract_end_date = Column(Date, nullable=True) # 계약 종료일
@@ -19,8 +20,9 @@ class SalaryContract(Base):
     # ================== 과세 -------------------
     # 기본급
     base_salary = Column(Integer, nullable=False) # 기본급
-    base_hour_per_week = Column(Integer, nullable=False) # 기본근무시간 (일주일)
-    base_hour_per_day = Column(Integer, nullable=False) # 기본근무시간 (하루)
+    base_hour_per_week = Column(Integer, nullable=False, default=40) # 기본근무시간 (일주일)
+    base_hour_per_day = Column(Integer, nullable=False, default=8) # 기본근무시간 (하루)
+    weekly_rest_hours = Column(Float, nullable=False, default=8) # 주휴시간
 
     # 포괄 산정 연장 근로 수당
     fixed_overtime_allowance = Column(Integer, nullable=False) # 고정연장근로수당
@@ -28,12 +30,12 @@ class SalaryContract(Base):
 
     # 연차 수당
     annual_leave_allowance = Column(Integer, nullable=False) # 연차수당
-    annual_leave_hour_per_day = Column(Integer, nullable=False) # 연차시간 (일)
-    annual_leave_count = Column(Integer, nullable=False) # 연차수
+    annual_leave_hour_per_day = Column(Integer, nullable=False, default=8) # 연차시간 (일)
+    annual_leave_count = Column(Integer, nullable=False, default=15) # 연차수
 
     # 휴일 수당
     holiday_allowance = Column(Integer, nullable=True) # 휴일수당
-    holiday_allowance_hours = Column(Integer, nullable=False) # 휴일수당시간
+    holiday_allowance_hours = Column(Integer, nullable=False, default=8) # 휴일수당시간
 
     # 직무 수당
     duty_allowance = Column(Integer, nullable=True) # 근무수당

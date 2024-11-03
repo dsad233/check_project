@@ -9,9 +9,11 @@ from app.models.users.users_model import Users
 
 
 class UserManagementRepository:
+    def __init__(self, session: AsyncSession):
+        self.session = session
+
     async def find_user_by_user_id(
             self,
-            session: AsyncSession,
             user_id: int
     ) -> Optional[Users]:
         stmt = (
@@ -21,5 +23,5 @@ class UserManagementRepository:
             .where(Users.id == user_id)
             .where(Users.deleted_yn == "N")
         )
-        result = await session.execute(stmt)
+        result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()

@@ -9,6 +9,7 @@ from sqlalchemy.orm import joinedload, aliased
 from app.common.dto.response_dto import ResponseDTO
 from app.core.database import get_db
 from app.cruds.users.users_crud import find_all_by_branch_id_and_role
+from app.dependencies.user_management import get_user_management_service
 from app.enums.users import Role
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto, AdminUsersDto
@@ -19,7 +20,6 @@ from app.models.parts.user_salary import UserSalary
 from app.service.user_management.service import UserManagementService
 
 router = APIRouter()
-user_management_service = UserManagementService()
 
 
 class UserManagement:
@@ -216,11 +216,12 @@ class UserManagement:
     @router.post("", response_model=ResponseDTO[CreatedUserDto])
     async def create_user(
             user_create: UserCreate,
+            service: UserManagementService = Depends(get_user_management_service),
             current_user: Users = Depends(get_current_user),
             session: AsyncSession = Depends(get_db)
     ):
         user = Users(**user_create.model_dump())
-        created_user = await user_management_service.add_user(session=session, user=user)
+        created_user = await service.add_user(session=session, user=user)
         data = await CreatedUserDto.build(user=created_user)
 
         return ResponseDTO(

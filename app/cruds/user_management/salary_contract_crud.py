@@ -41,11 +41,11 @@ class UserManagementSalaryContractRepository:
         salary_contract = await self.find_by_user_id(user_id)
         return SalaryContractDto.build(salary_contract=salary_contract)
 
-    async def create(self, salary_contract: SalaryContract):
+    async def create(self, salary_contract: SalaryContract) -> int:
         self.session.add(salary_contract)
         await self.session.commit()
         await self.session.refresh(salary_contract)
-        return salary_contract
+        return salary_contract.id
 
     async def partial_update(self, salary_contract_id: int, user_id: int, update_params: dict) -> SalaryContractDto:
         # 업데이트 쿼리 생성

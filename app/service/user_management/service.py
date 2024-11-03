@@ -2,7 +2,8 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
-from app.cruds.user_management.work_contract_crud import find_user_by_user_id
+from app.cruds.user_management.base_crud import UserManagementRepository
+# from app.cruds.user_management.work_contract_crud import find_user_by_user_id
 from app.cruds.users.users_crud import find_by_email, add_user
 from app.enums.modusign import SIGNINGMETHOD_OBJECT_TYPE
 from app.enums.users import Role
@@ -19,6 +20,9 @@ from app.schemas.modusign_schemas import TemplateResponse, SigningMethod
 
 
 class UserManagementService:
+    def __init__(self, user_management_repository: UserManagementRepository):
+        self.user_management_repository = user_management_repository
+
     async def add_user(
             self,
             user: Users,
@@ -38,7 +42,7 @@ class UserManagementService:
             user_id: int,
             session: AsyncSession
     ):
-        user = await find_user_by_user_id(session=session, user_id=user_id)
+        user = await self.user_management_repository.find_user_by_user_id(session=session, user_id=user_id)
 
         if not user:
             raise HTTPException(status_code=404, detail="User not found")

@@ -1,22 +1,45 @@
 from datetime import datetime, UTC
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, Date, String, Enum, Boolean
 from app.core.database import Base
-from app.enums.user_management import Status as SendMailStatus, ContractStatus
+from app.enums.user_management import Status as SendMailStatus, ContractStatus, ContractType
 
+"""
 
 class Contract(Base):
     __tablename__ = "contract"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    manager_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    work_contract_id = Column(Integer, ForeignKey("work_contract.id"), nullable=False)
+    contract_info_id = Column(Integer, ForeignKey("contract_info.id"), nullable=False)
+
+    contract_type = Column(Enum(*[e.value for e in ContractType], name="contract_type"), nullable=False)
+    contract_id = Column(Integer, nullable=False)  # 계약서 ID
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")  # Y인 경우 삭제 회원으로 분류
+
+"""
+
+class Contract(Base):
+    __tablename__ = "contract"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    # user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # manager_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # work_contract_id = Column(Integer, ForeignKey("work_contract.id"), nullable=False)
+    # contract_type_id = Column(Integer, ForeignKey("document_policies.id"), nullable=False)
+
+    # 계약 정보
+    contract_info_id = Column(Integer, ForeignKey("contract_info.id"), nullable=False)
+    contract_type = Column(Enum(*[e.value for e in ContractType], name="contract_type"), nullable=False)
+    contract_id = Column(Integer, nullable=False)  # 계약서 ID
 
     # 계약서 정보
-    contract_name = Column(String(255), nullable=False)
-    contract_type_id = Column(Integer, ForeignKey("document_policies.id"), nullable=False)
+    contract_name = Column(String(255), nullable=True)
     modusign_id = Column(String(255), nullable=True, unique=True)  # 모두싸인 ID
-    contract_url = Column(String(255), nullable=False, unique=True) # 계약서 URL / 모두싸인 URL or 계약서 URL중 하나는 존재
+    contract_url = Column(String(255), nullable=True, unique=True) # 계약서 URL / 모두싸인 URL or 계약서 URL중 하나는 존재
+
+    # 계약서 상태
     contract_status = Column(
         "contract_status",
         Enum(
@@ -25,7 +48,8 @@ class Contract(Base):
         ),
         nullable=False,
         default=ContractStatus.PENDING
-    )  # 계약 상태
+    )
+
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
     deleted_yn = Column(String(1), default="N")
