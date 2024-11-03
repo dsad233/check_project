@@ -17,7 +17,6 @@ from app.core.permissions.auth_utils import available_higher_than
 router = APIRouter()
 
 @router.get("/get", response_model=BranchListResponse, summary="지점 목록 조회")
-@available_higher_than(Role.EMPLOYEE)
 async def read_branches(
     *, context: Request, session: AsyncSession = Depends(get_db), request: BaseSearchDto = Depends(BaseSearchDto)
 ) -> BranchListResponse:
@@ -44,7 +43,6 @@ async def create_branch(
 
 
 @router.get("/{branch_id}/get", response_model=BranchResponse, summary="지점 조회")
-@available_higher_than(Role.EMPLOYEE)
 async def read_branch(
     *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int
 ) -> BranchResponse:

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Dict, Pattern, NamedTuple
 import re
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -7,98 +7,103 @@ from app.enums.users import Role
 from app.core.permissions.auth_utils import RoleAuthority
 
 
+class RouteConfig(NamedTuple):
+    """라우트 설정을 위한 데이터 클래스"""
+    required_role: Role #해당 라우트에 접근하기 위해 필요한 최소 권한
+    check_branch: bool = False #지점 접근 권한 검사 여부
+
+
 class RoleBranchMiddleware(BaseHTTPMiddleware):
+    """역할 기반 접근 제어 및 지점 접근 권한을 관리하는 미들웨어
+        1. URL prefix에 따른 역할 기반 접근 제어
+        2. 지점 관련 엔드포인트에 대한 접근 권한 검사
+        3. MSO 역할에 대한 특별 권한 처리
+        """
+
     def __init__(self, app):
         super().__init__(app)
-    #
-    #   # 정규식 패턴: /branches/숫자로 시작하는 모든 경로 체크
-        self.BRANCH_ID_PATTERN = re.compile(r"^/admin/branches/(\d+)(?:/.*)?$")
 
-        # public paths는 TokenMiddleware와 동일하게 유지
-        self.PUBLIC_PATHS = [
-            "/callback",
-            "/auth/login",
-            "/healthcheck",
-            "/docs",
-            "/openapi.json",
-            "/redoc",
-            "/favicon.ico",
-        ]
-
-        # 일반 사원 이상 접근 가능 경로
-        self.EMPLOYEE_LEVEL_PATHS = {
+        # 라우트 설정
+        # - admin: 관리자 권한(파트/통합/최고/mso) 필요, 지점 체크 필요
+        # - employee: 사원 권한 필요, 지점 체크 필요
+        # - mso: MSO 권한 필요, 지점 체크 불필요 (모든 지점 접근 가능)
+        self.ROUTE_CONFIG = {
+            "admin": RouteConfig(Role.ADMIN, check_branch=True),
+            "employee": RouteConfig(Role.EMPLOYEE, check_branch=True),
+            "mso": RouteConfig(Role.MSO, check_branch=False)
         }
 
-        # 관리자 이상 접근 가능 경로
-        self.ADMIN_LEVEL_PATHS = {
-        }
+        # 지점 접근 패턴을 위한 단일 정규표현식
+        # Format: /{prefix}/branches/{branch_id}/...
+        # Example: /admin/branches/123/users
+        self.BRANCH_PATTERN = re.compile(r"^/(?P<prefix>\w+)/branches/(?P<branch_id>\d+)(?:/.*)?$")
 
-        # # 통합 관리자 이상 접근 가능 경로
-        # self.INTEGRATED_ADMIN = {
-        #     "/"
-        # }
+    def _check_authorization(self, path: str, user_role: Role, user_branch_id: int) -> Optional[JSONResponse]:
+        """권한 검사"""
+        # 1. 경로에서 prefix 추출
+        # / admin / ... -> admin
+        # /employee/... -> employee
+        prefix = path.split('/')[1] if len(path.split('/')) > 1 else None
 
-        # MSO 이상 접근용
-        self.MSO_PATHS = {
-        }
+        # 등록된 prefix가 아니면 권한 검사 없이 통과 (public 라우트)
+        if not prefix or prefix not in self.ROUTE_CONFIG:
+            return None
+
+        config = self.ROUTE_CONFIG[prefix]
+
+        # 2. 사용자의 역할이 요구되는 최소 권한 레벨을 만족하는지 검사
+        if not RoleAuthority.check_role_level(user_role, config.required_role):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "detail": f"{config.required_role.value} 이상의 권한이 필요합니다. (현재: {user_role})"
+                }
+            )
+
+        # 3. 지점 접근 권한 검사 (필요한 경우만)
+        # - check_branch가 True인 경우에만 수행
+        # - MSO 역할은 모든 지점에 접근 가능
+        # - 그 외 역할은 자신이 속한 지점만 접근 가능
+        if config.check_branch:
+            match = self.BRANCH_PATTERN.match(path)
+            if match and match.group('prefix') == prefix:
+                branch_id = int(match.group('branch_id'))
+                if user_role != Role.MSO and user_branch_id != branch_id:
+                    return JSONResponse(
+                        status_code=401,
+                        content={
+                            "detail": f"본인 소속 지점의 데이터만 접근할 수 있습니다. (현재 역할: {user_role}, 속한 지점: {user_branch_id})"
+                        }
+                    )
+
+        return None
 
     async def dispatch(self, request: Request, call_next):
-        path = request.url.path
-
-        # OPTIONS 요청 처리
+        """모든 HTTP 요청에 대한 권한 검사를 수행하는 디스패처"""
+        # CORS preflight 요청 처리
         if request.method == "OPTIONS":
             return await call_next(request)
 
-        # public paths 체크
-        if any(path.startswith(p) for p in self.PUBLIC_PATHS):
+        path = request.url.path
+
+        # prefix 확인 (public path 체크)
+        prefix = path.split('/')[1] if len(path.split('/')) > 1 else None
+        if not prefix or prefix not in self.ROUTE_CONFIG:
+            # public 라우트는 권한 검사 없이 통과
             return await call_next(request)
 
-
-        user = request.state.user
-
-        # 퇴사자/휴직자 접근 제한
-        if user.role in [Role.RESIGNED, Role.ON_LEAVE]:
+        # 인증이 필요한 경로에서만 user 정보 확인
+        try:
+            user = request.state.user
+        except AttributeError:
             return JSONResponse(
-                status_code=403,
-                content={"detail": "접근 권한이 없습니다. (퇴사자/휴직자)"}
+                status_code=401,
+                content={"detail": "인증이 필요합니다."}
             )
 
-        # /branches/{branch_id}/* 패턴 체크
-        branch_match = self.BRANCH_ID_PATTERN.match(path)
-        if branch_match:
-            branch_id = int(branch_match.group(1))
-            print(branch_id, "::::", user.role)
-            # MSO가 아니고 본인 지점이 아닌 경우
-            if user.role != Role.MSO and user.branch_id != branch_id:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "해당 지점에 대한 접근 권한이 없습니다. 본인 소속 지점만 접근할 수 있습니다."}
-                )
+        # 통합된 권한 검사 수행
+        auth_result = self._check_authorization(path, user.role, user.branch_id)
+        if auth_result:
+            return auth_result
 
-
-        # MSO 전용 경로 체크
-        if any(path.startswith(p) for p in self.MSO_PATHS):
-            if user.role != Role.MSO:
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "MSO 권한이 필요합니다."}
-                )
-
-        # 관리자 레벨 경로 체크
-        if any(path.startswith(p) for p in self.ADMIN_LEVEL_PATHS):
-            if not RoleAuthority.check_role_level(user.role, Role.ADMIN):
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "관리자 이상의 권한이 필요합니다."}
-                )
-
-        # 일반 사원 레벨 경로 체크
-        if any(path.startswith(p) for p in self.EMPLOYEE_LEVEL_PATHS):
-            if not RoleAuthority.check_role_level(user.role, Role.EMPLOYEE):
-                return JSONResponse(
-                    status_code=401,
-                    content={"detail": "접근 권한이 없습니다."}
-                 )
-
-    #     # 그 외 TODO) 개발 모드 / 배포 모드일 경우에는 에러 처리 필요
         return await call_next(request)

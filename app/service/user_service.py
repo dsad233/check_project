@@ -8,6 +8,8 @@ from app.common.dto.search_dto import BaseSearchDto
 from app.models.users.users_model import Users
 
 
+MAX_ANNUAL_LEAVE_DAYS = 25
+
 async def get_branch_users_leave(
     *, session: AsyncSession, branch_id: int, request: BaseSearchDto
 ) -> UsersLeaveResponse:
@@ -35,7 +37,10 @@ async def plus_total_leave_days(
             user = await users_crud.find_by_id(session=session, user_id=user_id)
             if not user:
                 raise NotFoundError(detail=f"{user_id}번 유저를 찾을 수 없습니다.")
-            await users_crud.plus_total_leave_days(session=session, user_id=user_id, count=request.count)
+            updated_total_leave_days = user.total_leave_days + request.count
+            if updated_total_leave_days > MAX_ANNUAL_LEAVE_DAYS:
+                raise BadRequestError(detail=f"{user.name}의 최대 연차 수를 초과했습니다.")
+            await users_crud.update_total_leave_days(session=session, user_id=user_id, count=updated_total_leave_days)
     return True
 
 
@@ -48,9 +53,10 @@ async def minus_total_leave_days(
             user = await users_crud.find_by_id(session=session, user_id=user_id)
             if not user:
                 raise NotFoundError(detail=f"{user_id}번 유저를 찾을 수 없습니다.")
-            if user.total_leave_days < request.count:
+            updated_total_leave_days = user.total_leave_days - request.count
+            if updated_total_leave_days < 0:
                 raise BadRequestError(detail="잔여 연차가 부족합니다.")
-            await users_crud.minus_total_leave_days(session=session, user_id=user_id, count=request.count)
+            await users_crud.update_total_leave_days(session=session, user_id=user_id, count=updated_total_leave_days)
     return True
 
 

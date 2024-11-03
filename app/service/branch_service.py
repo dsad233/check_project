@@ -48,6 +48,7 @@ from datetime import datetime
 from app.exceptions.exceptions import NotFoundError, BadRequestError
 import logging
 
+
 # logger 설정
 logger = logging.getLogger(__name__)
 
@@ -269,6 +270,7 @@ async def get_branch_by_id(*, session: AsyncSession, branch_id: int) -> Branches
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     return branch
 
+
 async def get_branch_policies(*, session: AsyncSession, branch_id: int) -> CombinedPoliciesDto:
     """지점 정책 조회"""
     work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
@@ -433,3 +435,17 @@ async def update_schedule_holiday(*, session: AsyncSession, branch_id: int, requ
             status_code=500,
             detail="근무정책 업데이트에 실패하였습니다."
         )
+    
+
+async def auto_annual_leave_grant_scheduling(*, session: AsyncSession):
+    branches = await branches_crud.find_all_with_parts_users_auto_annual_leave_policies(session=session)
+    for branch in branches:
+        for part in branch.parts:
+            if part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.MANUAL_GRANT:
+                continue
+            elif part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.ACCOUNTING_BASED_GRANT:
+                await parts_service.account_based_auto_annual_leave_grant(session=session, part=part, branch=branch)
+            elif part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.ENTRY_DATE_BASED_GRANT:
+                await parts_service.entry_date_based_auto_annual_leave_grant(session=session, part=part, branch=branch)
+            elif part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.CONDITIONAL_GRANT:
+                await parts_service.condition_based_auto_annual_leave_grant(session=session, part=part, branch=branch)
