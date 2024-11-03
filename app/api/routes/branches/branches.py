@@ -18,7 +18,8 @@ from app.schemas.branches_schemas import (
     PersonnelRecordCategoriesResponse,
 )
 from app.schemas.users_schemas import (
-    PersonnelRecordUsersRequest, PersonnelRecordUsersResponse
+    PersonnelRecordUsersRequest, PersonnelRecordUsersResponse,
+    UsersNameResponse
 )
 from app.core.permissions.auth_utils import available_higher_than
 
@@ -171,3 +172,12 @@ async def read_personnel_record_users(
             request.branch_id = current_user.branch_id
 
     return await user_service.get_personnel_record_users(session=session, request=request)
+
+
+@router.get("/{branch_id}/users/name/list", response_model=UsersNameResponse, summary="지점 내 유저 이름 목록 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def read_branch_users_name(
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: BaseSearchDto = Depends(BaseSearchDto)
+) -> UsersNameResponse:
+
+    return await user_service.get_branch_users_name(session=session, request=request, branch_id=branch_id)
