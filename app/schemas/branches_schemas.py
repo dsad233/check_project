@@ -2,8 +2,9 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional
 from app.enums.users import Weekday
 from app.schemas.parts_schemas import PartIdWithName
+from app.common.dto.search_dto import NamePhoneSearchDto
 from app.common.dto.pagination_dto import PaginationDto
-from datetime import datetime, time
+from datetime import datetime, time, date
 
 
 class AccountBasedGrantDto(BaseModel):
@@ -303,3 +304,27 @@ class CombinedPoliciesUpdateDto(BaseModel):
 
 class ScheduleHolidayUpdateDto(BaseModel):
     work_policies: WorkPoliciesUpdateDto
+
+
+class PersonnelRecordCategoryRequest(BaseModel):
+    id: Optional[int] = None
+    name: str
+
+    @field_validator("id")
+    def validate_id(cls, v):
+        if v == "" or v == 0:
+            return None
+        return v
+
+
+class PersonnelRecordCategoryResponse(BaseModel):
+    id: int
+    name: str
+
+    class Config:
+        from_attributes = True
+
+
+class PersonnelRecordCategoriesResponse(BaseModel):
+    data: list[PersonnelRecordCategoryResponse]
+    pagination: PaginationDto

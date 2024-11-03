@@ -5,7 +5,7 @@ from app.models.branches.account_based_annual_leave_grant_model import AccountBa
 from app.models.branches.entry_date_based_annual_leave_grant_model import EntryDateBasedAnnualLeaveGrant
 from app.models.branches.condition_based_annual_leave_grant_model import ConditionBasedAnnualLeaveGrant
 from app.models.histories.branch_histories_model import BranchHistories
-from app.models.branches.branches_model import Branches
+from app.models.branches.branches_model import Branches, PersonnelRecordCategory
 from app.models.branches.work_policies_model import BranchBreakTime, WorkPolicies, BranchWorkSchedule
 from app.schemas.branches_schemas import AllowancePoliciesResponse, ScheduleHolidayUpdateDto, WorkPoliciesDto, AutoOvertimePoliciesDto, HolidayWorkPoliciesDto, OverTimePoliciesDto, AllowancePoliciesDto
 from app.models.branches.auto_overtime_policies_model import AutoOvertimePolicies
@@ -14,28 +14,16 @@ from app.models.branches.overtime_policies_model import OverTimePolicies
 from app.models.branches.allowance_policies_model import AllowancePolicies
 from app.common.dto.search_dto import BaseSearchDto
 from app.common.dto.pagination_dto import PaginationDto
-from app.schemas.branches_schemas import (AutoLeavePoliciesAndPartsDto, 
-                                          AccountPoliciesWithParts, 
-                                          EntryDatePoliciesWithParts, 
-                                          ConditionPoliciesWithParts, 
-                                          AutoAnnualLeaveApprovalDto, 
-                                          AccountBasedGrantDto, 
-                                          EntryDateBasedGrantDto, 
-                                          ConditionBasedGrantDto, 
-                                          PartIdWithName,
-                                          BranchHistoryResponse,
-                                          BranchHistoriesResponse,
-                                          BranchListResponse,
-                                          BranchResponse,
-                                          BranchRequest,
-                                          CombinedPoliciesDto,
-                                          WorkPoliciesDto,
-                                          AutoOvertimePoliciesDto,
-                                          HolidayWorkPoliciesDto,
-                                          OverTimePoliciesDto,
-                                          DefaultAllowancePoliciesDto,
-                                          HolidayAllowancePoliciesDto
-                                          )
+from app.schemas.branches_schemas import (
+    AutoLeavePoliciesAndPartsDto, AccountPoliciesWithParts, EntryDatePoliciesWithParts, 
+    ConditionPoliciesWithParts, AutoAnnualLeaveApprovalDto, AccountBasedGrantDto, 
+    EntryDateBasedGrantDto, ConditionBasedGrantDto, PartIdWithName, BranchHistoryResponse, 
+    BranchHistoriesResponse, BranchListResponse, BranchResponse, BranchRequest, 
+    CombinedPoliciesDto, WorkPoliciesDto, AutoOvertimePoliciesDto, 
+    HolidayWorkPoliciesDto, OverTimePoliciesDto, DefaultAllowancePoliciesDto, 
+    HolidayAllowancePoliciesDto, PersonnelRecordCategoryRequest, 
+    PersonnelRecordCategoryResponse, PersonnelRecordCategoriesResponse
+)
 from app.cruds.leave_policies import auto_annual_leave_approval_crud, account_based_annual_leave_grant_crud, entry_date_based_annual_leave_grant_crud, condition_based_annual_leave_grant_crud
 from app.cruds.branches.policies import allowance_crud, holiday_work_crud, overtime_crud, work_crud, auto_overtime_crud
 from app.cruds.parts import parts_crud
@@ -436,11 +424,12 @@ async def update_schedule_holiday(*, session: AsyncSession, branch_id: int, requ
             detail="근무정책 업데이트에 실패하였습니다."
         )
     
-
+# 자동 연차 부여 스케줄링
 async def auto_annual_leave_grant_scheduling(*, session: AsyncSession):
     branches = await branches_crud.find_all_with_parts_users_auto_annual_leave_policies(session=session)
     for branch in branches:
         for part in branch.parts:
+            # TODO: 유저마다 주 근무일수 다른거 분기 처리 해야함 지금은 5일로 고정
             if part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.MANUAL_GRANT:
                 continue
             elif part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.ACCOUNTING_BASED_GRANT:
@@ -449,3 +438,46 @@ async def auto_annual_leave_grant_scheduling(*, session: AsyncSession):
                 await parts_service.entry_date_based_auto_annual_leave_grant(session=session, part=part, branch=branch)
             elif part.auto_annual_leave_grant == PartAutoAnnualLeaveGrant.CONDITIONAL_GRANT:
                 await parts_service.condition_based_auto_annual_leave_grant(session=session, part=part, branch=branch)
+
+
+async def create_personnel_record_category(
+        *, session: AsyncSession, branch_id: int, request: PersonnelRecordCategoryRequest
+) -> PersonnelRecordCategoryResponse:
+    """지점 인사기록 카테고리 생성"""
+    duplicate_category = await branches_crud.get_personnel_record_category_by_name(session=session, name=request.name, branch_id=branch_id)
+    if duplicate_category is not None:
+        raise BadRequestError(detail=f"{request.name}은(는) 이미 존재합니다.")
+    return await branches_crud.create_personnel_record_category(session=session, request=PersonnelRecordCategory(branch_id=branch_id, **request.model_dump()))
+
+
+async def get_personnel_record_categories(
+        *, session: AsyncSession, branch_id: int, request: BaseSearchDto
+) -> PersonnelRecordCategoriesResponse:
+    """지점 인사기록 카테고리 조회"""
+    personnel_record_categories = await branches_crud.get_personnel_record_categories(session=session, branch_id=branch_id, request=request)
+    total_cnt = await branches_crud.get_personnel_record_categories_total_cnt(session=session, branch_id=branch_id)
+    if total_cnt == 0:
+        personnel_record_categories = []
+    return PersonnelRecordCategoriesResponse(data=personnel_record_categories, pagination=PaginationDto(total_record=total_cnt))
+
+
+async def update_personnel_record_category(
+        *, session: AsyncSession, branch_id: int, personnel_record_category_id: int, request: PersonnelRecordCategoryRequest
+) -> bool:
+    """지점 인사기록 카테고리 수정"""
+    personnel_record_category = await branches_crud.get_personnel_record_category(session=session, id=personnel_record_category_id)
+    if personnel_record_category is None:
+        raise NotFoundError(detail=f"{personnel_record_category_id}번 인사기록 카테고리가 없습니다.")
+    await branches_crud.update_personnel_record_category(session=session, old=personnel_record_category, request=request.model_dump(exclude_unset=True))
+
+    return True
+
+
+async def delete_personnel_record_category(*, session: AsyncSession, branch_id: int, personnel_record_category_id: int) -> bool:
+    """지점 인사기록 카테고리 삭제"""
+    personnel_record_category = await branches_crud.get_personnel_record_category(session=session, id=personnel_record_category_id)
+    if personnel_record_category is None:
+        raise NotFoundError(detail=f"{personnel_record_category_id}번 인사기록 카테고리가 없습니다.")
+    await branches_crud.delete_personnel_record_category(session=session, id=personnel_record_category_id)
+
+    return True
