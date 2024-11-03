@@ -1,49 +1,16 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.cruds.user_management.work_contract_history_crud import add_work_contract_history, \
-    find_work_contract_history_by_id, find_work_contract_histories_by_user_id
-from app.models.users.users_work_contract_history_model import WorkContractHistory
+from app.cruds.user_management.work_contract_history_crud import UserManagementContractHistoryRepository
+from app.models.users.users_work_contract_history_model import ContractHistory
 
 
-class UserManagementWorkContractHistoryService:
-    async def create_work_contract_history(
-            self,
-            session: AsyncSession,
-            user_id: int,
-            work_contract_id: int,
-            change_reason: str = None,
-            note: str = None
-    ) -> int:
-        work_contract_history = WorkContractHistory(
-            user_id=user_id,
-            work_contract_id=work_contract_id,
-            change_reason=change_reason,
-            note=note
-        )
+class UserManagementContractHistoryService:
+    def __init__(self, contract_history_repository: UserManagementContractHistoryRepository):
+        self.contract_history_repository = contract_history_repository
 
-        created_work_contract_history_id = await add_work_contract_history(
-            session=session,
-            work_contract_history=work_contract_history
-        )
+    async def get_contract_history_by_id(self, contract_history_id: int) -> ContractHistory:
+        return await self.contract_history_repository.find_work_contract_history_by_id(contract_history_id=contract_history_id)
 
-        return created_work_contract_history_id
+    async def get_contract_histories_by_user_id(self, user_id: int) -> list[ContractHistory]:
+        return await self.contract_history_repository.find_contract_histories_by_user_id(user_id=user_id)
 
-    async def get_work_contract_history_by_id(
-            self,
-            work_contract_histories_id: int,
-            session: AsyncSession
-    ) -> WorkContractHistory:
-        return await find_work_contract_history_by_id(
-            session=session,
-            work_contract_history_id=work_contract_histories_id
-       )
-
-    async def get_work_contract_histories_by_user_id(
-            self,
-            user_id: int,
-            session: AsyncSession
-    ) -> list[WorkContractHistory]:
-        return await find_work_contract_histories_by_user_id(
-            session=session,
-            user_id=user_id
-        )
+    async def create_contract_history(self, contract_history: ContractHistory) -> int:
+        return await self.contract_history_repository.add_contract_history(contract_history=contract_history)

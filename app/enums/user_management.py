@@ -26,3 +26,12 @@ class ContractStatus(str, Enum):
     APPROVE = "APPROVE"
     REJECT = "REJECT"
     CANCEL = "CANCEL"
+
+class ContractType(str, Enum):
+    """
+
+    """
+
+    WORK = "WORK"
+    SALARY = "SALARY"
+    PART_TIME = "PART_TIME"

@@ -8,7 +8,7 @@ from app.dependencies.user_management import get_user_management_salary_contract
 from app.middleware.tokenVerify import get_current_user
 from app.models.users.users_model import Users
 from app.models.users.users_salary_contract_model import SalaryContract
-from app.schemas.user_management.salary_contract import SalaryContractDto, RequestCreateSalaryContractDto, \
+from app.schemas.user_management.salary_contract import SalaryContractDto, RequestCreateSalaryContract, \
     RequestUpdateSalaryContractDto
 from app.service.user_management.salary_contract_service import UserManagementSalaryContractService
 
@@ -47,7 +47,7 @@ class UserManagementSalaryContract:
         response_model=ResponseDTO
     )
     async def create_salary_contract(
-            request_create_salary_contract: Annotated[RequestCreateSalaryContractDto, ...],
+            request_create_salary_contract: Annotated[RequestCreateSalaryContract, ...],
             service: Annotated[UserManagementSalaryContractService, Depends(get_user_management_salary_contract_service)],
             current_user: Annotated[Users, Depends(get_current_user)]
     ):

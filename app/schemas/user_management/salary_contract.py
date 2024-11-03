@@ -7,9 +7,7 @@ from app.models.users.users_salary_contract_model import SalaryContract
 from app.utils.datetime_utils import DatetimeUtil
 
 
-class RequestCreateSalaryContractDto(BaseModel):
-    user_id: int
-
+class RequestCreateSalaryContract(BaseModel):
     contract_start_date: str
     contract_end_date: Optional[str]
     annual_salary: int
@@ -31,7 +29,6 @@ class RequestCreateSalaryContractDto(BaseModel):
 
     def to_domain(self) -> SalaryContract:
         return SalaryContract(
-            user_id=self.user_id,
             contract_start_date=DatetimeUtil.str_to_date(self.contract_start_date),
             contract_end_date=DatetimeUtil.str_to_date(self.contract_end_date),
             annual_salary=self.annual_salary,

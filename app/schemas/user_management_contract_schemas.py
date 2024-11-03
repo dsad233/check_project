@@ -1,7 +1,12 @@
+from typing import Optional
+
 from pydantic import BaseModel
 
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_model import Users
+from app.schemas.user_management.salary_contract import RequestCreateSalaryContract
+from app.schemas.user_work_contract_schemas import RequestCreateWorkContract
+
 
 # ==================== Request ====================
 
@@ -25,6 +30,18 @@ class RequestSendMailContract(BaseModel):
     request_user_id: int
     request_contract_id: int
 
+
+class BaseRequestContract(BaseModel):
+    contract_info_id: int
+    note: Optional[str] = None
+    change_reason: Optional[str] = None
+
+class RequestPermanentContract(BaseRequestContract):
+    work_contract: RequestCreateWorkContract
+    salary_contract: RequestCreateSalaryContract
+
+# class RequestTemporaryContract(BaseRequestContract):
+#     part_time_contract: RequestCreatePartTimeContract
 
 # ==================== Response ====================
 
