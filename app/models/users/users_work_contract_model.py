@@ -10,7 +10,7 @@ class WorkContract(Base):
     """
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    # user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
 
     # 계약일
     contract_creation_date = Column(Date, nullable=False, default=datetime.now(UTC)) # 계약서 작성일

@@ -1,28 +1,27 @@
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.cruds.user_management.work_contract_crud import add_work_contract
+from app.cruds.user_management.work_contract_crud import UserManagementWorkContractRepository
 from app.models.users.users_work_contract_model import WorkContract
-from app.service.user_management.work_contract_history_service import UserManagementWorkContractHistoryService
-
-user_management_work_contract_history_service = UserManagementWorkContractHistoryService()
+from app.schemas.user_work_contract_schemas import WorkContractDto
+from app.service.user_management.work_contract_history_service import UserManagementContractHistoryService
 
 class UserManagementWorkContractService:
-    async def create_work_contract(
+    def __init__ (
             self,
-            session: AsyncSession,
-            work_contract: WorkContract,
-            change_reason: str = None,
-            note: str = None
+            work_contract_history_service: UserManagementContractHistoryService,
+            work_contract_repository: UserManagementWorkContractRepository,
     ):
-        created_work_contract_id = await add_work_contract(session=session, work_contract=work_contract)
-        created_work_contract_history_id = await user_management_work_contract_history_service.create_work_contract_history(
-            session=session,
-            user_id=work_contract.user_id,
-            work_contract_id=created_work_contract_id,
-            change_reason=change_reason,
-            note=note
+        self.work_contract_history_service = work_contract_history_service
+        self.work_contract_repository = work_contract_repository
+
+    async def get_work_contract_by_id(self, work_contract_id: int) -> WorkContractDto:
+        return await self.work_contract_repository.find_dto_by_work_contract_id(
+            work_contract_id=work_contract_id
         )
 
-        return created_work_contract_id, created_work_contract_history_id
+    async def create_work_contract(
+            self,
+            work_contract: WorkContract,
+    ):
+        created_work_contract_id = await self.work_contract_repository.add_work_contract(work_contract=work_contract)
+        return created_work_contract_id
 
 

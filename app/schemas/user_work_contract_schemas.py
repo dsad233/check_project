@@ -18,8 +18,6 @@ class RequestWorkContrackBreakTime(BaseModel):
 
 
 class RequestCreateWorkContract(BaseModel):
-    user_id: int
-
     contract_start_date: str
     contract_end_date: Optional[str] = None
 
@@ -37,9 +35,8 @@ class RequestCreateWorkContract(BaseModel):
 
     break_times: list[RequestWorkContrackBreakTime]
 
-    def to_model(self) -> WorkContract:
+    def to_domain(self) -> WorkContract:
         return WorkContract(
-            user_id=self.user_id,
             contract_start_date=self.contract_start_date,
             contract_end_date=self.contract_end_date,
             is_fixed_rest_day=self.is_fixed_rest_day,
@@ -92,13 +89,11 @@ class RequestPatchWorkContract(BaseModel):
 
 class ResponseCreatedWorkContractDto(BaseModel):
     work_contract_id: int
-    work_contract_history_id: int
 
     @classmethod
-    def build(cls, work_contract_id: int, work_contract_history_id: int):
+    def build(cls, work_contract_id: int):
         return cls(
             work_contract_id=work_contract_id,
-            work_contract_history_id=work_contract_history_id
         )
 
 class UserDto(BaseModel):
@@ -113,7 +108,7 @@ class UserDto(BaseModel):
         )
 
 
-class UserWorkContractFixedRestDayDto(BaseModel):
+class FixedRestDayDto(BaseModel):
     rest_day: str
     every_over_week: bool
 
@@ -124,9 +119,22 @@ class UserWorkContractFixedRestDayDto(BaseModel):
             every_over_week=fixed_rest_day.every_over_week
         )
 
+class WorkContractBreakTimeDto(BaseModel):
+    break_start_time: str
+    break_end_time: str
+
+    @classmethod
+    def build(cls, break_time: WorkContractBreakTime):
+        return cls(
+            break_start_time=break_time.break_start_time.strftime("%H:%M"),
+            break_end_time=break_time.break_end_time.strftime("%H:%M")
+        )
+
+
 class WorkContractDto(BaseModel):
     work_contract_id: int
-    fixed_rest_days: list[UserWorkContractFixedRestDayDto]
+    fixed_rest_days: list[FixedRestDayDto]
+    break_times: list[WorkContractBreakTimeDto]
 
     weekly_work_start_time: str
     weekly_work_end_time: str
@@ -138,34 +146,31 @@ class WorkContractDto(BaseModel):
     sunday_work_end_time: str
     sunday_is_rest: bool
 
-    break_start_time: str
-    break_end_time: str
-
     @classmethod
     def build(cls, work_contract: WorkContract):
-        try:
-            return cls(
-                work_contract_id=work_contract.id,
-                fixed_rest_days=[
-                    UserWorkContractFixedRestDayDto.build(
-                        fixed_rest_day=rest_day
-                    ) for rest_day in work_contract.fixed_rest_days],
-                weekly_work_start_time=work_contract.weekly_work_start_time.strftime("%H:%M"),
-                weekly_work_end_time=work_contract.weekly_work_end_time.strftime("%H:%M"),
-                weekly_is_rest=work_contract.weekly_is_rest,
-                saturday_work_start_time=work_contract.saturday_work_start_time.strftime("%H:%M"),
-                saturday_work_end_time=work_contract.saturday_work_end_time.strftime("%H:%M"),
-                saturday_is_rest=work_contract.saturday_is_rest,
-                sunday_work_start_time=work_contract.sunday_work_start_time.strftime("%H:%M"),
-                sunday_work_end_time=work_contract.sunday_work_end_time.strftime("%H:%M"),
-                sunday_is_rest=work_contract.sunday_is_rest,
-                break_start_time=work_contract.break_start_time.strftime("%H:%M"),
-                break_end_time=work_contract.break_end_time.strftime("%H:%M")
-            )
-        except Exception as e:
-            print(e)
-
-
+        return cls(
+            work_contract_id=work_contract.id,
+            fixed_rest_days=[
+                FixedRestDayDto.build(
+                    fixed_rest_day=rest_day
+                ) for rest_day in work_contract.fixed_rest_days],
+            break_times=[
+                WorkContractBreakTimeDto.build(
+                    break_time=break_time
+                ) for break_time in work_contract.break_times
+            ],
+            weekly_work_start_time=work_contract.weekly_work_start_time.strftime("%H:%M"),
+            weekly_work_end_time=work_contract.weekly_work_end_time.strftime("%H:%M"),
+            weekly_is_rest=work_contract.weekly_is_rest,
+            saturday_work_start_time=work_contract.saturday_work_start_time.strftime("%H:%M"),
+            saturday_work_end_time=work_contract.saturday_work_end_time.strftime("%H:%M"),
+            saturday_is_rest=work_contract.saturday_is_rest,
+            sunday_work_start_time=work_contract.sunday_work_start_time.strftime("%H:%M"),
+            sunday_work_end_time=work_contract.sunday_work_end_time.strftime("%H:%M"),
+            sunday_is_rest=work_contract.sunday_is_rest,
+            # break_start_time=work_contract.break_start_time.strftime("%H:%M"),
+            # break_end_time=work_contract.break_end_time.strftime("%H:%M")
+        )
 
 class ResponseUserWorkContractDto(BaseModel):
     user: UserDto

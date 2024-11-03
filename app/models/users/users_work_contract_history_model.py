@@ -5,13 +5,12 @@ from sqlalchemy import Column, Integer, ForeignKey, Date, DateTime, Text, String
 from app.core.database import Base
 
 
-class WorkContractHistory(Base):
-    __tablename__ = 'work_contract_history'
+class ContractHistory(Base):
+    __tablename__ = 'contract_history'
 
     id = Column(Integer, primary_key=True)
+    contract_info_id = Column(Integer, ForeignKey('contract_info.id'))
     user_id = Column(Integer, ForeignKey('users.id'))
-    work_contract_id = Column(Integer, ForeignKey('work_contract.id'))
-    # salary_contract_id # 추후 급여 로직 구현 시 추가
 
     # 변경 사유, 비고
     change_reason = Column(Text, nullable=True)
