@@ -13,10 +13,9 @@ class BaseSearchDto(BaseModel):
         self.offset = (self.page - 1) * self.record_size
 
 
-class PostSearchDto(BaseSearchDto):
-    branch_id: int
-    name: str
-    phone_number: str
+class NamePhoneSearchDto(BaseSearchDto):
+    name: Optional[str] = None
+    phone_number: Optional[str] = None
 
 
 class PostSearchDto(BaseSearchDto):

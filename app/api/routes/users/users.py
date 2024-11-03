@@ -1,17 +1,25 @@
 from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, load_only
-
 from app.api.routes.auth.auth import hashPassword
 from app.core.database import get_db
-from app.middleware.tokenVerify import get_current_user_id, validate_token, get_current_user
 from app.models.users.users_model import Users, UserUpdate
 from app.models.branches.branches_model import Branches
 from typing import Annotated
+from ....schemas.users_schemas import (
+    PersonnelRecordHistoriesResponse, PersonnelRecordHistoryCreateRequest, 
+    PersonnelRecordHistoryResponse, PersonnelRecordHistoryUpdateRequest,
+    PersonnelRecordHistoryCreateResponse
+)
+from ....service import user_service
+from ....core.permissions.auth_utils import available_higher_than
+from ....enums.users import Role
+from ....common.dto.search_dto import BaseSearchDto
+
 
 router = APIRouter()
 # db = async_session()
@@ -289,3 +297,52 @@ async def delete_user(
         print("에러가 발생하였습니다.")
         print(err)
         raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+    
+
+@router.post("/{user_id}/personnel-record-histories/create", summary="유저 인사기록 생성", response_model=PersonnelRecordHistoryCreateResponse)
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def create_personnel_record_history(
+    context: Request,
+    user_id: int,
+    request: PersonnelRecordHistoryCreateRequest,
+    session: AsyncSession = Depends(get_db)
+) -> PersonnelRecordHistoryCreateResponse:
+    created_by_user = context.state.user
+
+    return await user_service.create_personnel_record_history(session=session, request=request, created_by=created_by_user.id, user_id=user_id)
+
+
+@router.get("/{user_id}/personnel-record-histories/list", summary="유저 인사기록 조회", response_model=PersonnelRecordHistoriesResponse)
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def get_personnel_record_histories(
+    context: Request,
+    user_id: int,
+    request: BaseSearchDto = Depends(BaseSearchDto),
+    session: AsyncSession = Depends(get_db)
+) -> PersonnelRecordHistoriesResponse:
+    return await user_service.get_personnel_record_histories(session=session, request=request, user_id=user_id)
+
+
+@router.patch("/{user_id}/personnel-record-histories/{personnel_record_history_id}/update", summary="유저 인사기록 수정", response_model=bool)
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def update_personnel_record_history(
+    context: Request,
+    user_id: int,
+    personnel_record_history_id: int,
+    request: PersonnelRecordHistoryUpdateRequest,
+    session: AsyncSession = Depends(get_db)
+) -> bool:
+    created_by_user = context.state.user
+
+    return await user_service.update_personnel_record_history(session=session, personnel_record_history_id=personnel_record_history_id, request=request, created_by=created_by_user.id)
+
+
+@router.delete("/{user_id}/personnel-record-histories/{personnel_record_history_id}/delete", summary="유저 인사기록 삭제", response_model=bool)
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def delete_personnel_record_history(
+    context: Request,
+    user_id: int,
+    personnel_record_history_id: int,
+    session: AsyncSession = Depends(get_db)
+) -> bool:
+    return await user_service.delete_personnel_record_history(session=session, id=personnel_record_history_id)
