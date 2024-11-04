@@ -27,8 +27,7 @@ class LeaveHistories(Base):
     
     __tablename__ = "leave_histories"
     __table_args__ = (
-        Index("idx_leave_history_user_id", "user_id"),
-        UniqueConstraint("user_id", "application_date", name="uq_user_application_date"),
+        Index("idx_leave_history_user_id", "user_id")
     )
     
     id = Column(Integer, primary_key=True, autoincrement=True)
