@@ -3,7 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.enums.user_management import ContractType
+from app.enums.users import ContractType
 from app.models.users.career_model import Career
 
 

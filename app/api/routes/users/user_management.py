@@ -18,6 +18,7 @@ from app.models.parts.parts_model import Parts
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
 from app.schemas.user_management.user_management_schemas import CurrentUserDTO, UserDTO, UserListResponseDTO
+from app.dependencies.user_management import get_user_management_service
 from app.service.user_management.service import UserManagementService, UserQueryService
 
 router = APIRouter()
@@ -32,7 +33,7 @@ class UserManagement:
         record_size: int = Query(10, ge=1),
         status: Optional[str] = Query(
             None, 
-            description="사용자 상태 필터링 (가능한 값: '전체', '재직자', '퇴사자', '휴직자', '삭제회원')"
+            description="사용자 상태 필터링 (가능한 값: '전체' => 삭제회원제외, '재직자' => 퇴사자,휴직자 제외, '퇴사자', '휴직자', '삭제회원')"
         ),
         name: Optional[str] = None,
         phone: Optional[str] = None,
@@ -81,9 +82,6 @@ class UserManagement:
             )
 
         except Exception as err:
-            logger.error(f"에러가 발생하였습니다: {err}")
-            import traceback
-            logger.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.post("", response_model=ResponseDTO[CreatedUserDto])
@@ -96,6 +94,7 @@ class UserManagement:
         """
         사용자를 생성합니다.
         
+        role 가능한 값: 'MSO 최고권한', '최고관리자', '통합관리자', '관리자', '사원', '퇴사자', '휴직자', '임시생성' //
         gender 가능한 값: '남자', '여자' //
         education.school_type 가능한 값: '초등학교', '중학교', '고등학교', '대학교', '대학원' //
         education.graduation_type 가능한 값: '졸업', '졸업예정', '재학중', '휴학', '중퇴' //
@@ -183,35 +182,30 @@ class UserManagement:
         except Exception as err:
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
-    @router.patch("/{id}")
+    @router.patch("/{user_id}")
     async def update_user(
-            id: int,
-            user_update: UserUpdate,
-            db: AsyncSession = Depends(get_db),
-            current_user: Users = Depends(get_current_user)
+        user_id: int,
+        user_update: UserUpdate,
+        db: AsyncSession = Depends(get_db),
+        current_user: Users = Depends(get_current_user),
+        user_management_service: UserManagementService = Depends(get_user_management_service)
     ):
         """
         유저의 세부 정보를 수정합니다.
+        gender 가능한 값: '남자', '여자' //
+        education.school_type 가능한 값: '초등학교', '중학교', '고등학교', '대학교', '대학원' //
+        education.graduation_type 가능한 값: '졸업', '졸업예정', '재학중', '휴학', '중퇴' //
+        career.contract_type 가능한 값: '정규직', '계약직', '인턴', '파트타임' //
         """
         try:
-            user_query = select(Users).where(Users.id == id)
-            result = await db.execute(user_query)
-            target_user = result.scalar_one_or_none()
-
-            if not target_user:
-                raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
-
-            # if not current_user.can_edit_user(target_user):
-            #     raise HTTPException(status_code=403, detail="해당 사용자의 정보를 수정할 권한이 없습니다.")
-
-            update_data = user_update.model_dump(exclude_unset=True)
-            if not update_data:
-                raise HTTPException(status_code=400, detail="업데이트할 정보가 제공되지 않았습니다.")
-
-            for key, value in update_data.items():
-                setattr(target_user, key, value)
-
-            await db.commit()
+            # 서비스 레이어 호출
+            await user_management_service.update_user(
+                user_id=user_id,
+                user_update=user_update,
+                session=db,
+                current_user=current_user
+            )
+            
             return {"message": "유저 정보가 성공적으로 업데이트되었습니다."}
 
         except HTTPException as http_exc:
@@ -219,9 +213,6 @@ class UserManagement:
             raise http_exc
         except Exception as err:
             await db.rollback()
-            print(f"에러가 발생하였습니다: {err}")
-            import traceback
-            print(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}/role")
@@ -317,7 +308,7 @@ class UserManagement:
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
-                joinedload(Users.parts),
+                joinedload(Users.part),
                 joinedload(Users.branch)
             ).where(Users.id == id)
             result = await db.execute(user_query)
@@ -345,9 +336,7 @@ class UserManagement:
             raise http_exc
         except Exception as err:
             await db.rollback()
-            print(f"에러가 발생하였습니다: {err}")
-            import traceback
-            print(traceback.format_exc())
+            logger.error(f"에러가 발생하였습니다: {err}")
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
         
     @router.delete("/{id}/hard-delete")
@@ -401,7 +390,7 @@ class UserManagement:
         try:
             # 요청된 사용자 정보를 미리 로드
             user_query = select(Users).options(
-                joinedload(Users.parts),
+                joinedload(Users.part),
                 joinedload(Users.branch)
             ).where(Users.id == id)
             result = await db.execute(user_query)
@@ -429,9 +418,7 @@ class UserManagement:
             raise http_exc
         except Exception as err:
             await db.rollback()
-            print(f"에러가 발생하였습니다: {err}")
-            import traceback
-            print(traceback.format_exc())
+            logger.error(f"에러가 발생하였습니다: {err}")
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
 user_management = UserManagement()
