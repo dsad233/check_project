@@ -16,6 +16,7 @@ from app.schemas.user_management.salary_contract import SalaryContractDto
 from app.schemas.user_work_contract_schemas import WorkContractDto
 from app.service.template_service import TemplateService as ModusignTemplateService
 from app.service.document_service import DocumentService as ModusignDocumentService
+from app.service.user_management.part_time_contract_service import UserManagementPartTimeContractService
 from app.service.user_management.salary_contract_service import UserManagementSalaryContractService
 from app.service.user_management.service import UserManagementService
 from app.service.user_management.work_contract_history_service import UserManagementContractHistoryService

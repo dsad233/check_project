@@ -219,9 +219,11 @@ Parts.user_leaves = relationship("UserLeavesDays", back_populates="part", foreig
 Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys=[UserLeavesDays.branch_id])
 
 # users.part_timer
-Users.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="users", uselist=False)
-PartTimerWorkContract.users = relationship("Users", back_populates="part_timer_work_contracts")
+ContractInfo.part_timer_work_contract = relationship("PartTimerWorkContract", back_populates="contract_info", uselist=False)
+PartTimerWorkContract.contract_info = relationship("ContractInfo", back_populates="part_timer_work_contract", uselist=False)
 PartTimerWorkContract.part_timer_hourly_wages = relationship("PartTimerHourlyWage", back_populates="part_timer_work_contracts", uselist=False)
+PartTimerWorkContract.part_timer_working_times = relationship("PartTimerWorkingTime", back_populates="part_timer_work_contracts", uselist=False)
+PartTimerWorkingTime.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_working_times", uselist=False)
 PartTimerHourlyWage.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_hourly_wages", uselist=False)
 PartTimerAdditionalInfo.commutes = relationship("Commutes", back_populates="part_timer_additional_infos")
 Commutes.part_timer_additional_infos = relationship("PartTimerAdditionalInfo", back_populates="commutes")
