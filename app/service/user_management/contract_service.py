@@ -218,16 +218,14 @@ class UserManagementContractService:
             contract_status=ContractStatus.APPROVE
         )
 
-        if not result:
+        if (not result) or (await self.__check_all_signed(contract_info_id=contract.contract_info_id)):
             return False
 
         session = get_db()
-
-        if await self.__check_all_signed(contract_info_id=contract.contract_info_id):
-            await self.service.update_user_role(
-                user_id=contract.contract_info.user.id,
-                session=session
-            )
+        await self.service.update_user_role(
+            user_id=contract.contract_info.user.id,
+            session=session
+        )
 
     async def __check_all_signed(self, contract_info_id: int) -> bool:
         contracts = await self.contract_repository.find_contracts_by_contract_info_id(contract_info_id=contract_info_id)
