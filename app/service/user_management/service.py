@@ -422,7 +422,7 @@ class UserQueryService:
         if branch_id:
             query = query.filter(self.UserAlias.branch_id == branch_id)
         if part_id:
-            query = query.filter(self.UserAlias.parts.any(Parts.id == part_id))
+            query = query.filter(self.UserAlias.part_id == part_id)
 
         return query
 
