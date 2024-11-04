@@ -1,4 +1,6 @@
-from sqlalchemy import Column, Date, ForeignKey, Integer, Time, Enum
+from datetime import datetime
+
+from sqlalchemy import Column, Date, ForeignKey, Integer, Time, Enum, DateTime, String
 from app.core.database import Base
 import enum
 
@@ -18,9 +20,16 @@ class PartTimerWorkContract(Base):
     __tablename__ = "part_timer_work_contracts"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    # user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    contract_info_id = Column(Integer, ForeignKey("contract_info.id"), nullable=False)
     contract_start_date = Column(Date, nullable=False)
     contract_end_date = Column(Date, nullable=False)
+    daily_break_time = Column(Integer, nullable=False, default=30)
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+    deleted_yn = Column(String(1), default="N")  # Y인 경우 삭제 회원으로 분류
+
 
 class PartTimerWorkingTime(Base):
     __tablename__ = "part_timer_working_times"
