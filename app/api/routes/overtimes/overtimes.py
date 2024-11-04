@@ -511,8 +511,8 @@ async def get_overtimes_approved_list(
         if part_id:
             base_query = base_query.where(Parts.id == part_id)
         # 사용자 삭제 여부 검색 조건
-        if user_deleted_yn:
-            base_query = base_query.where(Users.deleted_yn == user_deleted_yn)
+        if user_deleted_yn == "Y":
+            base_query = base_query.where(Users.resignation_date.isnot(None))
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
@@ -527,7 +527,9 @@ async def get_overtimes_approved_list(
             "id": history.id,
             "user_id": user.id,
             "user_name": user.name,
+            "user_gender": user.gender,
             "user_phone_number": user.phone_number,
+            "user_resignation_date": user.resignation_date,
             "branch_id": branch.id,
             "branch_name": branch.name,
             "part_id": part.id,
