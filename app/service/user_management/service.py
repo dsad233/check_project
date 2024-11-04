@@ -411,7 +411,14 @@ class UserQueryService:
         branch_id: Optional[int],
         part_id: Optional[int]
     ):
-        """필터 조건 적용"""
+        """
+        필터 조건 적용
+        status: 사용자 상태 필터링
+        name: 사용자 이름 필터링
+        phone: 사용자 전화번호 필터링
+        branch_id: 사용자 부서 필터링
+        part_id: 사용자 파트 필터링
+        """
         if status:
             query = self._apply_status_filter(query, status)
         if name:
@@ -426,8 +433,15 @@ class UserQueryService:
         return query
 
     def _apply_status_filter(self, query, status: Optional[str]):
+        """
+        사용자 상태 필터링
+        전체: 삭제회원 제외한 전체 조회
+        재직자: 퇴사자, 휴직자,삭제회원을 제외한 재직자 조회
+        퇴사자: 삭제회원을 제외한 퇴사자 조회
+        휴직자: 삭제회원을 제외한 휴직자 조회
+        삭제회원: 삭제회원 조회
+        """
         if not status or status == "전체":
-            # 삭제회원 제외한 전체 조회
             return query.filter(self.UserAlias.deleted_yn == 'N')
             
         status_filters = {
@@ -458,9 +472,10 @@ class UserQueryService:
         )
 
     async def _get_total_count(self, db: AsyncSession, query) -> int:
-        """총 레코드 수 계산"""
+        """
+        총 레코드 수 계산
+        """
         try:
-            # 서브쿼리를 사용하여 필터링된 결과의 count를 계산
             subq = query.subquery()
             count_query = select(func.count()).select_from(subq)
             result = await db.execute(count_query)
