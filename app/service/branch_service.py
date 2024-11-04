@@ -168,7 +168,7 @@ async def get_branch_histories(*, session: AsyncSession, branch_id: int, request
 
 async def get_branches(*, session: AsyncSession, request: BaseSearchDto) -> BranchListResponse:
     """지점 조회"""
-    count = await branches_crud.count_all(session=session)
+    count = await branches_crud.count_non_deleted_all(session=session)
     if request.page == 0:
         branches = await branches_crud.find_all(session=session)
         pagination = PaginationDto(total_record=count, record_size=count)
@@ -211,7 +211,7 @@ async def create_branch(
 
 async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:
     """삭제된 지점 복구"""
-    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    branch = await branches_crud.find_deleted_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     return await branches_crud.revive(session=session, branch_id=branch_id)
