@@ -29,7 +29,7 @@ router = APIRouter()
 # db = async_session()
 
 
-# 현재 사용자의 ���차 일수 정보 조회
+# 현재 사용자의 연차 일수 정보 조회
 @router.get(
     "/leave-histories/current-user-leaves",
     response_model=UserLeavesDaysResponse,
@@ -65,10 +65,6 @@ async def get_current_user_leaves(
             )
             .order_by(UserLeavesDays.created_at.desc())
         )
-
-        # 실��� 쿼리 확인
-        print(f"쿼리: {str(leave_query)}")
-
         result = await db.execute(leave_query)
         leave_info = result.scalar_one_or_none()
 
@@ -474,6 +470,7 @@ async def get_approve_leave(
 
 
 @router.post("/leave-histories", summary="연차 신청", description="연차를 신청합니다.")
+@available_higher_than(Role.ADMIN)
 async def create_leave_history(
     context: Request,
     leave_create: LeaveHistoriesCreate,
@@ -562,7 +559,9 @@ async def create_leave_history(
     summary="연차 승인/반려",
     description="연차를 승인/반려합니다.",
 )
+@available_higher_than(Role.ADMIN)
 async def approve_leave(
+    context: Request,
     leave_approve: LeaveHistoriesApprove,
     leave_id: int = Path(description="승인/반려 결정을 할 연차 ID를 입력합니다."),
     branch_id: int = Path(description="현재 사용자가 포함된 지점 ID를 입력합니다."),
