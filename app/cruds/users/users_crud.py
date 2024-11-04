@@ -14,35 +14,61 @@ from app.schemas.users_schemas import PersonnelRecordUsersRequest
 from app.common.dto.search_dto import BaseSearchDto, NamePhoneSearchDto
 from app.exceptions.exceptions import BadRequestError
 
-
 logger = logging.getLogger(__name__)
 
-async def find_by_id(
-    *, session: AsyncSession, user_id: int
-) -> Optional[Users]:
 
+async def find_by_id(
+        *, session: AsyncSession, user_id: int
+) -> Optional[Users]:
     stmt = select(Users).where(Users.id == user_id).where(Users.deleted_yn == "N")
     result = await session.execute(stmt)
     user = result.scalar_one_or_none()
     return user
 
+
 async def find_by_email(
-    *, session: AsyncSession, email: str
+        *, session: AsyncSession, email: str
 ) -> Optional[Users]:
-    
     stmt = select(Users).where(Users.email == email).where(Users.deleted_yn == "N")
     result = await session.execute(stmt)
     user = result.scalar_one_or_none()
     return user
 
 
+async def find_all_by_branch_id(
+        *, session: AsyncSession, branch_id: int, request: BaseSearchDto
+) -> list[Users]:
+    stmt = select(Users).options(selectinload(Users.part)).where(Users.branch_id == branch_id).where(
+        Users.deleted_yn == "N").offset(request.offset).limit(request.record_size)
+    result = await session.execute(stmt)
+    users = result.scalars().all()
+    return users
+
+
 async def find_all_by_branch_id_and_role(
-    *, session: AsyncSession, branch_id: int, role: str
+        *, session: AsyncSession, branch_id: int, role: str
 ) -> Optional[list[Users]]:
     stmt = select(Users).where(Users.branch_id == branch_id).where(Users.role == role).where(Users.deleted_yn == "N")
     result = await session.execute(stmt)
     users = list(result.scalars().all())
     return users
+
+
+async def find_user_by_user_id_with_careers_and_educations(
+        *, session: AsyncSession, user_id: int
+) -> Optional[Users]:
+    stmt = (
+        select(Users)
+        .options(
+            joinedload(Users.educations),
+            joinedload(Users.careers)
+        )
+        .where(Users.id == user_id)
+        .where(Users.deleted_yn == "N")
+    )
+    result = await session.execute(stmt)
+    return result.unique().scalar_one_or_none()
+
 
 async def add_user(
         *, session: AsyncSession, user: Users
@@ -58,21 +84,22 @@ async def add_user(
         await session.rollback()
         raise e
 
+
 async def update_user(
         *, session: AsyncSession, old: Users, request: dict
 ) -> Users:
     for key, value in request.items():
         setattr(old, key, value)
     old.updated_at = datetime.now()
-    
+
     session.flush()
     session.refresh(old)
 
     return old
-    
+
 
 async def update_total_leave_days(
-    *, session: AsyncSession, user_id: int, count: int
+        *, session: AsyncSession, user_id: int, count: int
 ) -> bool:
     await session.execute(
         sa_update(Users)
@@ -87,7 +114,7 @@ async def update_total_leave_days(
 
 
 async def get_users_count(
-    *, session: AsyncSession, branch_id: int
+        *, session: AsyncSession, branch_id: int
 ) -> int:
     stmt = select(func.count()).where(Users.branch_id == branch_id).where(Users.deleted_yn == "N")
     result = await session.execute(stmt)
@@ -95,7 +122,7 @@ async def get_users_count(
 
 
 async def create_personnel_record_history(
-    *, session: AsyncSession, request: PersonnelRecordHistory
+        *, session: AsyncSession, request: PersonnelRecordHistory
 ) -> PersonnelRecordHistory:
     session.add(request)
     await session.flush()
@@ -104,7 +131,7 @@ async def create_personnel_record_history(
 
 
 async def get_personnel_record_histories(
-    *, session: AsyncSession, user_id: int, request: BaseSearchDto
+        *, session: AsyncSession, user_id: int, request: BaseSearchDto
 ) -> list[PersonnelRecordHistory]:
     stmt = (
         select(PersonnelRecordHistory)
@@ -123,15 +150,16 @@ async def get_personnel_record_histories(
 
 
 async def get_personnel_record_histories_count(
-    *, session: AsyncSession, user_id: int
+        *, session: AsyncSession, user_id: int
 ) -> int:
-    stmt = select(func.count()).where(PersonnelRecordHistory.user_id == user_id).where(PersonnelRecordHistory.deleted_yn == "N")
+    stmt = select(func.count()).where(PersonnelRecordHistory.user_id == user_id).where(
+        PersonnelRecordHistory.deleted_yn == "N")
     result = await session.execute(stmt)
     return result.scalar_one()
 
 
 async def get_personnel_record_history(
-    *, session: AsyncSession, id: int
+        *, session: AsyncSession, id: int
 ) -> PersonnelRecordHistory:
     stmt = (
         select(PersonnelRecordHistory)
@@ -148,7 +176,7 @@ async def get_personnel_record_history(
 
 
 async def update_personnel_record_history(
-    *, session: AsyncSession, old: PersonnelRecordHistory, request: dict
+        *, session: AsyncSession, old: PersonnelRecordHistory, request: dict
 ) -> bool:
     for key, value in request.items():
         setattr(old, key, value)
@@ -157,8 +185,9 @@ async def update_personnel_record_history(
 
     return True
 
+
 async def delete_personnel_record_history(
-    *, session: AsyncSession, id: int
+        *, session: AsyncSession, id: int
 ) -> bool:
     await session.execute(
         sa_update(PersonnelRecordHistory).where(PersonnelRecordHistory.id == id).values(deleted_yn="Y")
@@ -168,9 +197,8 @@ async def delete_personnel_record_history(
 
 
 async def get_personnel_record_users(
-    *, session: AsyncSession, request: PersonnelRecordUsersRequest
+        *, session: AsyncSession, request: PersonnelRecordUsersRequest
 ) -> tuple[list[Users], int]:
-    
     base_query = (
         select(Users)
         .join(Users.branch)
@@ -203,35 +231,6 @@ async def get_personnel_record_users(
     total_count = await session.scalar(count_query)
 
     # 결과 조회
-    result = await session.execute(
-        base_query
-        .order_by(Users.created_at.desc())
-        .offset(request.offset)
-        .limit(request.record_size)
-    )
-
-    return result.unique().scalars().all(), total_count
-
-
-async def get_branch_users(
-    *, session: AsyncSession, request: BaseSearchDto, branch_id: int
-) -> tuple[list[Users], int]:
-    base_query = (
-        select(Users)
-        .join(Users.part)
-        .options(
-            joinedload(Users.part),
-        )
-        .where(
-            Users.deleted_yn == "N",
-            Parts.deleted_yn == "N",
-            Users.branch_id == branch_id
-        )
-    )
-
-    count_query = select(func.count()).select_from(base_query.subquery())
-    total_count = await session.scalar(count_query)
-
     result = await session.execute(
         base_query
         .order_by(Users.created_at.desc())

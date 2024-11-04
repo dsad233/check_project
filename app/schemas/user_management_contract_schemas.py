@@ -4,6 +4,7 @@ from pydantic import BaseModel
 
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_model import Users
+from app.schemas.user_management.part_timers_contract_schemas import RequestCreatePartTimeContract
 from app.schemas.user_management.salary_contract import RequestCreateSalaryContract
 from app.schemas.user_work_contract_schemas import RequestCreateWorkContract
 
@@ -40,8 +41,8 @@ class RequestPermanentContract(BaseRequestContract):
     work_contract: RequestCreateWorkContract
     salary_contract: RequestCreateSalaryContract
 
-# class RequestTemporaryContract(BaseRequestContract):
-#     part_time_contract: RequestCreatePartTimeContract
+class RequestTemporaryContract(BaseRequestContract):
+    part_time_contract: RequestCreatePartTimeContract
 
 # ==================== Response ====================
 

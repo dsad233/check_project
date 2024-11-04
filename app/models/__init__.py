@@ -3,8 +3,11 @@ from sqlalchemy.orm import relationship
 from sqlalchemy import desc
 from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
 from app.models.commutes.commutes_model import Commutes
+from app.models.users.career_model import Career
+from app.models.users.education_model import Education
 from app.models.users.overtimes_model import Overtimes, OverTime_History
 from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerAdditionalInfo, PartTimerHourlyWage, PartTimerWorkContract, PartTimerWorkingTime
+from app.models.users.time_off_model import TimeOff
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_document_model import Document, DocumentSendHistory
 from app.models.users.users_work_contract_model import WorkContract, FixedRestDay, WorkContractBreakTime
@@ -219,9 +222,11 @@ Parts.user_leaves = relationship("UserLeavesDays", back_populates="part", foreig
 Branches.user_leaves = relationship("UserLeavesDays", back_populates="branch", foreign_keys=[UserLeavesDays.branch_id])
 
 # users.part_timer
-Users.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="users", uselist=False)
-PartTimerWorkContract.users = relationship("Users", back_populates="part_timer_work_contracts")
+ContractInfo.part_timer_work_contract = relationship("PartTimerWorkContract", back_populates="contract_info", uselist=False)
+PartTimerWorkContract.contract_info = relationship("ContractInfo", back_populates="part_timer_work_contract", uselist=False)
 PartTimerWorkContract.part_timer_hourly_wages = relationship("PartTimerHourlyWage", back_populates="part_timer_work_contracts", uselist=False)
+PartTimerWorkContract.part_timer_working_times = relationship("PartTimerWorkingTime", back_populates="part_timer_work_contracts", uselist=False)
+PartTimerWorkingTime.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_working_times", uselist=False)
 PartTimerHourlyWage.part_timer_work_contracts = relationship("PartTimerWorkContract", back_populates="part_timer_hourly_wages", uselist=False)
 PartTimerAdditionalInfo.commutes = relationship("Commutes", back_populates="part_timer_additional_infos")
 Commutes.part_timer_additional_infos = relationship("PartTimerAdditionalInfo", back_populates="commutes")
@@ -279,3 +284,12 @@ PersonnelRecordHistory.created_by_user = relationship(
 )
 
 PersonnelRecordHistory.personnel_record_category = relationship("PersonnelRecordCategory", back_populates="personnel_record_histories")
+
+Users.careers = relationship("Career", back_populates="user")
+Career.user = relationship("Users", back_populates="careers")
+
+Users.educations = relationship("Education", back_populates="user")
+Education.user = relationship("Users", back_populates="educations")
+
+Users.time_offs = relationship("TimeOff", back_populates="user")
+TimeOff.user = relationship("Users", back_populates="time_offs")

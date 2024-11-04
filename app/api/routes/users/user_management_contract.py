@@ -8,7 +8,7 @@ from app.enums.user_management import ContractType
 from app.middleware.tokenVerify import get_current_user
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
-from app.schemas.user_management_contract_schemas import RequestPermanentContract
+from app.schemas.user_management_contract_schemas import RequestPermanentContract, RequestTemporaryContract
 from app.service.user_management.contract_service import UserManagementContractService
 
 router = APIRouter()
@@ -50,25 +50,25 @@ class UserManagementContract:
             message="성공적으로 정규직 계약서를 생성했습니다."
         )
 
-    # @router.post("/temporary", response_model=ResponseDTO)
-    # async def add_temporary_contract(
-    #         request_temporary_contract: RequestTemporaryContract,
-    #         contract_service: UserManagementContractService = Depends(get_user_management_contract_service),
-    #         current_user: Users = Depends(get_current_user),
-    # ):
-    #     await contract_service.register_temporary_contract(
-    #         contract_info_id=request_temporary_contract.contract_info_id,
-    #         part_time_contract=request_temporary_contract.part_time_contract.to_domain(),
-    #         note=request_temporary_contract.note,
-    #         change_reason=request_temporary_contract.change_reason
-    #     )
-    #
-    #     return ResponseDTO(
-    #         status="SUCCESS",
-    #         message="성공적으로 계약직 계약서를 생성했습니다."
-    #     )
+    @router.post("/temporary", response_model=ResponseDTO)
+    async def add_temporary_contract(
+            request_temporary_contract: RequestTemporaryContract,
+            contract_service: UserManagementContractService = Depends(get_user_management_contract_service),
+            current_user: Users = Depends(get_current_user),
+    ):
+        await contract_service.register_temporary_contract(
+            contract_info_id=request_temporary_contract.contract_info_id,
+            part_time_contract=request_temporary_contract.part_time_contract.to_domain(),
+            note=request_temporary_contract.note,
+            change_reason=request_temporary_contract.change_reason
+        )
 
-    @router.patch("")
+        return ResponseDTO(
+            status="SUCCESS",
+            message="성공적으로 계약직 계약서를 생성했습니다."
+        )
+
+    # @router.patch("")
 
 
     @router.post("/request-contract")
