@@ -467,22 +467,23 @@ async def get_overtimes_approved_list(
     phone_number: Optional[str] = None, 
     branch_id: Optional[int] = None, 
     part_id: Optional[int] = None,
-    is_deleted: Optional[str] = None,
+    user_deleted_yn: Optional[str] = None,
     page: int = 1,
     size: int = 10,
     db: AsyncSession = Depends(get_db)
     ):
     try:
         if date is None:
+            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
-            # weekday()가 0(월요일)~6(일요일)을 반환하므로, 
-            # 일요일부터 시작하려면 현재 요일에 1을 더한 후 7로 나눈 나머지를 사용
-            current_weekday = (date_obj.weekday() + 1) % 7
+            current_weekday = date_obj.weekday()
+            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
             date_start_day = date_obj - timedelta(days=current_weekday)
+            # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
         else:
             date_obj = date
-            current_weekday = (date_obj.weekday() + 1) % 7
+            current_weekday = date_obj.weekday()
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
@@ -494,11 +495,9 @@ async def get_overtimes_approved_list(
             Parts, Users.part_id == Parts.id
         ).where(
             OverTime_History.deleted_at == "N",
-            Users.deleted_yn == "N",
-            OverTime_History.created_at >= date_start_day,
-            OverTime_History.created_at <= date_end_day
+            Users.deleted_yn == "N"
         )
-  
+
         # 이름 검색 조건
         if name:
             base_query = base_query.where(Users.name.like(f"%{name}%"))
@@ -512,8 +511,8 @@ async def get_overtimes_approved_list(
         if part_id:
             base_query = base_query.where(Parts.id == part_id)
         # 사용자 삭제 여부 검색 조건
-        if is_deleted == "Y":
-            base_query = base_query.where(Users.resignation_date != None)
+        if user_deleted_yn:
+            base_query = base_query.where(Users.deleted_yn == user_deleted_yn)
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
@@ -523,13 +522,11 @@ async def get_overtimes_approved_list(
             .limit(size)
         )
         records = result.all()
-   
+
         formatted_data = [{
             "id": history.id,
             "user_id": user.id,
             "user_name": user.name,
-            "user_hire_date": user.hire_date,
-            "user_resignation_date": user.resignation_date,
             "user_phone_number": user.phone_number,
             "branch_id": branch.id,
             "branch_name": branch.name,
@@ -561,8 +558,8 @@ async def get_overtimes_approved_list(
             },
             "data": formatted_data,
         }
-        
-        
+
+
     except HTTPException as http_err:
         await db.rollback()
         raise http_err
