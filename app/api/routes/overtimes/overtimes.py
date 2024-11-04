@@ -38,20 +38,18 @@ async def create_overtime(
         existing_overtime = await db.execute(
             select(Overtimes)
             .where(
-                or_(
-                    Overtimes.status == Status.PENDING,
-                    Overtimes.status == Status.APPROVED
-                ),
+                Overtimes.status.in_([Status.PENDING, Status.APPROVED]),
                 Overtimes.applicant_id == current_user_id,
                 Overtimes.application_date == datetime.now(UTC).date(),
                 Overtimes.deleted_yn == "N"
             )
+            .order_by(Overtimes.created_at.desc())
         )
 
         result_existing_overtime = existing_overtime.first()
 
-        if  result_existing_overtime is not None:
-            raise HTTPException(status_code=400, detail=f"이미 오늘 {overtime.overtime_hours}분 초과근무 신청을 했습니다.")
+        if result_existing_overtime is not None:
+            raise HTTPException(status_code=400, detail=f"이미 처리중이거나 승인된 초과근무 신청이 있습니다.")
             
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -198,7 +196,7 @@ async def approve_overtime(
             if result_part is None:
                 raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
             
-            # 기존 횟수에 대한 오버타임 조회
+            # 기존 횟수에 대한 오버타�� 조회
             find_overtime_history = await db.execute(select(OverTime_History).where(OverTime_History.user_id == result_user.id, OverTime_History.deleted_at == "N"))
             result_overtime_history = find_overtime_history.scalar_one_or_none()
 

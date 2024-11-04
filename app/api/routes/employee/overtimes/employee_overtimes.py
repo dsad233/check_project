@@ -1,9 +1,10 @@
-from datetime import datetime, date, timedelta
+from datetime import UTC, datetime, date, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
+from app.enums.users import Status
 from app.middleware.tokenVerify import get_current_user, get_current_user_id
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
@@ -20,33 +21,45 @@ async def create_employee_overtime(
         current_user: Users = Depends(get_current_user),
         db: AsyncSession = Depends(get_db)
 ):
-    try:
-        # 본인의 branch_id 확인
-        if not current_user.branch_id:
-            raise HTTPException(
-                status_code=400,
-                detail="소속된 지점이 없습니다."
+    try:        
+        existing_overtime = await db.execute(
+            select(Overtimes)
+            .where(
+                Overtimes.status.in_([Status.PENDING, Status.APPROVED]),
+                Overtimes.applicant_id == current_user.id,
+                Overtimes.application_date == datetime.now(UTC).date(),
+                Overtimes.deleted_yn == "N"
             )
+            .order_by(Overtimes.created_at.desc())
+        )
 
+        result_existing_overtime = existing_overtime.first()
+
+        if result_existing_overtime is not None:
+            raise HTTPException(status_code=400, detail=f"이미 처리중이거나 승인된 초과근무 신청이 있습니다.")
+            
         new_overtime = Overtimes(
             applicant_id=current_user.id,
-            application_date=overtime.application_date,
+            application_date = overtime.application_date,
             overtime_hours=overtime.overtime_hours,
             application_memo=overtime.application_memo,
         )
 
         db.add(new_overtime)
         await db.commit()
-
+        
         return {
-            "message": "초과 근무 신청이 완료되었습니다.",
+            "message": "초과 근무 기록이 성공적으로 생성되었습니다.",
         }
+        
     except HTTPException as http_err:
         await db.rollback()
         raise http_err
     except Exception as err:
         await db.rollback()
-        raise HTTPException(status_code=500, detail="초과 근무 신청 중 오류가 발생했습니다.")
+        print("에러가 발생하였습니다.")
+        print(err)
+        raise HTTPException(status_code=500, detail=f"서버 오류가 발생했습니다. Error : {str(err)}")
 
 
 @router.get("", summary="사원용 - 본인 초과근무 내역 조회")
