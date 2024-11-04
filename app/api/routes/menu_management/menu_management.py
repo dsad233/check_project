@@ -23,11 +23,34 @@ class PartResponse(BaseModel):
 class ManageablePartsResponse(BaseModel):
     parts: List[PartResponse]
 
+#######
+
+class MenuPermissionInfo(BaseModel):
+    menu_name: str
+    is_permitted: bool
+
+class PartMenuPermissions(BaseModel):
+    part_id: int
+    part_name: str
+    menu_permissions: List[MenuPermissionInfo]
+
+class AdminMenuPermissionsResponse(BaseModel):
+    menu_permissions: List[MenuPermissionInfo]
+
+class PartAdminMenuPermissionsResponse(BaseModel):
+    permissions: List[PartMenuPermissions]
+
+
+class AdminNoPermissionsNeededResponse(BaseModel):
+    message: str
+
+#######
+
+
 class MenuPermissionUpdate(BaseModel):
     part_id: int
     menu_name: str
     is_permitted: bool
-
 
 class UpdateMenuPermissionsRequest(BaseModel):
     user_id: int
@@ -89,6 +112,120 @@ async def get_manageable_parts(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.get(
+    "",
+    summary="관리자의 메뉴 권한 정보 조회"
+)
+async def get_user_menu_permissions(
+    current_user: Users = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    관리자의 메뉴 권한 정보를 조회합니다.
+    - MSO/최고관리자: 모든 권한을 가지고 있으므로 별도 권한 정보 불필요
+    - 통합 관리자: 본인의 세부 권한 정보
+    - 파트 관리자: 자신이 속한 파트의 세부 권한 정보
+    """
+    try:
+        if current_user.role in [Role.MSO, Role.SUPER_ADMIN]:
+            return AdminNoPermissionsNeededResponse(
+                message="MSO는 모든 지점, 최고관리자는 본인 지점의 모든 권한을 가지고 있습니다."
+            )
+
+        elif current_user.role == Role.INTEGRATED_ADMIN:
+            # 통합 관리자: 본인의 세부 권한 정보 조회
+            menu_perms = await db.execute(
+                select(user_menus).where(
+                    user_menus.c.user_id == current_user.id
+                )
+            )
+            menu_perms = menu_perms.fetchall()
+
+            all_menu_permissions = []
+            for menu in MenuPermissions:
+                existing_perm = next(
+                    (p for p in menu_perms if p.menu_name == menu),
+                    None
+                )
+                all_menu_permissions.append(
+                    MenuPermissionInfo(
+                        menu_name=menu.value,
+                        is_permitted=existing_perm.is_permitted if existing_perm else False
+                    )
+                )
+
+            return AdminMenuPermissionsResponse(
+                menu_permissions=all_menu_permissions
+            )
+
+        elif current_user.role == Role.ADMIN:
+            # 파트 관리자: user_parts 테이블에서 관리 가능한 파트 조회
+            manageable_parts_query = select(Parts).join(
+                user_parts,
+                and_(
+                    user_parts.c.part_id == Parts.id,
+                    user_parts.c.user_id == current_user.id
+                )
+            ).where(
+                and_(
+                    Parts.branch_id == current_user.branch_id,
+                    Parts.deleted_yn == "N"
+                )
+            )
+
+            parts = await db.execute(manageable_parts_query)
+            parts = parts.scalars().all()
+
+            if not parts:
+                raise HTTPException(
+                    status_code=404,
+                    detail="관리 가능한 파트가 없습니다."
+                )
+
+            permissions = []
+            for part in parts:
+                menu_perms = await db.execute(
+                    select(user_menus).where(
+                        and_(
+                            user_menus.c.user_id == current_user.id,
+                            user_menus.c.part_id == part.id
+                        )
+                    )
+                )
+                menu_perms = menu_perms.fetchall()
+
+                all_menu_permissions = []
+                for menu in MenuPermissions:
+                    existing_perm = next(
+                        (p for p in menu_perms if p.menu_name == menu),
+                        None
+                    )
+                    all_menu_permissions.append(
+                        MenuPermissionInfo(
+                            menu_name=menu.value,
+                            is_permitted=existing_perm.is_permitted if existing_perm else False
+                        )
+                    )
+
+                permissions.append(
+                    PartMenuPermissions(
+                        part_id=part.id,
+                        part_name=part.name,
+                        menu_permissions=all_menu_permissions
+                    )
+                )
+
+            return PartAdminMenuPermissionsResponse(
+                permissions=permissions
+            )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 
 @router.post("/update")
 @available_higher_than(Role.INTEGRATED_ADMIN)
