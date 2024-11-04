@@ -8,7 +8,7 @@ from app.enums.user_management import ContractType
 from app.middleware.tokenVerify import get_current_user
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
-from app.schemas.user_management_contract_schemas import RequestPermanentContract
+from app.schemas.user_management_contract_schemas import RequestPermanentContract, RequestTemporaryContract
 from app.service.user_management.contract_service import UserManagementContractService
 
 router = APIRouter()
