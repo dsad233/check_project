@@ -29,6 +29,11 @@ class BaseAppSettings(BaseSettings):
     MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
     MODUSIGN_USER_EMAIL: str  
     MODUSIGN_WEBHOOK_URL: str = Field(..., env="MODUSIGN_WEBHOOK_URL")
+    SLACK_HOOK : str
+    USERNAME : str
+    CHANNEL : str
+    API_URL : str 
+    
     
     @property
     def MODUSIGN_HEADERS(self) -> dict:

@@ -144,7 +144,7 @@ employee_router.include_router(
 
 employee_router.include_router(
     employee_leave_categories_router,
-    prefix="/my-branch/leave-categories"
+    prefix="/my-branches/leave-categories"
 )
 
 employee_router.include_router(employee_branches_router)
