@@ -29,6 +29,18 @@ class TimeOffGetResponseDto(BaseModel):
     class Config:
         from_attributes = True
 
+class TimeOffCreateRequestDto(BaseModel):
+    user_id: int
+    time_off_type: TimeOffType
+    start_date: datetime
+    end_date: datetime
+    description: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
+
 
 class TimeOffListDto(BaseModel):
     id: int
