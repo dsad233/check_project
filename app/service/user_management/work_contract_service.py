@@ -25,3 +25,13 @@ class UserManagementWorkContractService:
         return created_work_contract_id
 
 
+    async def partial_update_work_contract(
+            self,
+            work_contract_id: int,
+            update_params: dict,
+    ) -> WorkContractDto:
+        updated_work_contract = await self.work_contract_repository.partial_update_work_contract(
+            contract_id=work_contract_id,
+            update_params=update_params,
+        )
+        return updated_work_contract

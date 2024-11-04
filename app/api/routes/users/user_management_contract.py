@@ -1,14 +1,14 @@
 import asyncio
 
 from fastapi import APIRouter, Depends
+from fastapi.params import Annotated, Path, Body
 
 from app.common.dto.response_dto import ResponseDTO
 from app.dependencies.user_management import get_user_management_contract_service
-from app.enums.user_management import ContractType
 from app.middleware.tokenVerify import get_current_user
-from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
-from app.schemas.user_management_contract_schemas import RequestPermanentContract, RequestTemporaryContract
+from app.schemas.user_management_contract_schemas import RequestPermanentContract, RequestTemporaryContract, \
+    RequestUpdateContract
 from app.service.user_management.contract_service import UserManagementContractService
 
 router = APIRouter()
@@ -16,26 +16,11 @@ router = APIRouter()
 class UserManagementContract:
     router = router
 
-
-    @router.get("/{user_id}/history")
-    async def get_contract_histories(
-            user_id: int,
-            contract_service: UserManagementContractService = Depends(get_user_management_contract_service),
-            current_user: Users = Depends(get_current_user),
-    ):
-        contract_histories = await contract_service.get_contract_histories_by_user_id(user_id=user_id)
-
-        return ResponseDTO(
-            status="SUCCESS",
-            message="성공적으로 계약서 이력을 가져왔습니다.",
-            data=contract_histories
-        )
-
     @router.post("/permanent", response_model=ResponseDTO)
     async def add_permanent_contract(
-            request_permanent_contract: RequestPermanentContract,
-            contract_service: UserManagementContractService = Depends(get_user_management_contract_service),
-            current_user: Users = Depends(get_current_user),
+            request_permanent_contract: Annotated[RequestPermanentContract, Body(..., title="정규직 계약서 생성 요청")],
+            contract_service: Annotated[UserManagementContractService, Depends(get_user_management_contract_service)],
+            current_user: Annotated[Users, Depends(get_current_user)],
     ):
         await contract_service.register_permanent_contract(
             contract_info_id=request_permanent_contract.contract_info_id,
@@ -50,11 +35,12 @@ class UserManagementContract:
             message="성공적으로 정규직 계약서를 생성했습니다."
         )
 
+
     @router.post("/temporary", response_model=ResponseDTO)
     async def add_temporary_contract(
-            request_temporary_contract: RequestTemporaryContract,
-            contract_service: UserManagementContractService = Depends(get_user_management_contract_service),
-            current_user: Users = Depends(get_current_user),
+            request_temporary_contract: Annotated[RequestTemporaryContract, Body(..., title="임시 계약서 생성 요청")],
+            contract_service: Annotated[UserManagementContractService, Depends(get_user_management_contract_service)],
+            current_user: Annotated[Users, Depends(get_current_user)],
     ):
         await contract_service.register_temporary_contract(
             contract_info_id=request_temporary_contract.contract_info_id,
@@ -68,28 +54,50 @@ class UserManagementContract:
             message="성공적으로 계약직 계약서를 생성했습니다."
         )
 
-    # @router.patch("")
 
-
-    @router.post("/request-contract")
-    async def request_contract(
-            user_id: int,
-            work_contract_history_id: int,
-            contract_service: UserManagementContractService = Depends(get_user_management_contract_service),
-            current_user: Users = Depends(get_current_user),
+    @router.get("/{user_id}/history")
+    async def get_contract_histories(
+            user_id: Annotated[int, Path(..., title="사용자 ID", gt=0)],
+            contract_service: Annotated[UserManagementContractService, Depends(get_user_management_contract_service)],
+            current_user: Annotated[Users, Depends(get_current_user)],
     ):
-        await contract_service.create_contract2(
-            user_id=user_id,
-            manager_id=current_user.id,
-            work_contract_history_id=work_contract_history_id,
-        )
+        contract_histories = await contract_service.get_contract_histories_by_user_id(user_id=user_id)
 
         return ResponseDTO(
             status="SUCCESS",
-            message="성공적으로 계약서를 요청했습니다."
+            message="성공적으로 계약서 이력을 가져왔습니다.",
+            data=contract_histories
         )
 
 
+    @router.post("/{user_id}/approve/{contract_info_id}")
+    async def approve_contract(
+            user_id: Annotated[int, Path(..., title="사용자 ID", gt=0)],
+            contract_service: Annotated[UserManagementContractService, Depends(get_user_management_contract_service)],
+            current_user: Annotated[Users, Depends(get_current_user)],
+    ):
+        raise NotImplementedError("아직 구현되지 않았습니다.")
+
+
+
+    # @router.post("/{user_id}/request-contract")
+    # async def request_contract(
+    #         user_id: Annotated[int, Path(..., title="사용자 ID", gt=0)],
+    #         work_contract_history_id: Annotated[int, Body(..., title="근로계약 이력 ID", gt=0)],
+    #         contract_service: Annotated[UserManagementContractService, Depends(get_user_management_contract_service)],
+    #         current_user: Annotated[Users, Depends(get_current_user)],
+    # ):
+    #     ...
+    #     await contract_service.create_contract2(
+    #         user_id=user_id,
+    #         manager_id=current_user.id,
+    #         work_contract_history_id=work_contract_history_id,
+    #     )
+    #
+    #     return ResponseDTO(
+    #         status="SUCCESS",
+    #         message="성공적으로 계약서를 요청했습니다."
+    #     )
 
 
     # @router.get("/send_mail/{user_id}", response_model=ResponseDTO[ResponseSendMailContract])

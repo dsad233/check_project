@@ -67,6 +67,31 @@ class RequestCreatePartTimeContract(BaseModel):
 
         return part_time_contract
 
+class RequestUpdateWorkingTimeDto(BaseModel):
+    day_of_week: Optional[int] = Field(None, description="요일 (0: 일요일, 6: 토요일)", ge=0, le=6)
+    work_start_time: Optional[time] = Field(None, description="작업 시작 시간")
+    work_end_time: Optional[time] = Field(None, description="작업 종료 시간")
+
+class RequestUpdateHourlyWageDto(BaseModel):
+    calculate_start_time: Optional[time] = Field(None, description="시급 계산 시작 시간")
+    calculate_end_time: Optional[time] = Field(None, description="시급 계산 종료 시간")
+    hourly_wage: Optional[int] = Field(None, description="시급", gt=0)
+
+class RequestUpdateAdditionalInfoDto(BaseModel):
+    work_type: Optional[WorkTypeEnum] = Field(None, description="작업 유형")
+    rest_minutes: Optional[int] = Field(default=30, description="휴식 시간(분)", ge=0)
+    work_set_start_time: Optional[time] = Field(None, description="설정된 작업 시작 시간")
+    work_set_end_time: Optional[time] = Field(None, description="설정된 작업 종료 시간")
+
+class RequestUpdatePartTimeContract(BaseModel):
+    contract_start_date: Optional[date] = Field(None, description="계약 시작 날짜")
+    contract_end_date: Optional[date] = Field(None, description="계약 종료 날짜")
+    daily_break_time: Optional[int] = Field(None, description="일일 휴식 시간(분)", ge=30)
+    working_times: Optional[List[RequestUpdateWorkingTimeDto]] = Field(None, description="작업 시간 목록")
+    hourly_wages: Optional[List[RequestUpdateHourlyWageDto]] = Field(None, description="시급 정보 목록")
+    additional_info: Optional[RequestUpdateAdditionalInfoDto] = Field(None, description="추가 정보")
+
+
 class PartTimerWorkContractDto(BaseModel):
     contract_start_date: date = Field(..., description="계약 시작 날짜")
     contract_end_date: date = Field(..., description="계약 종료 날짜")

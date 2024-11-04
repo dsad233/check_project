@@ -15,6 +15,7 @@ class RequestCreateSalaryContract(BaseModel):
     base_salary: int
     base_hour_per_week: int
     base_hour_per_day: int
+    weekly_rest_hours: int
     fixed_overtime_allowance: int
     fixed_overtime_hours: int
     annual_leave_allowance: Optional[int]
@@ -36,6 +37,7 @@ class RequestCreateSalaryContract(BaseModel):
             base_salary=self.base_salary,
             base_hour_per_week=self.base_hour_per_week,
             base_hour_per_day=self.base_hour_per_day,
+            weekly_rest_hours=self.weekly_rest_hours,
             fixed_overtime_allowance=self.fixed_overtime_allowance,
             fixed_overtime_hours=self.fixed_overtime_hours,
             annual_leave_allowance=self.annual_leave_allowance,
@@ -49,7 +51,7 @@ class RequestCreateSalaryContract(BaseModel):
             vehicle_maintenance_allowance=self.vehicle_maintenance_allowance
         )
 
-class RequestUpdateSalaryContractDto(BaseModel):
+class RequestUpdateSalaryContract(BaseModel):
     salary_contract_id: int = Field(..., description="급여 계약 ID")
     contract_start_date: Optional[str] = Field(default=None, description="계약 시작일")
     contract_end_date: Optional[str] = Field(default=None, description="계약 종료일")
@@ -58,6 +60,7 @@ class RequestUpdateSalaryContractDto(BaseModel):
     base_salary: Optional[int] = Field(default=None, description="기본급")
     base_hour_per_week: Optional[int] = Field(default=None, description="기본근무시간 (일주일)")
     base_hour_per_day: Optional[int] = Field(default=None, description="기본근무시간 (하루)")
+    weekly_rest_hours: Optional[int] = Field(default=None, description="주휴시간")
     fixed_overtime_allowance: Optional[int] = Field(default=None, description="고정연장근로수당")
     fixed_overtime_hours: Optional[int] = Field(default=None, description="고정연장근로시간")
     annual_leave_allowance: Optional[int] = Field(default=None, description="연차수당")
@@ -79,6 +82,7 @@ class SalaryContractDto(BaseModel):
     base_salary: int = Field(..., description="기본급")
     base_hour_per_week: int = Field(..., description="기본근무시간 (일주일)")
     base_hour_per_day: int = Field(..., description="기본근무시간 (하루)")
+    weekly_rest_hours: Optional[int] = Field(default=None, description="주휴시간")
     fixed_overtime_allowance: int = Field(..., description="고정연장근로수당")
     fixed_overtime_hours: int = Field(..., description="고정연장근로시간")
     annual_leave_allowance: int = Field(..., description="연차수당")
@@ -101,6 +105,7 @@ class SalaryContractDto(BaseModel):
             base_salary=salary_contract.base_salary,
             base_hour_per_week=salary_contract.base_hour_per_week,
             base_hour_per_day=salary_contract.base_hour_per_day,
+            weekly_rest_hours=salary_contract.weekly_rest_hours,
             fixed_overtime_allowance=salary_contract.fixed_overtime_allowance,
             fixed_overtime_hours=salary_contract.fixed_overtime_hours,
             annual_leave_allowance=salary_contract.annual_leave_allowance,

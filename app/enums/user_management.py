@@ -22,6 +22,7 @@ class ContractStatus(str, Enum):
     계약서 상태 구성용 영문 Enum
     """
 
+
     PENDING = "PENDING"
     APPROVE = "APPROVE"
     REJECT = "REJECT"

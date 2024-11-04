@@ -3,7 +3,7 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import select, insert, text
+from sqlalchemy import select, insert, text, update
 from sqlalchemy.orm import selectinload, joinedload
 
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
@@ -32,12 +32,13 @@ class UserManagementContractRepository:
         return result.scalar_one_or_none()
 
 
-    async def find_contract_by_contract_id(self, user_id: int, contract_id: int) -> Optional[Contract]:
+    async def find_contract_by_contract_id(self, contract_id: int) -> Optional[Contract]:
         stmt = (
             select(Contract)
-            .where(Contract.id == contract_id)
-            .where(Contract.user_id == user_id)
-            .where(Contract.deleted_yn == "N")
+            .filter(
+                Contract.id == contract_id,
+                Contract.deleted_yn == "N"
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -147,5 +148,19 @@ class UserManagementContractRepository:
             await self.session.commit()
         except Exception as e:
             logger.error(f"Failed to hard delete contract: {e}")
+            await self.session.rollback()
+            raise e
+
+    async def update_contract(self, contract_id: int, update_params: dict):
+        try:
+            stmt = (
+                update(Contract)
+                .where(Contract.id == contract_id)
+                .values(update_params)
+            )
+            await self.session.execute(stmt)
+            await self.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to update contract: {e}")
             await self.session.rollback()
             raise e

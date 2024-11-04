@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel
 
@@ -61,29 +61,32 @@ class RequestCreateWorkContract(BaseModel):
             ]
         )
 
-class RequestPatchWorkContract(BaseModel):
-    contract_start_date: Optional[str] = None
-    contract_end_date: Optional[str] = None
-    is_fixed_rest_day: Optional[bool] = None
-    fixed_rest_days: Optional[list[RequestWorkContractFixedRestDay]] = None
-    weekly_work_start_time: Optional[str] = None
-    weekly_work_end_time: Optional[str] = None
-    weekly_is_rest: Optional[bool] = None
-    saturday_work_start_time: Optional[str] = None
-    saturday_work_end_time: Optional[str] = None
-    saturday_is_rest: Optional[bool] = None
-    sunday_work_start_time: Optional[str] = None
-    sunday_work_end_time: Optional[str] = None
-    sunday_is_rest: Optional[bool] = None
-    break_start_time: Optional[str] = None
-    break_end_time: Optional[str] = None
+class RequestUpdateWorkContractFixedRestDay(BaseModel):
+    rest_day: Optional[str]
+    every_over_week: Optional[bool]
 
-    def to_update_dict(self) -> dict:
-        return {
-            key: value
-            for key, value in self.model_dump().items()
-            if value is not None
-        }
+class RequestUpdateWorkContractBreakTime(BaseModel):
+    break_start_time: Optional[str]
+    break_end_time: Optional[str]
+
+class RequestUpdateWorkContract(BaseModel):
+    contract_start_date: Optional[str]
+    contract_end_date: Optional[str]
+
+    is_fixed_rest_day: Optional[bool]
+    fixed_rest_days: Optional[List[RequestUpdateWorkContractFixedRestDay]]
+
+    weekly_work_start_time: Optional[str]
+    weekly_work_end_time: Optional[str]
+
+    saturday_work_start_time: Optional[str]
+    saturday_work_end_time: Optional[str]
+
+    sunday_work_start_time: Optional[str]
+    sunday_work_end_time: Optional[str]
+
+    break_times: Optional[List[RequestUpdateWorkContractBreakTime]]
+
 
 # ==================== Response ====================
 

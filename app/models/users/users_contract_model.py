@@ -3,31 +3,10 @@ from sqlalchemy import Column, Integer, ForeignKey, DateTime, Date, String, Enum
 from app.core.database import Base
 from app.enums.user_management import Status as SendMailStatus, ContractStatus, ContractType
 
-"""
-
 class Contract(Base):
     __tablename__ = "contract"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
-    contract_info_id = Column(Integer, ForeignKey("contract_info.id"), nullable=False)
-
-    contract_type = Column(Enum(*[e.value for e in ContractType], name="contract_type"), nullable=False)
-    contract_id = Column(Integer, nullable=False)  # 계약서 ID
-
-    created_at = Column(DateTime, default=datetime.now)
-    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
-    deleted_yn = Column(String(1), default="N")  # Y인 경우 삭제 회원으로 분류
-
-"""
-
-class Contract(Base):
-    __tablename__ = "contract"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    # user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # manager_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    # work_contract_id = Column(Integer, ForeignKey("work_contract.id"), nullable=False)
-    # contract_type_id = Column(Integer, ForeignKey("document_policies.id"), nullable=False)
 
     # 계약 정보
     contract_info_id = Column(Integer, ForeignKey("contract_info.id"), nullable=False)

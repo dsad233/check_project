@@ -12,3 +12,9 @@ class UserManagementPartTimeContractService:
 
     async def get_part_time_contract_by_id(self, part_time_contract_id: int) -> PartTimerWorkContractDto:
         return await self.part_time_contract_repository.find_dto_by_id(part_time_contract_id=part_time_contract_id)
+
+    async def partial_update_part_time_contract(self, part_time_contract_id: int, update_params: dict) -> PartTimerWorkContractDto:
+        return await self.part_time_contract_repository.partial_update_part_time_contract(
+            contract_id=part_time_contract_id,
+            update_params=update_params
+        )

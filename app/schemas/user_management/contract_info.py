@@ -3,6 +3,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.models.users.users_contract_info_model import ContractInfo
+from app.schemas.user_management.part_timers_contract_schemas import PartTimerWorkContractDto
 from app.schemas.user_management.salary_contract import SalaryContractDto, RequestCreateSalaryContract
 from app.schemas.user_work_contract_schemas import WorkContractDto, RequestCreateWorkContract
 from app.utils.datetime_utils import DatetimeUtil
@@ -42,13 +43,13 @@ class ResponseTotalContractInfo(BaseModel):
             contract_info: ContractInfoDto,
             work_contract: Optional[WorkContractDto],
             salary_contract: Optional[SalaryContractDto],
-            # part_time_contract: Optional[PartTimeContractDto]
+            part_time_contract: Optional[PartTimerWorkContractDto]
     ) -> "ResponseTotalContractInfo":
         return ResponseTotalContractInfo(
             contract_info=contract_info,
             work_contract=work_contract,
             salary_contract=salary_contract,
-            # part_time_contract=part_time_contract
+            part_time_contract=part_time_contract
         )
 
 class ResponseCreatedContractInfo(BaseModel):
@@ -91,7 +92,5 @@ class RequestUpdateContractInfo(BaseModel):
     position: Optional[str]
     employ_status: Optional[str]
 
-class RequestRegisterContract(BaseModel):
-    work: Optional[RequestCreateWorkContract]
-    salary: Optional[RequestCreateSalaryContract]
-    # part_time: Optional[RequestCreatePartTimeContract]
+class RequestApproveContract(BaseModel):
+    user_id: int

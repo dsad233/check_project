@@ -27,7 +27,7 @@ user_query_service = UserQueryService()
 class UserManagement:
     router = router
 
-    @router.get("")
+    @router.get("", response_model=UserListResponseDTO)
     async def get_users(
         page: int = Query(1, ge=1),
         record_size: int = Query(10, ge=1),

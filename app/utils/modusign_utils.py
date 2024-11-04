@@ -12,7 +12,7 @@ class ModuSignGenerator:
             user: Users,
     ) -> dict:
         today = datetime.today()
-        image_path = "/Users/marin/Downloads/signature.jpg"
+        # image_path = "/Users/marin/Downloads/signature.jpg"
 
         return {
             "templateId": template_response.id,
