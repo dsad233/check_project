@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
@@ -14,6 +14,9 @@ from app.enums.users import MenuPermissions, Role
 from app.middleware.tokenVerify import get_current_user, validate_token
 from app.models.users.users_model import Users, user_menus, user_parts
 from app.models.parts.parts_model import Parts
+from sqlalchemy.dialects.mysql import insert as mysql_insert
+
+
 router = APIRouter()
 
 class PartResponse(BaseModel):
@@ -54,8 +57,8 @@ class MenuPermissionUpdate(BaseModel):
 
 class UpdateMenuPermissionsRequest(BaseModel):
     user_id: int
-    permissions: List[MenuPermissionUpdate]
-
+    new_role: Role #필수 필드로 변경
+    permissions: Optional[List[MenuPermissionUpdate]] = None  # Optional로 변경
 @router.get(
     "/manageable-parts",
     response_model=ManageablePartsResponse,
@@ -233,7 +236,63 @@ async def get_user_menu_permissions(
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.post("/update")
+    # 함수를 라우터 밖으로 이동하고 들여쓰기 수정
+
+
+def get_menu_enum(menu_value: str) -> MenuPermissions:
+    """메뉴 value에 해당하는 Enum 객체 반환"""
+    try:
+        return next(
+            menu for menu in MenuPermissions if menu.value == menu_value
+        )
+    except StopIteration:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid menu name: {menu_value}. Available menus: {[e.value for e in MenuPermissions]}"
+        )
+@router.post("/update",
+             summary="사용자 권한 관리",
+             description="""
+    사용자의 역할 변경 및 메뉴 권한을 설정합니다.
+    
+    [역할별 권한 관리 범위]
+     1. MSO
+       ✓ 역할 변경: 모든 사용자 가능
+       ✓ 메뉴 세부 권한: 모든 권한 자동 부여 (permissions 불필요)
+       
+    2. 최고관리자 (자기 지점만)
+       ✓ 역할 변경: 사원 ↔ 통합관리자/파트관리자
+       ✓ 메뉴 세부 권한: 모든 권한 자동 부여 (permissions 불필요)
+       
+    3. 통합관리자 (자기 지점만)
+       ✗ 역할 변경: 불가능
+       ✓ 메뉴 세부 권한: 파트관리자만 수정 가능 (permissions 필수)
+       
+    4. 파트관리자
+       ✗ 역할 변경: 불가능
+       ✗ 메뉴 세부 권한: 불가능
+    
+    [요청 예시]
+    1. MSO/최고관리자 승격 시:
+    {
+        "user_id": 123,
+        "new_role": "SUPER_ADMIN"  // permissions 없어도 됨.
+    }
+    
+    2. 통합/파트관리자 권한 설정/수정 시:
+    {
+        "user_id": 123,
+        "new_role": "관리자",
+        "permissions": [  // 필수 
+            {
+                "part_id": 1,
+                "menu_name": "P.T관리",
+                "is_permitted": true
+            }
+        ]
+    }
+    """,
+             )
 @available_higher_than(Role.INTEGRATED_ADMIN)
 async def update_menu_permissions(
     request: Request,
@@ -242,86 +301,107 @@ async def update_menu_permissions(
     db: AsyncSession = Depends(get_db),
 ):
     try:
+        async def grant_full_permissions(user_id: int, part_id: int):
+            """MSO/최고관리자 전체 권한 부여"""
+            for menu in MenuPermissions:
+                stmt = mysql_insert(user_menus).values(
+                    user_id=user_id,
+                    part_id=part_id,
+                    menu_name=menu,
+                    is_permitted=True
+                )
+                stmt = stmt.on_duplicate_key_update(
+                    is_permitted=True
+                )
+                await db.execute(stmt)
 
-        def get_menu_enum(menu_value: str) -> MenuPermissions:
-            """메뉴 value에 해당하는 Enum 객체 반환"""
-            try:
-                return next(
-                    menu for menu in MenuPermissions if menu.value == menu_value
+        async def update_part_admin_permissions(user_id: int, permissions: List[MenuPermissionUpdate]):
+            """파트 관리자 권한 설정"""
+            for perm in permissions:
+                # 파트가 해당 지점에 속하는지 확인
+                part = await db.scalar(
+                    select(Parts)
+                    .where(
+                        and_(
+                            Parts.id == perm.part_id,
+                            Parts.branch_id == target_user.branch_id,
+                            Parts.deleted_yn == "N"
+                        )
+                    )
                 )
-            except StopIteration:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Invalid menu name: {menu_value}. Available menus: {[e.value for e in MenuPermissions]}",
+                if not part:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"파트 ID {perm.part_id}는 해당 지점에 존재하지 않거나 삭제된 파트입니다."
+                    )
+
+                # user_parts 테이블 업데이트
+                stmt = mysql_insert(user_parts).values(
+                    user_id=user_id,
+                    part_id=perm.part_id
                 )
+                stmt = stmt.prefix_with('IGNORE')
+                await db.execute(stmt)
+
+                # user_menus 테이블 업데이트
+                menu_enum = get_menu_enum(perm.menu_name)
+                stmt = mysql_insert(user_menus).values(
+                    user_id=user_id,
+                    part_id=perm.part_id,
+                    menu_name=menu_enum,
+                    is_permitted=perm.is_permitted
+                )
+                stmt = stmt.on_duplicate_key_update(
+                    is_permitted=stmt.inserted.is_permitted
+                )
+                await db.execute(stmt)
 
         # 대상 사용자 조회
-        target_user_query = await db.execute(
-            select(Users).where(Users.id == body.user_id)
-        )
-        target_user = target_user_query.scalar_one_or_none()
-
+        target_user = await db.scalar(select(Users).where(Users.id == body.user_id))
         if not target_user:
-            raise HTTPException(
-                status_code=404, detail="해당 사용자를 찾을 수 없습니다."
-            )
+            raise HTTPException(status_code=404, detail="해당 사용자를 찾을 수 없습니다.")
 
-        # 권한 업데이트
-        for perm in body.permissions:
-
-            # target-user의 권한 관리 가능 여부 체크
+        # 권한 체크
+        if body.permissions:
+            for perm in body.permissions:
+                if not await can_manage_user_permissions(
+                        current_user, target_user, body.new_role, db, perm.part_id
+                ):
+                    raise HTTPException(status_code=401, detail="해당 사용자의 권한을 관리할 수 없습니다.")
+        else:
             if not await can_manage_user_permissions(
-                current_user, target_user, db, perm.part_id
+                    current_user, target_user, body.new_role, db
             ):
+                raise HTTPException(status_code=401, detail="해당 사용자의 권한을 관리할 수 없습니다.")
+
+        # permissions 필수 체크 (통합관리자/파트관리자)
+        if body.new_role in [Role.INTEGRATED_ADMIN, Role.ADMIN]:
+            if not body.permissions:
                 raise HTTPException(
-                    status_code=403, detail="해당 사용자의 권한을 관리할 수 없습니다."
+                    status_code=400,
+                    detail="통합관리자/파트관리자 설정 시 메뉴 권한(permissions) 설정이 필요합니다."
                 )
 
-            menu_enum = get_menu_enum(perm.menu_name)
-
-            existing = await db.execute(
-                select(user_menus).where(
-                    and_(
-                        user_menus.c.user_id == body.user_id,
-                        user_menus.c.part_id == perm.part_id,
-                        user_menus.c.menu_name == menu_enum,
-                    )
-                )
+        # 역할 변경
+        if body.new_role != target_user.role:
+            await db.execute(
+                update(Users)
+                .where(Users.id == target_user.id)
+                .values(role=body.new_role)
             )
-            existing = existing.first()
 
-            try:
-                if existing:
-                    await db.execute(
-                        update(user_menus)
-                        .where(
-                            and_(
-                                user_menus.c.user_id == target_user.id,
-                                user_menus.c.part_id == perm.part_id,
-                                user_menus.c.menu_name == menu_enum,
-                            )
-                        )
-                        .values(is_permitted=perm.is_permitted)
-                    )
-                else:
-                    await db.execute(
-                        insert(user_menus).values(
-                            user_id=target_user.id,
-                            part_id=perm.part_id,
-                            menu_name=menu_enum,
-                            is_permitted=perm.is_permitted,
-                        )
-                    )
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+        # 권한 설정
+        if body.new_role in [Role.MSO, Role.SUPER_ADMIN]:
+            await grant_full_permissions(target_user.id, target_user.part_id)
+        elif body.permissions:
+            await update_part_admin_permissions(target_user.id, body.permissions)
 
         await db.commit()
-        return {"message": "메뉴 권한이 업데이트되었습니다"}
+        return {"message": "권한이 업데이트되었습니다"}
 
-    except HTTPException:
-        await db.rollback()
-        raise
     except Exception as e:
-        print(f"Unexpected error: {str(e)}")
         await db.rollback()
+        if isinstance(e, HTTPException):
+            raise e
+        print(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
