@@ -371,10 +371,10 @@ class UserQueryService:
 
             # 정렬 및 페이지네이션 적용
             final_query = self._apply_sorting_and_pagination(
-                filtered_query,
-                current_user.id,
-                page,
-                record_size
+                query=filtered_query,
+                current_user_id=current_user.id,
+                page=page,
+                record_size=record_size
             )
 
             # 쿼리 실행 및 결과 처리
@@ -414,7 +414,6 @@ class UserQueryService:
         """필터 조건 적용"""
         if status:
             query = self._apply_status_filter(query, status)
-
         if name:
             query = query.filter(self.UserAlias.name.ilike(f"%{name}%"))
         if phone:
@@ -422,7 +421,7 @@ class UserQueryService:
         if branch_id:
             query = query.filter(self.UserAlias.branch_id == branch_id)
         if part_id:
-            query = query.filter(self.UserAlias.parts.any(Parts.id == part_id))
+            query = query.filter(self.UserAlias.part_id == part_id)
 
         return query
 
@@ -460,9 +459,15 @@ class UserQueryService:
 
     async def _get_total_count(self, db: AsyncSession, query) -> int:
         """총 레코드 수 계산"""
-        count_query = select(func.count(distinct(self.UserAlias.id))).select_from(query.subquery())
-        result = await db.execute(count_query)
-        return result.scalar_one()
+        try:
+            # 서브쿼리를 사용하여 필터링된 결과의 count를 계산
+            subq = query.subquery()
+            count_query = select(func.count()).select_from(subq)
+            result = await db.execute(count_query)
+            return result.scalar_one()
+        except Exception as e:
+            logger.error(f"총 레코드 수 계산 중 에러 발생: {str(e)}")
+            raise
 
     def _apply_sorting_and_pagination(
         self,
