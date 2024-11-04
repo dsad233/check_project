@@ -1,15 +1,15 @@
 from datetime import datetime, date, timedelta
-from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from typing import Annotated, Optional
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db
 from app.middleware.tokenVerify import get_current_user, get_current_user_id
 from app.models.branches.branches_model import Branches
 from app.models.parts.parts_model import Parts
-from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto
+from app.models.users.leave_histories_model import LeaveHistories, LeaveHistoriesCreate, LeaveHistoriesSearchDto, LeaveHistoriesUpdate
 from app.models.users.users_model import Users
-from app.models.branches.user_leaves_days import UserLeavesDays
+from app.models.branches.user_leaves_days import UserLeavesDays, UserLeavesDaysResponse
 from app.models.branches.leave_categories_model import LeaveCategory
 from app.enums.users import Status
 
@@ -430,4 +430,196 @@ async def get_employee_leave_histories(
 
     except Exception as err:
         print(f"에러가 발생하였습니다: {err}")
+        raise HTTPException(status_code=500, detail=str(err))
+
+# 현재 사용자의 연차 일수 정보 조회
+@router.get(
+    "/current-user-leaves",
+    response_model=UserLeavesDaysResponse,
+    summary="사원용 - 현재 사용자의 연차 일수 정보 조회",
+    description="사원용 - 현재 사용자의 연차 일수 정보를 조회합니다.",
+)
+async def get_current_user_leaves(
+    *,
+    branch_id: Annotated[int, Query(description="지점 ID를 입력합니다.")],
+    year: Annotated[
+        Optional[int], Query(description="연도를 입력합니다. 예) 2024")
+    ] = None,
+    current_user_id: Annotated[int, Depends(get_current_user_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+):
+    try:
+        if year is None:
+            year = date.today().year
+
+        # 해당 연도의 시작일과 종료일 설정
+        start_date = date(year, 1, 1)
+        end_date = date(year, 12, 31)
+
+        # 모든 기록 조회
+        leave_query = (
+            select(UserLeavesDays)
+            .where(
+                UserLeavesDays.user_id == current_user_id,
+                UserLeavesDays.branch_id == branch_id,
+                UserLeavesDays.deleted_yn == "N",
+                UserLeavesDays.created_at >= start_date,
+                UserLeavesDays.created_at <= end_date,
+            )
+            .order_by(UserLeavesDays.created_at.desc())
+        )
+        result = await db.execute(leave_query)
+        leave_info = result.scalar_one_or_none()
+
+        user_query = select(Users).where(Users.id == current_user_id)
+        user_result = await db.execute(user_query)
+        user = user_result.scalar_one_or_none()
+
+        if not leave_info:
+            return {
+                "user_id": current_user_id,
+                "branch_id": branch_id,
+                "year": year,
+                "increased_days": 0.0,
+                "decreased_days": 0.0,
+                "total_leave_days": user.total_leave_days,
+                "message": f"{year}년도의 연차 정보가 없습니다.",
+            }
+
+        # 모든 increased_days 합산
+        total_increased = (
+            float(leave_info.increased_days)
+            if leave_info.increased_days is not None
+            else 0.0
+        )
+        total_decreased = (
+            float(leave_info.decreased_days)
+            if leave_info.decreased_days is not None
+            else 0.0
+        )
+
+        return UserLeavesDaysResponse(
+            user_id=current_user_id,
+            branch_id=branch_id,
+            year=year,
+            increased_days=float(leave_info.increased_days),
+            decreased_days=float(leave_info.decreased_days),
+            total_leave_days=total_increased - float(leave_info.decreased_days),
+        )
+
+    except Exception as err:
+        print(err)
+        raise HTTPException(status_code=500, detail=str(err))
+
+@router.patch(
+    "/{leave_id}", summary="사원용 - 연차 수정", description="사원용 - 연차를 수정합니다."
+)
+async def update_employee_leave(
+    leave_update: LeaveHistoriesUpdate,
+    branch_id: int = Query(description="현재 사용자가 포함된 지점 ID를 입력합니다."),
+    leave_id: int = Path(description="수정할 연차 ID를 입력합니다."),
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        user_query = select(Users).where(
+            Users.id == current_user_id, Users.deleted_yn == "N"
+        )
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
+
+        if current_user.branch_id != branch_id:
+            raise HTTPException(
+                status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다."
+            )
+
+        query = select(LeaveHistories).where(
+            LeaveHistories.id == leave_id,
+            LeaveHistories.branch_id == branch_id,
+            LeaveHistories.deleted_yn == "N",
+        )
+        result = await db.execute(query)
+        leave_history = result.scalar_one_or_none()
+
+        if not leave_history:
+            raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
+
+        # 현재 사용자의 user_id와 연차 기록의 user_id가 일치하는지 확인
+        if leave_history.user_id != current_user.id:
+            raise HTTPException(
+                status_code=403, detail="연차를 수정할 권한이 없습니다."
+            )
+
+        if leave_update.leave_category_id:
+            leave_history.leave_category_id = leave_update.leave_category_id
+        if leave_update.date:
+            leave_history.application_date = leave_update.date
+        if leave_update.applicant_description:
+            leave_history.applicant_description = leave_update.applicant_description
+
+        await db.commit()
+        return {"message": "연차 수정에 성공하였습니다."}
+
+    except Exception as err:
+        await db.rollback()
+        print(err)
+        raise HTTPException(status_code=500, detail=str(err))
+
+
+@router.delete(
+    "/{leave_id}", summary="사원용 - 연차 삭제", description="사원용 - 연차를 삭제합니다."
+)
+async def delete_employee_leave(
+    branch_id: int = Query(
+        ..., description="현재 사용자가 포함된 지점 ID를 입력합니다."
+    ),
+    leave_id: int = Path(..., description="삭제할 연차 ID를 입력합니다."),
+    current_user_id: int = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        user_query = select(Users).where(
+            Users.id == current_user_id, Users.deleted_yn == "N"
+        )
+        user_result = await db.execute(user_query)
+        current_user = user_result.scalar_one_or_none()
+
+        if current_user.role.strip() == "MSO 관리자":
+            pass
+        elif current_user.branch_id != branch_id:
+            raise HTTPException(
+                status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다."
+            )
+
+        query = select(LeaveHistories).where(
+            LeaveHistories.id == leave_id,
+            LeaveHistories.branch_id == branch_id,
+            LeaveHistories.deleted_yn == "N",
+        )
+        result = await db.execute(query)
+        leave_history = result.scalar_one_or_none()
+
+        if not leave_history:
+            raise HTTPException(status_code=404, detail="해당 연차를 찾을 수 없습니다.")
+
+        if (
+            leave_history.request_user_id != current_user.id
+            and current_user.role.strip()
+            not in ["MSO 최고권한", "최고관리자", "통합관리자"]
+        ):
+            raise HTTPException(
+                status_code=403, detail="연차를 삭제할 권한이 없습니다."
+            )
+
+        if leave_history.status.strip() != "확인중":
+            raise HTTPException(
+                status_code=400, detail="승인/반려된 연차는 삭제할 수 없습니다."
+            )
+
+        leave_history.deleted_yn = "Y"
+        await db.commit()
+        return {"message": "연차 삭제에 성공하였습니다."}
+    except Exception as err:
+        await db.rollback()
+        print(err)
         raise HTTPException(status_code=500, detail=str(err))
