@@ -12,8 +12,7 @@ from app.core.permissions.auth_utils import available_higher_than
 from app.cruds.labor_management.repositories.part_timer_repository import PartTimerRepository
 from app.cruds.labor_management.repositories.part_timer_repository_interface import IPartTimerRepository
 from app.enums.users import Role
-from app.exceptions.exceptions import NotFoundError
-from app.middleware.tokenVerify import validate_token
+from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.core.database import get_db
 
 router = APIRouter()
@@ -56,13 +55,15 @@ async def get_part_timers(
 async def get_part_timer_by_user_info(
     request: Request,
     repo: IPartTimerRepository = Depends(get_part_timer_repository),
-    user_name: str = Query(None),
-    phone_number: str = Query(None),
     branch_id: int = Query(...),
     part_id: int = Query(...),
+    user_name: str = Query(None),
+    phone_number: str = Query(None, regex="^[0-9\\-]+$"),
     year: int = Query(datetime.now().year),
     month: int = Query(datetime.now().month)) -> PartTimersSummariesDTO:
 
+    if not user_name and not phone_number:
+        raise BadRequestError("사용자 이름 또는 전화번호를 입력해주세요.")
     return PartTimersSummariesDTO.toDTO(await repo.get_part_timer_by_user_info(year, month, user_name, phone_number, branch_id, part_id))
 
 @router.get("/part-timer/work-history", summary="파트타이머 근로 내역 조회", description="특정 파트타이머가 언제 출퇴근을 했는 지를 상세하게 볼 수 있는 API")
