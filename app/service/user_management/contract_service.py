@@ -6,6 +6,7 @@ from fastapi import Depends
 from app.core.database import get_db
 from app.cruds.user_management.contract_crud import UserManagementContractRepository
 from app.enums.user_management import ContractType, ContractStatus
+from app.enums.users import Role
 from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerWorkContract
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_salary_contract_model import SalaryContract
@@ -225,8 +226,7 @@ class UserManagementContractService:
         if await self.__check_all_signed(contract_info_id=contract.contract_info_id):
             await self.service.update_user_role(
                 user_id=contract.contract_info.user.id,
-                session=session,
-                role=contract.contract_info.role
+                session=session
             )
 
     async def __check_all_signed(self, contract_info_id: int) -> bool:
