@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.cruds.user_management.contract_crud import UserManagementContractRepository
 from app.enums.user_management import ContractType
+from app.models.users.part_timer.users_part_timer_work_contract_model import PartTimerWorkContract
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
 from app.models.users.users_salary_contract_model import SalaryContract
@@ -29,14 +30,14 @@ class UserManagementContractService:
             service: UserManagementService,
             salary_contract_service: UserManagementSalaryContractService,
             work_contract_service: UserManagementWorkContractService,
-            # part_time_contract_service: UserManagementPartTimeContractService,
+            part_time_contract_service: UserManagementPartTimeContractService,
             contract_history_service: UserManagementContractHistoryService,
             contract_repository: UserManagementContractRepository,
     ):
         self.service = service
         self.salary_contract_service = salary_contract_service
         self.work_contract_service = work_contract_service
-        # self.part_time_contract_service = part_time_contract_service
+        self.part_time_contract_service = part_time_contract_service
 
         self.contract_history_service = contract_history_service
         self.modusign_template_service = ModusignTemplateService()
@@ -52,7 +53,7 @@ class UserManagementContractService:
             note: Optional[str],
             change_reason: Optional[str],
     ) -> bool:
-        work_contract_id, work_contract_history_id = await self.create_work_contract(work_contract=work_contract)
+        work_contract_id = await self.create_work_contract(work_contract=work_contract)
         salary_contract_id = await self.create_salary_contract(salary_contract=salary_contract)
 
         work_contract_contract = Contract(
@@ -81,10 +82,42 @@ class UserManagementContractService:
         return True
 
 
+    async def register_temporary_contract(
+            self,
+            contract_info_id: int,
+            part_time_contract: PartTimerWorkContract,
+            note: Optional[str],
+            change_reason: Optional[str]
+    ) -> int:
+        part_time_contract_id = await self.create_part_time_contract(part_time_contract=part_time_contract)
+
+        part_time_contract_contract = Contract(
+            contract_info_id=contract_info_id,
+            contract_type=ContractType.PART_TIME,
+            contract_id=part_time_contract_id,
+        )
+
+        part_time_contract_contract_id = await self.create_contract(contract=part_time_contract_contract)
+
+        contract_history = ContractHistory(
+            contract_info_id=contract_info_id,
+            change_reason=change_reason,
+            note=note
+        )
+
+        await self.contract_history_service.create_contract_history(contract_history=contract_history)
+        return part_time_contract_contract_id
+
+    # Part Time Contract
+    async def get_part_time_contract_by_id(self, part_time_contract_id: int) -> PartTimerWorkContractDto:
+        return await self.part_time_contract_service.get_part_time_contract_by_id(part_time_contract_id=part_time_contract_id)
+    async def create_part_time_contract(self, part_time_contract: PartTimerWorkContract) -> int:
+        return await self.part_time_contract_service.create_part_time_contract(part_time_contract=part_time_contract)
+
     # Work Contract
     async def get_work_contract_by_id(self, work_contract_id: int) -> WorkContractDto:
         return await self.work_contract_service.get_work_contract_by_id(work_contract_id=work_contract_id)
-    async def create_work_contract(self, work_contract: WorkContract) -> tuple[int, int]:
+    async def create_work_contract(self, work_contract: WorkContract) -> int:
         return await self.work_contract_service.create_work_contract(work_contract=work_contract)
 
     # Salary Contract
@@ -101,13 +134,6 @@ class UserManagementContractService:
     async def get_contract_histories_by_user_id(self, user_id: int) -> list[ContractHistory]:
         return await self.contract_history_service.get_contract_histories_by_user_id(user_id=user_id)
 
-    # async def create_temporary_contract(
-    #         self,
-    #         user_id: int,
-    #         manager_id: int,
-    #         part_time_contract: PartTimeContract
-    # ) -> int:
-    #     ...
 
 
     async def create_contract2(self, user_id: int, manager_id: int, work_contract_history_id: int) -> int:
