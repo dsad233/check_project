@@ -394,7 +394,7 @@ class UserQueryService:
                 func.max(Commutes.updated_at).label('last_activity'),
                 func.max(UserSalary.monthly_salary).label('monthly_salary'),
                 func.max(UserSalary.annual_salary).label('annual_salary'))
-            .options(joinedload(self.UserAlias.parts), joinedload(self.UserAlias.branch))
+            .options(joinedload(self.UserAlias.part), joinedload(self.UserAlias.branch))
             .outerjoin(Commutes, self.UserAlias.id == Commutes.user_id)
             .outerjoin(UserSalary, self.UserAlias.id == UserSalary.user_id)
             .group_by(self.UserAlias.id)
