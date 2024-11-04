@@ -124,6 +124,7 @@ class UserCreate(BaseModel):
     birth_date: Optional[date] = None
     hire_date: Optional[date] = None
     resignation_date: Optional[date] = None
+    resident_registration_number: Optional[str] = None
 
     # 외래 키
     branch_id: Optional[int] = None
@@ -183,6 +184,7 @@ class CreatedUserDto(BaseModel):
     birth_date: Optional[date] = None
     hire_date: Optional[date] = None
     resignation_date: Optional[date] = None
+    resident_registration_number: Optional[str] = None
 
     branch_id: Optional[int] = None
     part_id: Optional[int] = None
