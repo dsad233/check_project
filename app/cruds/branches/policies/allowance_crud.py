@@ -14,9 +14,9 @@ async def create(
     *, session: AsyncSession, branch_id: int, request: AllowancePolicies = AllowancePolicies()
 ) -> AllowancePolicies:
     
-    request.branch_id = branch_id
+    if request.branch_id is None:
+        request.branch_id = branch_id
     session.add(request)
-    await session.commit()
     await session.flush()
     await session.refresh(request)
     return request
@@ -39,7 +39,7 @@ async def update(
         stmt = sa_update(AllowancePolicies).where(AllowancePolicies.branch_id == branch_id).values(**changed_fields)
         await session.execute(stmt)
         old.updated_at = datetime.now()
-        await session.commit()
+        await session.flush()
         await session.refresh(old)
     else:
         pass
