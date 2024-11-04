@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request
-from sqlalchemy import select, func, update
+from sqlalchemy import case, select, func, update
 from datetime import UTC, datetime, date, timedelta
 from typing import Optional, Annotated
 from decimal import Decimal
@@ -65,7 +65,6 @@ async def get_current_user_leaves(
             )
             .order_by(UserLeavesDays.created_at.desc())
         )
-
         result = await db.execute(leave_query)
         leave_info = result.scalar_one_or_none()
 
@@ -100,9 +99,9 @@ async def get_current_user_leaves(
             user_id=current_user_id,
             branch_id=branch_id,
             year=year,
-            increased_days=total_increased,
-            decreased_days=total_decreased,
-            total_leave_days=total_increased - total_decreased,
+            increased_days=float(leave_info.increased_days),
+            decreased_days=float(leave_info.decreased_days),
+            total_leave_days=total_increased - float(leave_info.decreased_days),
         )
 
     except Exception as err:
@@ -133,7 +132,7 @@ async def get_leave_histories(
         None, description="검색할 이름을 입력합니다. 공백인 경우 전체 조회합니다."
     ),
     search_phone: Optional[str] = Query(
-        None, description="검색할 전화번호를 입력합니다. 공백인 경우 전체 조회합니다."
+        None, description="검색할 전화번���를 입력합니다. 공백인 경우 전체 조회합니다."
     ),
     page: int = Query(
         1, gt=0, description="페이지 번호를 입력합니다. 기본값은 1입니다."
@@ -336,7 +335,7 @@ async def get_approve_leave(
             # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
             current_weekday = date_obj.weekday()
-            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
+            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함 
             date_start_day = date_obj - timedelta(days=current_weekday)
             # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
@@ -346,95 +345,113 @@ async def get_approve_leave(
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
-                # 기본 사용자 쿼리 생성
-        user_query = select(Users, Branches, Parts).join(
-            Branches, Users.branch_id == Branches.id
-        ).join(
-            Parts, Users.part_id == Parts.id
-        ).where(
-            Users.deleted_yn == "N"
+    
+        # 사용자별 집계를 위한 기본 쿼리
+        base_query = (
+            select(Users, Branches, Parts)
+            .join(Branches, Users.branch_id == Branches.id)
+            .join(Parts, Users.part_id == Parts.id)
+            .where(Users.deleted_yn == "N")
         )
 
         # 필터 조건 적용
         if branch_id:
-            user_query = user_query.where(Branches.id == branch_id)
+            base_query = base_query.where(Branches.id == branch_id)
         if part_id:
-            user_query = user_query.where(Parts.id == part_id)
+            base_query = base_query.where(Parts.id == part_id)
         if search_name:
-            user_query = user_query.where(Users.name.ilike(f"%{search_name}%"))
+            base_query = base_query.where(Users.name.ilike(f"%{search_name}%"))
         if search_phone:
-            user_query = user_query.where(Users.phone_number.ilike(f"%{search_phone}%"))
+            base_query = base_query.where(Users.phone_number.ilike(f"%{search_phone}%"))
 
         # 사용자 목록 조회
-        users_result = await db.execute(user_query)
+        users_result = await db.execute(base_query)
         users = users_result.all()
 
-        user_stats = {}
-        
-        for user, branch, part in users:
-            # 유급 휴가의 decreased_days 합계만 조회
-            decreased_summary_query = select(
-                func.coalesce(func.sum(LeaveHistories.decreased_days), 0).label('total_decreased')
-            ).select_from(LeaveHistories).join(
-                LeaveCategory, LeaveHistories.leave_category_id == LeaveCategory.id
-            ).where(
-                LeaveHistories.user_id == user.id,
-                LeaveHistories.deleted_yn == "N",
-                LeaveCategory.is_paid == True,
-                LeaveHistories.application_date >= date_start_day,
-                LeaveHistories.application_date <= date_end_day
-            )
-            
-            # 최신 기록 조회 (regular_days, is_paid, increased_days)
-            latest_leave_query = select(
-                LeaveHistories.regular_days,
-                LeaveHistories.is_paid,
-                LeaveHistories.increased_days
-            ).where(
-                LeaveHistories.user_id == user.id,
-                LeaveHistories.deleted_yn == "N"
-            ).order_by(
-                LeaveHistories.created_at.desc()
-            ).limit(1)
-            
-            decreased_result = await db.execute(decreased_summary_query)
-            latest_leave_result = await db.execute(latest_leave_query)
-            
-            decreased_stats = decreased_result.first()
-            latest_leave = latest_leave_result.first()
-            
-            total_decreased = float(decreased_stats.total_decreased if decreased_stats else 0)
-            latest_increased = float(latest_leave.increased_days if latest_leave else 0)
-            
-            user_stats[user.id] = {
-                "user_info": {
-                    "user_id": user.id,
-                    "user_name": user.name,
-                    "user_phone_number": user.phone_number,
-                    "user_gender": user.gender,
-                    "user_hire_date": user.hire_date,
-                    "user_resignation_date": user.resignation_date,
-                    "search_branch_id": branch.id,
-                    "branch_name": branch.name,
-                    "part_id": part.id,
-                    "part_name": part.name,
-                    "leave_summary": {
-                        "total_decreased_days": total_decreased,
-                        "total_increased_days": latest_increased,  # 최신 기록의 increased_days
-                        "total_leave_days": total_decreased + latest_increased
-                    },
-                    "regular_days": float(latest_leave.regular_days if latest_leave else 0),
-                    "is_paid": float(latest_leave.is_paid if latest_leave else 0)
-                }
-            }
+        formatted_data = []
+        current_year = datetime.now().year
+        year_start = datetime(current_year, 1, 1).date()
 
-        formatted_data = list(user_stats.values())
+        for user, branch, part in users:
+            # 올해 1월 1일부터 현재까지의 무급 휴가 사용 일수 합계 조회
+            unpaid_days_result = await db.execute(
+                select(func.sum(LeaveHistories.decreased_days).label('total_unpaid_days'))
+                .join(LeaveCategory, LeaveHistories.leave_category_id == LeaveCategory.id)
+                .where(
+                    LeaveHistories.user_id == user.id,
+                    LeaveCategory.is_paid == False,
+                    LeaveHistories.status == 'approved',
+                    LeaveHistories.deleted_yn == "N",
+                    LeaveHistories.application_date >= year_start,
+                    LeaveHistories.application_date <= date_end_day
+                )
+            )
+            total_unpaid_days = unpaid_days_result.scalar() or 0
+            
+            # 올해 1월 1일부터 현재까지의 유급 휴가 사용 일수 합계 조회
+            paid_days_result = await db.execute(
+                select(func.sum(LeaveHistories.decreased_days).label('total_paid_days'))
+                .join(LeaveCategory, LeaveHistories.leave_category_id == LeaveCategory.id)
+                .where(
+                    LeaveHistories.user_id == user.id,
+                    LeaveCategory.is_paid == True,
+                    LeaveHistories.status == 'approved',
+                    LeaveHistories.deleted_yn == "N",
+                    LeaveHistories.application_date >= year_start,
+                    LeaveHistories.application_date <= date_end_day
+                )
+            )
+            total_paid_days = paid_days_result.scalar() or 0
+            
+            # 올해 1월 1일부터 현재까지의 증가된 휴가 일수 합계 조회
+            increased_days_result = await db.execute(
+                select(func.sum(LeaveHistories.increased_days).label('total_increased_days'))
+                .where(
+                    LeaveHistories.user_id == user.id,
+                    LeaveHistories.deleted_yn == "N",
+                    LeaveHistories.application_date >= year_start,
+                    LeaveHistories.application_date <= date_end_day
+                )
+            )
+            total_increased_days = increased_days_result.scalar() or 0
+            
+            # 1년 총 연차 수 조회 (UserLeavesDays의 최신 기록)
+            total_leave_days_result = await db.execute(
+                select(UserLeavesDays.increased_days)
+                .where(
+                    UserLeavesDays.user_id == user.id,
+                    UserLeavesDays.deleted_yn == "N"
+                )
+                .order_by(UserLeavesDays.created_at.desc())
+                .limit(1)
+            )
+            yearly_total_leave_days = total_leave_days_result.scalar() or 0
+            
+            leave_history_data = {
+                "user_id": user.id,
+                "user_name": user.name,
+                "user_phone": user.phone_number,
+                "user_gender": user.gender,
+                "user_hire_date": user.hire_date,
+                "user_resignation_date": user.resignation_date,
+                "branch_id": branch.id,
+                "branch_name": branch.name,
+                "part_id": part.id,
+                "part_name": part.name,
+                "decreased_days": float(total_paid_days),
+                "unpaid": float(total_unpaid_days),
+                "increased_days": float(total_increased_days),
+                "total_leave_days": float(yearly_total_leave_days),  # 1년 총 연차 수
+                "can_use_days": float(yearly_total_leave_days - total_paid_days),  # 남은 연차 수
+            }
+            formatted_data.append(leave_history_data)
+
 
         # 페이지네이션 적용
+        total_count = len(formatted_data)
         start_idx = (page - 1) * size
         end_idx = start_idx + size
         paginated_data = formatted_data[start_idx:end_idx]
-        total_count = len(formatted_data)
 
         return {
             "list": paginated_data,
@@ -444,15 +461,16 @@ async def get_approve_leave(
                 "size": size,
                 "total_pages": (total_count + size - 1) // size,
             },
-            "message": "연차 신청 목록을 정상적으로 조회하였습니다.",
+            "message": "연차 전체 승인 목록을 정상적으로 조회하였습니다.",
         }
-
+            
     except Exception as err:
         print(f"에러가 발생하였습니다: {err}")
         raise HTTPException(status_code=500, detail=str(err))
 
 
 @router.post("/leave-histories", summary="연차 신청", description="연차를 신청합니다.")
+@available_higher_than(Role.ADMIN)
 async def create_leave_history(
     context: Request,
     leave_create: LeaveHistoriesCreate,
@@ -478,26 +496,10 @@ async def create_leave_history(
             raise HTTPException(
                 status_code=403, detail="다른 지점의 정보에 접근할 수 없습니다."
             )
-
-        # 사용 가능한 연차 일수 체크
-        user = await user_service.get_branch_users_leave(
-            request=BaseSearchDto(record_size=1), session=db, branch_id=branch_id
-        )
-        if not user:
-            raise HTTPException(status_code=404, detail="사용자를 찾을 수 없습니다.")
-
-        if user.data[0].total_leave_days is None:
-            raise HTTPException(
-                status_code=400,
-                detail="사용자의 총 연차 일수가 설정되어 있지 않습니다.",
-            )
-
-        if user.data[0].total_leave_days < decreased_days:
-            raise HTTPException(
-                status_code=400,
-                detail=f"신청 일수({decreased_days}일)가 남은 연차 일수({user.data[0].total_leave_days}일)보다 많습니다.",
-            )
-
+            
+        if current_user.role not in ["MSO 최고권한", "최고관리자", "통합관리자", "사원"]:
+            raise HTTPException(status_code=403, detail="권한이 없습니다.")
+        
         # LeaveHistories 생성 및 flush
         create = LeaveHistories(
             branch_id=branch_id,
@@ -506,9 +508,6 @@ async def create_leave_history(
             leave_category_id=leave_create.leave_category_id,
             decreased_days=decreased_days,
             increased_days=0.00,
-            total_leave_days=0.00,
-            is_paid=0.00,
-            regular_days=0.00,
             start_date=start_date,
             end_date=end_date,
             application_date=datetime.now().date(),
@@ -537,9 +536,6 @@ async def create_leave_history(
                 part_id=current_user.part_id,
                 increased_days=0.00,
                 decreased_days=0.00,
-                total_leave_days=0.00,
-                is_paid=0.00,
-                regular_days=0.00,
                 deleted_yn="N",
             )
             db.add(user_leaves_days)
@@ -563,7 +559,9 @@ async def create_leave_history(
     summary="연차 승인/반려",
     description="연차를 승인/반려합니다.",
 )
+@available_higher_than(Role.ADMIN)
 async def approve_leave(
+    context: Request,
     leave_approve: LeaveHistoriesApprove,
     leave_id: int = Path(description="승인/반려 결정을 할 연차 ID를 입력합니다."),
     branch_id: int = Path(description="현재 사용자가 포함된 지점 ID를 입력합니다."),
@@ -629,7 +627,7 @@ async def approve_leave(
                 )
             )
 
-            # LeaveHistories 업데이��
+            # LeaveHistories 업데이트
             leave_history.start_date >= now
             leave_history.status = leave_approve.status
             leave_history.admin_description = leave_approve.admin_description
@@ -643,7 +641,6 @@ async def approve_leave(
             leave_history_approved = await db.execute(
                 select(LeaveHistories).where(
                     LeaveHistories.id == leave_id,
-                    LeaveHistories.status == Status.APPROVED,
                 )
             )
             leave_history_approved = leave_history_approved.scalar_one_or_none()

@@ -2,7 +2,7 @@ import logging
 from typing import Optional, List, Tuple
 
 from fastapi import Depends, HTTPException
-from sqlalchemy import select, func, delete, distinct, literal_column, case
+from sqlalchemy import and_, select, func, delete, distinct, literal_column, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, joinedload, selectinload
 
@@ -213,16 +213,17 @@ class UserManagementService:
 
                 # 새 교육 정보 추가
                 for edu_data in educations_data:
-                    new_education = Education(
-                        user_id=user_id,
-                        school_type=edu_data.get('school_type'),
-                        school_name=edu_data.get('school_name'),
-                        graduation_type=edu_data.get('graduation_type'),
-                        major=edu_data.get('major'),
-                        admission_date=edu_data.get('admission_date'),
-                        graduation_date=edu_data.get('graduation_date')
-                    )
-                    session.add(new_education)
+                    if edu_data and any(edu_data.values()):
+                        new_education = Education(
+                            user_id=user_id,
+                            school_type=edu_data.get('school_type'),
+                            school_name=edu_data.get('school_name'),
+                            graduation_type=edu_data.get('graduation_type'),
+                            major=edu_data.get('major'),
+                            admission_date=edu_data.get('admission_date'),
+                            graduation_date=edu_data.get('graduation_date')
+                        )
+                        session.add(new_education)
 
             # 경력 정보 업데이트
             if careers_data is not None:
@@ -234,17 +235,18 @@ class UserManagementService:
 
                 # 새 경력 정보 추가
                 for career_data in careers_data:
-                    new_career = Career(
-                        user_id=user_id,
-                        company=career_data.get('company'),
-                        contract_type=career_data.get('contract_type'),
-                        start_date=career_data.get('start_date'),
-                        end_date=career_data.get('end_date'),
-                        job_title=career_data.get('job_title'),
-                        department=career_data.get('department'),
-                        position=career_data.get('position')
-                    )
-                    session.add(new_career)
+                    if career_data and any(career_data.values()):
+                        new_career = Career(
+                            user_id=user_id,
+                            company=career_data.get('company'),
+                            contract_type=career_data.get('contract_type'),
+                            start_date=career_data.get('start_date'),
+                            end_date=career_data.get('end_date'),
+                            job_title=career_data.get('job_title'),
+                            department=career_data.get('department'),
+                            position=career_data.get('position')
+                        )
+                        session.add(new_career)
 
             await session.commit()
 
@@ -355,7 +357,7 @@ class UserQueryService:
             base_query = self._create_base_query()
 
             # 필터 적용
-            query = await self._apply_filters(
+            filtered_query = await self._apply_filters(
                 base_query,
                 status,
                 name,
@@ -364,19 +366,19 @@ class UserQueryService:
                 part_id
             )
 
-            # 총 개수 계산
-            total_count = await self._get_total_count(db, query)
+            # 총 개수 계산 - 필터링된 쿼리 사용
+            total_count = await self._get_total_count(db=db, query=filtered_query)
 
             # 정렬 및 페이지네이션 적용
-            query = self._apply_sorting_and_pagination(
-                query,
-                current_user.id,
-                page,
-                record_size
+            final_query = self._apply_sorting_and_pagination(
+                query=filtered_query,
+                current_user_id=current_user.id,
+                page=page,
+                record_size=record_size
             )
 
             # 쿼리 실행 및 결과 처리
-            users_data = await self._execute_query(db, query)
+            users_data = await self._execute_query(db=db, query=final_query)
 
             return users_data, total_count
 
@@ -409,10 +411,16 @@ class UserQueryService:
         branch_id: Optional[int],
         part_id: Optional[int]
     ):
-        """필터 조건 적용"""
+        """
+        필터 조건 적용
+        status: 사용자 상태 필터링
+        name: 사용자 이름 필터링
+        phone: 사용자 전화번호 필터링
+        branch_id: 사용자 부서 필터링
+        part_id: 사용자 파트 필터링
+        """
         if status:
             query = self._apply_status_filter(query, status)
-
         if name:
             query = query.filter(self.UserAlias.name.ilike(f"%{name}%"))
         if phone:
@@ -420,29 +428,61 @@ class UserQueryService:
         if branch_id:
             query = query.filter(self.UserAlias.branch_id == branch_id)
         if part_id:
-            query = query.filter(self.UserAlias.parts.any(Parts.id == part_id))
+            query = query.filter(self.UserAlias.part_id == part_id)
 
         return query
 
-    def _apply_status_filter(self, query, status: str):
-        """상태 필터 적용"""
+    def _apply_status_filter(self, query, status: Optional[str]):
+        """
+        사용자 상태 필터링
+        전체: 삭제회원 제외한 전체 조회
+        재직자: 퇴사자, 휴직자,삭제회원을 제외한 재직자 조회
+        퇴사자: 삭제회원을 제외한 퇴사자 조회
+        휴직자: 삭제회원을 제외한 휴직자 조회
+        삭제회원: 삭제회원 조회
+        """
+        if not status or status == "전체":
+            return query.filter(self.UserAlias.deleted_yn == 'N')
+            
         status_filters = {
-            '퇴사자': (self.UserAlias.deleted_yn == "N", self.UserAlias.role == "퇴사자"),
-            '휴직자': (self.UserAlias.deleted_yn == "N", self.UserAlias.role == "휴직자"),
-            '재직자': (self.UserAlias.deleted_yn == "N", ~self.UserAlias.role.in_(["퇴사자", "휴직자"])),
-            '전체': (self.UserAlias.deleted_yn == "N"),
-            '삭제회원': (self.UserAlias.deleted_yn == "Y",)
+            "재직자": [
+                self.UserAlias.deleted_yn == 'N',
+                self.UserAlias.role.notin_(['퇴사자', '휴직자'])
+            ],
+            "퇴사자": [
+                self.UserAlias.deleted_yn == 'N',
+                self.UserAlias.role == '퇴사자'
+            ],
+            "휴직자": [
+                self.UserAlias.deleted_yn == 'N',
+                self.UserAlias.role == '휴직자'
+            ],
+            "삭제회원": [
+                self.UserAlias.deleted_yn == 'Y'
+            ]
         }
-
+        
         if status in status_filters:
-            return query.filter(*status_filters[status])
-        return query
+            return query.filter(and_(*status_filters[status]))
+            
+        # 잘못된 status 값이 전달된 경우
+        raise HTTPException(
+            status_code=400,
+            detail="유효하지 않은 상태 필터입니다. ('전체', '재직자', '퇴사자', '휴직자', '삭제회원' 중 하나를 사용하세요)"
+        )
 
     async def _get_total_count(self, db: AsyncSession, query) -> int:
-        """총 레코드 수 계산"""
-        count_query = select(func.count(distinct(self.UserAlias.id))).select_from(query.subquery())
-        result = await db.execute(count_query)
-        return result.scalar_one()
+        """
+        총 레코드 수 계산
+        """
+        try:
+            subq = query.subquery()
+            count_query = select(func.count()).select_from(subq)
+            result = await db.execute(count_query)
+            return result.scalar_one()
+        except Exception as e:
+            logger.error(f"총 레코드 수 계산 중 에러 발생: {str(e)}")
+            raise
 
     def _apply_sorting_and_pagination(
         self,

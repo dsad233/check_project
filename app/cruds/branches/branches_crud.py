@@ -97,25 +97,29 @@ async def find_deleted_by_id(
 async def find_by_id_with_policies(
     *, session: AsyncSession, branch_id: int
 ) -> Optional[Branches]:
-    stmt = select(Branches).options(
-        joinedload(Branches.work_policies).options(
-            selectinload(WorkPolicies.work_schedules),
-            selectinload(WorkPolicies.break_times),
-        ),
-        joinedload(Branches.overtime_policies),
-        joinedload(Branches.holiday_work_policies),
-        joinedload(Branches.auto_overtime_policies),
-        joinedload(Branches.account_based_annual_leave_grant),
-        joinedload(Branches.entry_date_based_annual_leave_grant),
-        joinedload(Branches.condition_based_annual_leave_grant),
-        joinedload(Branches.auto_annual_leave_approval),
-        joinedload(Branches.allowance_policies)
-    ).where(Branches.id == branch_id).where(Branches.deleted_yn == "N")
+    stmt = (
+        select(Branches)
+        .options(
+            joinedload(Branches.work_policies).options(
+                selectinload(WorkPolicies.work_schedules),
+                selectinload(WorkPolicies.break_times),
+            ),
+            joinedload(Branches.overtime_policies),
+            joinedload(Branches.holiday_work_policies),
+            joinedload(Branches.auto_overtime_policies),
+            joinedload(Branches.account_based_annual_leave_grant),
+            joinedload(Branches.entry_date_based_annual_leave_grant),
+            joinedload(Branches.condition_based_annual_leave_grant),
+            joinedload(Branches.auto_annual_leave_approval),
+            joinedload(Branches.allowance_policies)
+        )
+        .where(Branches.id == branch_id)
+        .where(Branches.deleted_yn == "N")
+    )
     
     result = await session.execute(stmt)
-    branch = result.scalar_one_or_none()
-    return branch
-
+    return result.unique().scalar_one_or_none()
+    
 
 async def delete(*, session: AsyncSession, branch_id: int) -> bool:
 
@@ -169,20 +173,6 @@ async def update(*, session: AsyncSession, branch_id: int, request: Branches, ol
         pass
     
     return True
-
-
-# async def find_all_with_parts_users_auto_annual_leave_policies(
-#     *, session: AsyncSession
-# ) -> list[Branches]:
-#     stmt = select(Branches).options(
-#         selectinload(Branches.parts.and_(Parts.deleted_yn == "N")
-#                      ).selectinload(Parts.users.and_(Users.deleted_yn == "N")),
-#         selectinload(Branches.account_based_annual_leave_grant),
-#         selectinload(Branches.entry_date_based_annual_leave_grant),
-#         selectinload(Branches.condition_based_annual_leave_grant)
-#         ).where(Branches.deleted_yn == "N")
-#     result = await session.execute(stmt)
-#     return result.scalars().all()
 
 
 async def find_all_with_parts_users_auto_annual_leave_policies(

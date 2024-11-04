@@ -32,7 +32,8 @@ class BaseAppSettings(BaseSettings):
     SLACK_HOOK : str
     USERNAME : str
     CHANNEL : str
-    API_URL : str
+    API_URL : str 
+    
     
     @property
     def MODUSIGN_HEADERS(self) -> dict:

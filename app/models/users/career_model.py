@@ -2,7 +2,7 @@ from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum, DateTime
 from app.core.database import Base
 from datetime import datetime, UTC
 
-from app.enums.user_management import ContractType
+from app.enums.users import ContractType
 
 
 class Career(Base):
