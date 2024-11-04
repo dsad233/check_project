@@ -173,7 +173,7 @@ async def get_leave_histories(
         )
 
         # 사원인 경우 자신의 연차 신청 내역만 조회 가능하도록 필터 추가
-        if current_user.role == Status.EMPLOYEE:
+        if current_user.role == "사원":
             base_query = base_query.where(LeaveHistories.user_id == current_user.id)
 
         if base_query is None:
