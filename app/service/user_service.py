@@ -178,6 +178,6 @@ async def get_branch_users_name(
     users, total_cnt = await users_crud.get_branch_users(session=session, request=request, branch_id=branch_id)
 
     return UsersNameResponse(
-        data=[UserNameResponse(name=user.name) for user in users], 
+        data=[UserNameResponse(id=user.id, name=user.name) for user in users], 
         pagination=PaginationDto(total_record=total_cnt, record_size=request.record_size)
     )

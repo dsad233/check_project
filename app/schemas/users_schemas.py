@@ -78,6 +78,7 @@ class PersonnelRecordUsersResponse(BaseModel):
 
 
 class UserNameResponse(BaseModel):
+    id: int
     name: str
 
 
