@@ -11,8 +11,18 @@ from app.schemas.users_schemas import UserLeaveResponse
 from app.service import user_service
 from app.enums.users import Role
 from app.service import branch_service
-from app.schemas.branches_schemas import BranchRequest, BranchListResponse, BranchResponse, ManualGrantRequest
+from app.schemas.branches_schemas import (
+    BranchRequest, BranchListResponse, 
+    BranchResponse, ManualGrantRequest, 
+    PersonnelRecordCategoryRequest, PersonnelRecordCategoryResponse, 
+    PersonnelRecordCategoriesResponse,
+)
+from app.schemas.users_schemas import (
+    PersonnelRecordUsersRequest, PersonnelRecordUsersResponse,
+    UsersNameResponse
+)
 from app.core.permissions.auth_utils import available_higher_than
+
 
 router = APIRouter()
 
@@ -112,3 +122,62 @@ async def manual_minus_annual_leave(
     
     return await user_service.minus_total_leave_days(session=session, request=request)
 
+
+@router.post("/{branch_id}/personnel-record-categories/create", response_model=PersonnelRecordCategoryResponse, summary="지점 인사기록 카테고리 생성")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def create_personnel_record_category(
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: PersonnelRecordCategoryRequest
+) -> PersonnelRecordCategoryResponse:
+
+    return await branch_service.create_personnel_record_category(session=session, branch_id=branch_id, request=request)
+
+
+@router.get("/{branch_id}/personnel-record-categories/list", response_model=PersonnelRecordCategoriesResponse, summary="지점 인사기록 카테고리 목록 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def read_personnel_record_categories(
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: BaseSearchDto = Depends(BaseSearchDto)
+) -> PersonnelRecordCategoriesResponse:
+
+    return await branch_service.get_personnel_record_categories(session=session, branch_id=branch_id, request=request)
+
+
+@router.patch("/{branch_id}/personnel-record-categories/{personnel_record_category_id}/update", response_model=bool, summary="지점 인사기록 카테고리 수정")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def update_personnel_record_category(
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, personnel_record_category_id: int, request: PersonnelRecordCategoryRequest
+) -> bool:
+
+    return await branch_service.update_personnel_record_category(session=session, branch_id=branch_id, personnel_record_category_id=personnel_record_category_id, request=request)
+
+
+@router.delete("/{branch_id}/personnel-record-categories/{personnel_record_category_id}/delete", response_model=bool, summary="지점 인사기록 카테고리 삭제")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def delete_personnel_record_category(
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, personnel_record_category_id: int
+) -> bool:
+
+    return await branch_service.delete_personnel_record_category(session=session, branch_id=branch_id, personnel_record_category_id=personnel_record_category_id)
+
+
+@router.get("/personnel-record-users/list", response_model=PersonnelRecordUsersResponse, summary="지점 인사관리 페이지 유저 목록 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def read_personnel_record_users(
+    *, context: Request, session: AsyncSession = Depends(get_db), request: PersonnelRecordUsersRequest = Depends(PersonnelRecordUsersRequest)
+) -> PersonnelRecordUsersResponse:
+    
+    current_user = context.state.user
+    
+    if request.branch_id is None:
+        if current_user.role != Role.MSO:
+            request.branch_id = current_user.branch_id
+
+    return await user_service.get_personnel_record_users(session=session, request=request)
+
+
+@router.get("/{branch_id}/users/name/list", response_model=UsersNameResponse, summary="지점 내 유저 이름 목록 조회")
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def read_branch_users_name(
+    *, context: Request, session: AsyncSession = Depends(get_db), branch_id: int, request: BaseSearchDto = Depends(BaseSearchDto)
+) -> UsersNameResponse:
+
+    return await user_service.get_branch_users_name(session=session, request=request, branch_id=branch_id)

@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, logger
 from sqlalchemy import select, case, func, distinct, literal_column
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload, aliased
@@ -17,212 +17,95 @@ from app.schemas.parts_schemas import PartRequest
 from app.models.parts.parts_model import Parts
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.user_salary import UserSalary
-from app.service.user_management.service import UserManagementService
+from app.schemas.user_management.user_management_schemas import CurrentUserDTO, UserDTO, UserListResponseDTO
+from app.service.user_management.service import UserManagementService, UserQueryService
 
 router = APIRouter()
-
+user_query_service = UserQueryService()
 
 class UserManagement:
     router = router
 
     @router.get("")
     async def get_users(
-        request: Request,
-        db: AsyncSession = Depends(get_db),
-        current_user: Users = Depends(get_current_user),
         page: int = Query(1, ge=1),
         record_size: int = Query(10, ge=1),
-        status: Optional[str] = None, 
+        status: Optional[str] = Query(
+            None, 
+            description="사용자 상태 필터링 (가능한 값: '전체', '재직자', '퇴사자', '휴직자', '삭제회원')"
+        ),
         name: Optional[str] = None,
         phone: Optional[str] = None,
         branch_id: Optional[int] = None,
         part_id: Optional[int] = None,
+        current_user: Users = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
     ): 
+        """
+        사용자 목록을 조회합니다.
+        status 필터링 가능한 값: '전체', '재직자', '퇴사자', '휴직자', '삭제회원'
+        """
         try:
             if not current_user:
                 raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
-        
-            UserAlias = aliased(Users)
 
-            # 기본 쿼리 구성
-            base_query = (
-                select(UserAlias, 
-                    func.max(Commutes.updated_at).label('last_activity'),
-                    func.max(UserSalary.monthly_salary).label('monthly_salary'),
-                    func.max(UserSalary.annual_salary).label('annual_salary'))
-                .options(joinedload(UserAlias.parts), joinedload(UserAlias.branch))
-                .outerjoin(Commutes, UserAlias.id == Commutes.user_id)
-                .outerjoin(UserSalary, UserAlias.id == UserSalary.user_id)
-                .group_by(UserAlias.id)
+            users_data, total_count = await user_query_service.get_users_service(
+                db=db,
+                current_user=current_user,
+                page=page,
+                record_size=record_size,
+                status=status,
+                name=name,
+                phone=phone,
+                branch_id=branch_id,
+                part_id=part_id
             )
 
-            # 1. 사용자 역할에 따른 1차 필터링
-            # query = current_user.get_accessible_users_query(base_query, UserAlias)
+            if not users_data:
+                return UserListResponseDTO(
+                    message="조건에 맞는 유저가 없습니다.",
+                    data=[],
+                    total=0,
+                    count=0,
+                    page=page,
+                    record_size=record_size
+                )
 
-            query = base_query
-
-            # 권한 체크
-            # if branch_id and not current_user.can_access_branch(branch_id):
-            #     return {"message": "해당 지점에 접근할 권한이 없습니다."}
-            # if part_id and not current_user.can_access_parts([part_id]):
-            #     return {"message": "해당 파트에 접근할 권한이 없습니다."}
-
-            # 2. 상태 검색 조건 적용
-            if status:
-                if status == '퇴사자':
-                    query = query.filter(UserAlias.deleted_yn == "N", UserAlias.role == "퇴사자")
-                elif status == '휴직자':
-                    query = query.filter(UserAlias.deleted_yn == "N", UserAlias.role == "휴직자")
-                elif status == '재직자':
-                    query = query.filter(UserAlias.deleted_yn == "N", ~UserAlias.role.in_(["퇴사자", "휴직자"]))
-                elif status == '삭제유저':
-                    query = query.filter(UserAlias.deleted_yn == "Y")
-
-            # 3. 추가 검색 조건 적용
-            if name:
-                query = query.filter(UserAlias.name.ilike(f"%{name}%"))
-            if phone:
-                query = query.filter(UserAlias.phone_number.ilike(f"%{phone}%"))
-            if branch_id:
-                query = query.filter(UserAlias.branch_id == branch_id)
-            if part_id:
-                query = query.filter(UserAlias.parts.any(Parts.id == part_id))
-
-            # 총 개수 계산
-            count_query = select(func.count(distinct(UserAlias.id))).select_from(query.subquery())
-            total_count = await db.execute(count_query)
-            total_count = total_count.scalar_one()
-
-            # 정렬 및 페이지네이션
-            query = query.order_by(
-                case((UserAlias.id == current_user.id, literal_column("0")), else_=literal_column("1")),
-                UserAlias.id
-            ).offset((page - 1) * record_size).limit(record_size)
-
-            # 쿼리 실행
-            result = await db.execute(query)
-            users_data = result.unique().all()
-
-            # 결과 처리
-            user_data = []
-
-            for user, last_activity, monthly_salary, annual_salary in users_data:
-                user_dict = {
-                    "id": user.id,
-                    "name": user.name,
-                    "gender": user.gender,
-                    "email": user.email,
-                    "hire_date": user.hire_date,
-                    "parts": [
-                        {
-                            "branch_id": part.branch_id,
-                            "created_at": part.created_at,
-                            "deleted_yn": part.deleted_yn,
-                            "id": part.id,
-                            "is_doctor": part.is_doctor,
-                            "leave_granting_authority": part.leave_granting_authority,
-                            "name": part.name,
-                            "required_certification": part.required_certification,
-                            "task": part.task,
-                            "updated_at": part.updated_at,
-                        } for part in user.parts
-                    ] if user.parts else None,
-                    "branch": {
-                        "address": user.branch.address,
-                        "call_number": user.branch.call_number,
-                        "code": user.branch.code,
-                        "corporate_seal": user.branch.corporate_seal,
-                        "created_at": user.branch.created_at,
-                        "deleted_yn": user.branch.deleted_yn,
-                        "id": user.branch.id,
-                        "mail_address": user.branch.mail_address,
-                        "name": user.branch.name,
-                        "nameplate": user.branch.nameplate,
-                        "registration_number": user.branch.registration_number,
-                        "representative_name": user.branch.representative_name,
-                        "updated_at": user.branch.updated_at,
-                    } if user.branch else None,
-                    "role": user.role,
-                    "last_activity": last_activity
-                }
-
-                # user_dict = {
-                #     "id": user.id,
-                #     "branch": {
-                #         "id": user.branch.id,
-                #         "name": user.branch.name
-                #     },
-                #     "name": user.name,
-                #     "work_part": user.part.name,
-                #     "birth_date": user.birth_date,
-                #     "phone_number": user.phone_number,
-                #     "email": user.email,
-                #     "hire_date": user.hire_date,
-                #     "monthly_salary": monthly_salary,
-                #     "annual_salary": annual_salary,
-                #     # 근무 기간 추가
-                #     # 계약 기간 추가
-                # }
-
-                # 전체 정보 접근 권한 확인
-                # if current_user.can_access_full_user_info(user):
-                #     user_dict.update({
-                #         "birth_date": user.birth_date,
-                #         "phone_number": user.phone_number,
-                #         "retirement_date": user.retirement_date,
-                #         "leave_date": user.leave_date,
-                #         "monthly_salary": monthly_salary,
-                #         "annual_salary": annual_salary,
-                #     })
-
-                user_dict.update({
-                    "birth_date": user.birth_date,
-                    "phone_number": user.phone_number,
-                    # "retirement_date": user.retirement_date,
-                    # "leave_date": user.leave_date,
-                    "retirement_date": None,
-                    "leave_date": None,
-                    "monthly_salary": monthly_salary,
-                    "annual_salary": annual_salary,
-                })
-
-
-                user_data.append(user_dict)
-
-            if not user_data:
-                return {
-                    "message": "조건에 맞는 유저가 없습니다.",
-                    "data": [],
-                    "total": 0,
-                    "page": page,
-                    "record_size": record_size,
-                }
-
-            return {
-                "message": "유저를 정상적으로 조회하였습니다.",
-                "data": user_data,
-                "total": total_count,
-                "count": len(user_data),
-                "page": page,
-                "record_size": record_size,
-            }
+            return UserListResponseDTO(
+                message="유저를 정상적으로 조회하였습니다.",
+                data=users_data,
+                total=total_count,
+                count=len(users_data),
+                page=page,
+                record_size=record_size
+            )
 
         except Exception as err:
-            print(f"에러가 발생하였습니다: {err}")
+            logger.error(f"에러가 발생하였습니다: {err}")
             import traceback
-            print(traceback.format_exc())
+            logger.error(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.post("", response_model=ResponseDTO[CreatedUserDto])
     async def create_user(
             user_create: UserCreate,
-            service: UserManagementService = Depends(get_user_management_service),
+            user_management_service: UserManagementService = Depends(get_user_management_service),
             current_user: Users = Depends(get_current_user),
             session: AsyncSession = Depends(get_db)
     ):
-        user = Users(**user_create.model_dump())
-        created_user = await service.add_user(session=session, user=user)
-        data = await CreatedUserDto.build(user=created_user)
+        """
+        사용자를 생성합니다.
+        
+        gender 가능한 값: '남자', '여자' //
+        education.school_type 가능한 값: '초등학교', '중학교', '고등학교', '대학교', '대학원' //
+        education.graduation_type 가능한 값: '졸업', '졸업예정', '재학중', '휴학', '중퇴' //
+        career.contract_type 가능한 값: '정규직', '계약직', '인턴', '파트타임' //
+        """
+        created_user = await user_management_service.add_user(
+            user_create=user_create,
+            session=session
+        )
+        data = await CreatedUserDto.build(user=created_user, session=session)
 
         return ResponseDTO(
             status="SUCCESS",
@@ -230,7 +113,7 @@ class UserManagement:
             data=data,
         )
 
-    @router.get("/me", response_model=ResponseDTO[dict])
+    @router.get("/me", response_model=ResponseDTO[CurrentUserDTO])
     async def get_user(
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user)
@@ -239,50 +122,16 @@ class UserManagement:
             if not current_user:
                 raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
 
-            user_dict = {
-                "id": current_user.id,
-                "name": current_user.name,
-                "email": current_user.email,
-                "role": current_user.role,
-                "parts": [
-                    {
-                        "branch_id": part.branch_id,
-                        "created_at": part.created_at,
-                        "deleted_yn": part.deleted_yn,
-                        "id": part.id,
-                        "is_doctor": part.is_doctor,
-                        "leave_granting_authority": part.leave_granting_authority,
-                        "name": part.name,
-                        "required_certification": part.required_certification,
-                        "task": part.task,
-                        "updated_at": part.updated_at,
-                    } for part in current_user.parts
-                ] if current_user.parts else None,
-                "branch": {
-                    "address": current_user.branch.address,
-                    "call_number": current_user.branch.call_number,
-                    "code": current_user.branch.code,
-                    "corporate_seal": current_user.branch.corporate_seal,
-                    "created_at": current_user.branch.created_at,
-                    "deleted_yn": current_user.branch.deleted_yn,
-                    "id": current_user.branch.id,
-                    "mail_address": current_user.branch.mail_address,
-                    "name": current_user.branch.name,
-                    "nameplate": current_user.branch.nameplate,
-                    "registration_number": current_user.branch.registration_number,
-                    "representative_name": current_user.branch.representative_name,
-                    "updated_at": current_user.branch.updated_at,
-                } if current_user.branch else None,
-            }
+            user_dto = CurrentUserDTO.from_user(current_user)
 
             return ResponseDTO(
                 status="SUCCESS",
                 message="현재 로그인한 사용자를 정상적으로 조회하였습니다.",
-                data=user_dict,
+                data=user_dto,
             )
 
         except Exception as err:
-            print("에러가 발생하였습니다.", err)
+            logger.error("에러가 발생하였습니다.", err)
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.get("/admin", response_model=ResponseDTO[AdminUsersDto])
@@ -305,9 +154,10 @@ class UserManagement:
             data=data,
         )
 
-    @router.get("/{id}", response_model=ResponseDTO[dict])
+    @router.get("/{id}", response_model=ResponseDTO[UserDTO])
     async def get_user_detail(
             id: int,
+            user_management_service: UserManagementService = Depends(get_user_management_service),
             db: AsyncSession = Depends(get_db),
             current_user: Users = Depends(get_current_user)
     ):
@@ -315,110 +165,22 @@ class UserManagement:
         ID를 입력 시 세부정보가 조회되며, 권한에 따른 정보 접근이 가능합니다. 세부정보는 관리자만 볼 수 있습니다.
         """
         try:
-            if not current_user:
-                raise HTTPException(status_code=404, detail="현재 사용자 정보를 찾을 수 없습니다.")
-
-            UserAlias = aliased(Users)
-
-            # 요청된 사용자 정보 조회
-            base_query = (
-                select(UserAlias,
-                       func.max(Commutes.updated_at).label('last_activity'),
-                       func.max(UserSalary.monthly_salary).label('monthly_salary'),
-                       func.max(UserSalary.annual_salary).label('annual_salary'))
-                .options(joinedload(UserAlias.parts), joinedload(UserAlias.branch))
-                .outerjoin(Commutes, UserAlias.id == Commutes.user_id)
-                .outerjoin(UserSalary, UserAlias.id == UserSalary.user_id)
-                .group_by(UserAlias.id)
-                .where(UserAlias.id == id)
+            user_dto = await user_management_service.get_user_detail(
+                db=db,
+                user_id=id,
+                current_user=current_user
             )
-
-            # 사용자 역할에 따른 쿼리 필터링
-            # query = current_user.get_accessible_users_query(base_query, UserAlias)
-
-            query = base_query
-
-            # 쿼리 실행
-            result = await db.execute(query)
-            user_data = result.unique().first()
-
-            if not user_data:
-                raise HTTPException(status_code=404, detail="요청한 사용자를 찾을 수 없거나 접근 권한이 없습니다.")
-
-            user, last_activity, monthly_salary, annual_salary = user_data
-
-            # 기본 사용자 정보 구성
-            user_dict = {
-                "id": user.id,
-                "name": user.name,
-                "gender": user.gender,
-                "email": user.email,
-                "hire_date": user.hire_date,
-                "parts": [
-                    {
-                        "branch_id": part.branch_id,
-                        "created_at": part.created_at,
-                        "deleted_yn": part.deleted_yn,
-                        "id": part.id,
-                        "is_doctor": part.is_doctor,
-                        "leave_granting_authority": part.leave_granting_authority,
-                        "name": part.name,
-                        "required_certification": part.required_certification,
-                        "task": part.task,
-                        "updated_at": part.updated_at,
-                    } for part in user.parts
-                ] if user.parts else None,
-                "branch": {
-                    "address": user.branch.address,
-                    "call_number": user.branch.call_number,
-                    "code": user.branch.code,
-                    "corporate_seal": user.branch.corporate_seal,
-                    "created_at": user.branch.created_at,
-                    "deleted_yn": user.branch.deleted_yn,
-                    "id": user.branch.id,
-                    "mail_address": user.branch.mail_address,
-                    "name": user.branch.name,
-                    "nameplate": user.branch.nameplate,
-                    "registration_number": user.branch.registration_number,
-                    "representative_name": user.branch.representative_name,
-                    "updated_at": user.branch.updated_at,
-                } if user.branch else None,
-                "role": user.role,
-                "last_activity": last_activity
-            }
-
-
-            # 전체 정보 접근 권한 확인
-            # if current_user.can_access_full_user_info(user):
-            #     user_dict.update({
-            #         "birth_date": user.birth_date,
-            #         "phone_number": user.phone_number,
-            #         "retirement_date": user.retirement_date,
-            #         "leave_date": user.leave_date,
-            #         "monthly_salary": monthly_salary,
-            #         "annual_salary": annual_salary,
-            #     })
-
-            user_dict.update({
-                "birth_date": user.birth_date,
-                "phone_number": user.phone_number,
-                "retirement_date": None,
-                "leave_date": None,
-                "monthly_salary": monthly_salary,
-                "annual_salary": annual_salary,
-            })
 
             return ResponseDTO(
                 status="SUCCESS",
                 message="유저를 정상적으로 조회하였습니다.",
-                data=user_dict,
+                data=user_dto,
             )
+            
         except HTTPException as http_exc:
             raise http_exc
+        
         except Exception as err:
-            print(f"에러가 발생하였습니다: {err}")
-            import traceback
-            print(traceback.format_exc())
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
 
     @router.patch("/{id}")
