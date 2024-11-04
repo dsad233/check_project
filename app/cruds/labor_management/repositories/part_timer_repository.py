@@ -8,9 +8,12 @@ from app.cruds.labor_management.dto.part_timers_response_dto import PartTimerSum
 
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.enums.user_management import ContractStatus, ContractType
 from app.enums.users import EmploymentStatus
+from app.models.users.users_contract_info_model import ContractInfo
+from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
-from sqlalchemy import Select, Time, and_, case, exists, extract, func, select, update
+from sqlalchemy import Select, Time, and_, case, exists, extract, func, select, tuple_, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.users.users_model import Users
@@ -379,8 +382,14 @@ class PartTimerRepository(IPartTimerRepository):
             int: 파트 타이머의 총 수
         '''
         query = (
-            select(func.count(Users.id))
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            select(func.count(func.distinct(Users.id)))
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(
+                        Contract.contract_type == ContractType.PART_TIME,
+                        Contract.contract_status == ContractStatus.APPROVE
+                    )
                 .join(Branches, Branches.id == Users.branch_id)
                 .join(Parts, Parts.id == Users.part_id)
                 .join(Commutes, Commutes.user_id == Users.id)
@@ -390,7 +399,6 @@ class PartTimerRepository(IPartTimerRepository):
                             func.extract('month', Commutes.clock_in) == month
                         )
                     )
-            .group_by(Users.id)
         )
 
         result = await self.session.execute(query)
@@ -409,8 +417,14 @@ class PartTimerRepository(IPartTimerRepository):
             int: 파트 타이머의 총 수
         '''
         query = (
-            select(func.count(Users.id))
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            select(func.count(func.distinct(Users.id)))
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(
+                        Contract.contract_type == ContractType.PART_TIME,
+                        Contract.contract_status == ContractStatus.APPROVE
+                    )
                 .join(Branches, Branches.id == Users.branch_id)
                     .filter(Branches.id == branch_id)
                 .join(Parts, Parts.id == Users.part_id)
@@ -421,7 +435,6 @@ class PartTimerRepository(IPartTimerRepository):
                             func.extract('month', Commutes.clock_in) == month
                         )
                     )
-            .group_by(Users.id)
         )
 
         result = await self.session.execute(query)
@@ -441,8 +454,14 @@ class PartTimerRepository(IPartTimerRepository):
             int: 파트 타이머의 총 수
         '''
         query = (
-            select(func.count(Users.id))
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            select(func.count(func.distinct(Users.id)))
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(
+                        Contract.contract_type == ContractType.PART_TIME,
+                        Contract.contract_status == ContractStatus.APPROVE
+                    )
                 .join(Branches, Branches.id == Users.branch_id)
                     .filter(Branches.id == branch_id)
                 .join(Parts, Parts.id == Users.part_id)
@@ -454,7 +473,6 @@ class PartTimerRepository(IPartTimerRepository):
                             func.extract('month', Commutes.clock_in) == month
                         )
                     )
-            .group_by(Users.id)
         )
 
         result = await self.session.execute(query)
