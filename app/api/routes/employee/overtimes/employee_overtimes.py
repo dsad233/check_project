@@ -100,13 +100,33 @@ async def get_employee_overtimes(
 
         formatted_data = []
         for overtime in overtimes:
+            user_query = select(Users, Branches, Parts).join(
+                Branches, Users.branch_id == Branches.id
+            ).join(
+                Parts, Users.part_id == Parts.id
+            ).where(Users.id == overtime.applicant_id)
+            
+            user_result = await db.execute(user_query)
+            user, branch, part = user_result.first()
+            
             overtime_data = {
                 "id": overtime.id,
+                "applicant_id": user.id,
+                "user_name": user.name,
+                "user_phone_number": user.phone_number,
+                "user_gender": user.gender,
+                "user_hire_date": user.hire_date,
+                "user_resignation_date": user.resignation_date,
+                "branch_id": branch.id,
+                "branch_name": branch.name,
+                "part_id": part.id,
+                "part_name": part.name,
                 "application_date": overtime.application_date,
                 "overtime_hours": overtime.overtime_hours,
                 "application_memo": overtime.application_memo,
                 "manager_memo": overtime.manager_memo,
                 "status": overtime.status,
+                "manager_id": overtime.manager_id,
                 "manager_name": overtime.manager_name,
                 "processed_date": overtime.processed_date,
                 "is_approved": overtime.is_approved

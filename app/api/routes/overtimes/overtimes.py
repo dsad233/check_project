@@ -417,6 +417,8 @@ async def get_overtimes(
                 "user_name": user.name,
                 "user_phone_number": user.phone_number,
                 "user_gender": user.gender,
+                "user_hire_date": user.hire_date,
+                "user_resignation_date": user.resignation_date,
                 "branch_id": branch.id,
                 "branch_name": branch.name,
                 "part_id": part.id,
