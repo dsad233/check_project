@@ -7,16 +7,10 @@ from app.models.branches.condition_based_annual_leave_grant_model import Conditi
 from app.exceptions.exceptions import NotFoundError, BadRequestError
 
 
-async def find_by_id(*, session: AsyncSession, id: int) -> ConditionBasedAnnualLeaveGrant:
-
-    stmt = (
-        select(ConditionBasedAnnualLeaveGrant)
-        .where(ConditionBasedAnnualLeaveGrant.id == id)
-    )
+async def find_by_id(*, session: AsyncSession, branch_id: int, id: int) -> Optional[ConditionBasedAnnualLeaveGrant]:
+    stmt = select(ConditionBasedAnnualLeaveGrant).where(ConditionBasedAnnualLeaveGrant.branch_id == branch_id).where(ConditionBasedAnnualLeaveGrant.id == id)
     result = await session.execute(stmt)
-    policy = result.scalar_one_or_none()
-
-    return policy
+    return result.unique().scalar_one_or_none()
 
 async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> list[ConditionBasedAnnualLeaveGrant]:
 
@@ -30,43 +24,36 @@ async def find_all_by_branch_id(*, session: AsyncSession, branch_id: int) -> lis
 
     return policy
 
-async def create(*, session: AsyncSession, branch_id: int, condition_based_annual_leave_grant_create: ConditionBasedAnnualLeaveGrant = ConditionBasedAnnualLeaveGrant()) -> ConditionBasedAnnualLeaveGrant:
+async def create(*, session: AsyncSession, branch_id: int, request: ConditionBasedAnnualLeaveGrant = ConditionBasedAnnualLeaveGrant()) -> ConditionBasedAnnualLeaveGrant:
 
-    if condition_based_annual_leave_grant_create.branch_id is None:
-        condition_based_annual_leave_grant_create.branch_id = branch_id
-    session.add(condition_based_annual_leave_grant_create)
-    await session.commit()
+    if request.branch_id is None:
+        request.branch_id = branch_id
+    session.add(request)
     await session.flush()
-    await session.refresh(condition_based_annual_leave_grant_create)
-    return condition_based_annual_leave_grant_create
+    await session.refresh(request)
+    return request
     
-async def update(*, session: AsyncSession, branch_id: int, condition_based_annual_leave_grant_update: ConditionBasedAnnualLeaveGrant) -> ConditionBasedAnnualLeaveGrant:
+async def update(*, session: AsyncSession, branch_id: int, request: ConditionBasedAnnualLeaveGrant, old: ConditionBasedAnnualLeaveGrant) -> bool:
 
-    # 기존 정책 조회
-    condition_based_annual_leave_grant = await find_by_id(session=session, id=condition_based_annual_leave_grant_update.id)
-
-    if condition_based_annual_leave_grant is None:
-        raise NotFoundError(f"{branch_id}번 지점의 {condition_based_annual_leave_grant_update.id}번 자동 부여 정책이 존재하지 않습니다.")
-    
     # 변경된 필드만 업데이트
     changed_fields = {}
     for column in ConditionBasedAnnualLeaveGrant.__table__.columns:
         if column.name not in ['id', 'branch_id', 'created_at', 'updated_at', 'deleted_yn']:
-            new_value = getattr(condition_based_annual_leave_grant_update, column.name)
-            if new_value is not None and getattr(condition_based_annual_leave_grant, column.name) != new_value:
+            new_value = getattr(request, column.name)
+            if new_value is not None and getattr(old, column.name) != new_value:
                 changed_fields[column.name] = new_value
 
     if changed_fields:
         # 변경된 필드가 있을 경우에만 업데이트 수행
-        stmt = sa_update(ConditionBasedAnnualLeaveGrant).where(ConditionBasedAnnualLeaveGrant.id == condition_based_annual_leave_grant_update.id).where(ConditionBasedAnnualLeaveGrant.branch_id == branch_id).values(**changed_fields)
+        stmt = sa_update(ConditionBasedAnnualLeaveGrant).where(ConditionBasedAnnualLeaveGrant.id == old.id).values(**changed_fields)
         await session.execute(stmt)
-        condition_based_annual_leave_grant.updated_at = datetime.now()
-        await session.commit()
-        await session.refresh(condition_based_annual_leave_grant)
+        old.updated_at = datetime.now()
+        await session.flush()
+        await session.refresh(old)
     else:
         pass
 
-    return condition_based_annual_leave_grant
+    return True
 
 
 async def delete_all_id(
