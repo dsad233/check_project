@@ -138,10 +138,10 @@ class ManualGrantRequest(BaseModel):
 
 
 class BranchWorkScheduleDto(BaseModel):
-    day_of_week: Weekday
-    start_time: time
-    end_time: time
-    is_holiday: bool
+    day_of_week: Optional[Weekday] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
+    is_holiday: Optional[bool] = None
 
     class Config:
         from_attributes = True
@@ -149,24 +149,23 @@ class BranchWorkScheduleDto(BaseModel):
 
 
 class BranchBreakTimeDto(BaseModel):
-    is_doctor: bool
-    break_type: str
-    start_time: time
-    end_time: time
+    is_doctor: Optional[bool] = None
+    break_type: Optional[str] = None
+    start_time: Optional[time] = None
+    end_time: Optional[time] = None
 
     class Config:
         from_attributes = True
 
 
 class WorkPoliciesDto(BaseModel):
-    id: int
-    branch_id: int
-    weekly_work_days: int
-    work_schedules: list[BranchWorkScheduleDto] = []
-    break_times: list[BranchBreakTimeDto] = []
+    weekly_work_days: Optional[int] = Field(description="주간 근무일", default=5)
+    work_schedules: Optional[list[BranchWorkScheduleDto]] = Field(description="근무일정", default=[])
+    break_times: Optional[list[BranchBreakTimeDto]] = Field(description="휴게시간", default=[])
 
     class Config:
         from_attributes = True
+        
         
 class BranchWorkScheduleUpdateDto(BaseModel):
     day_of_week: Optional[Weekday] = None
@@ -292,14 +291,6 @@ class CombinedPoliciesDto(BaseModel):
     default_allowance_policies: DefaultAllowancePoliciesDto
     holiday_allowance_policies: HolidayAllowancePoliciesDto
 
-
-class CombinedPoliciesUpdateDto(BaseModel):
-    work_policies: WorkPoliciesUpdateDto
-    auto_overtime_policies: AutoOvertimePoliciesDto
-    holiday_work_policies: HolidayWorkPoliciesDto
-    overtime_policies: OverTimePoliciesDto
-    default_allowance_policies: DefaultAllowancePoliciesDto
-    holiday_allowance_policies: HolidayAllowancePoliciesDto
 
 
 class ScheduleHolidayUpdateDto(BaseModel):
