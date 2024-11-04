@@ -10,6 +10,7 @@ from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.enums.user_management import ContractStatus, ContractType
 from app.enums.users import EmploymentStatus
+from app.exceptions.exceptions import BadRequestError
 from app.models.users.users_contract_info_model import ContractInfo
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
@@ -58,21 +59,23 @@ class PartTimerRepository(IPartTimerRepository):
                 Branches.id.label('branch_id'),
                 Parts.id.label('part_id'),
                 func.sum(
-                    case(
-                        (PartTimerAdditionalInfo.work_type == 'HOSPITAL', work_hours - rest_hours),
-                        else_=0
-                    )
+                    case((PartTimerAdditionalInfo.work_type == 'HOSPITAL', work_hours - rest_hours), else_=0)
                 ).label('hospital_work_hours'),
                 func.sum(
-                    case(
-                        (PartTimerAdditionalInfo.work_type == 'HOLIDAY', work_hours - rest_hours),
-                        else_=0
-                    )
+                    case((PartTimerAdditionalInfo.work_type == 'HOLIDAY', work_hours - rest_hours), else_=0)
                 ).label('holiday_work_hours'),
                 func.sum(work_hours - rest_hours).label('total_work_hours'),
                 func.sum((work_hours - rest_hours) * PartTimerHourlyWage.hourly_wage).label('total_wage'),
+                PartTimerHourlyWage.calculate_start_time,
+                PartTimerHourlyWage.calculate_end_time
             )
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            .join(ContractInfo, Users.id == ContractInfo.user_id)
+                .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+            .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                .filter(
+                    Contract.contract_type == ContractType.PART_TIME,
+                    Contract.contract_status == ContractStatus.APPROVE
+                )
             .join(Branches, Branches.id == Users.branch_id)
             .join(Parts, Parts.id == Users.part_id)
             .join(Commutes, Commutes.user_id == Users.id)
@@ -84,9 +87,10 @@ class PartTimerRepository(IPartTimerRepository):
                     )
                 )
             .join(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
-            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
+            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == Contract.contract_id)
                 .filter(
                     and_(
+                        # NOTE: **설정시간이 시급에 기재된 시작시간과 종료시간 사이에 있는 경우만 조회됨!!!!**
                         PartTimerAdditionalInfo.work_set_start_time >= PartTimerHourlyWage.calculate_start_time,
                         PartTimerAdditionalInfo.work_set_start_time <= PartTimerHourlyWage.calculate_end_time
                     )
@@ -113,13 +117,16 @@ class PartTimerRepository(IPartTimerRepository):
         '''
         part_timer_find_subquery = (
             select(Users.id)
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
-                .join(Branches, Branches.id == Users.branch_id)
-                .join(Parts, Parts.id == Users.part_id)
-                .join(Commutes, Commutes.user_id == Users.id)
-            .group_by(Users.id)
-            .offset((page_num - 1) * page_size)
-            .limit(page_size)
+                .distinct()
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(
+                        Contract.contract_type == ContractType.PART_TIME,
+                        Contract.contract_status == ContractStatus.APPROVE
+                    )
+                .offset((page_num - 1) * page_size)
+                .limit(page_size)
         ).subquery()
 
         return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
@@ -141,7 +148,10 @@ class PartTimerRepository(IPartTimerRepository):
         '''
         query = (self.get_part_timer_work_history_summary_select_query()
             .select_from(Users)
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+            .join(ContractInfo, Users.id == ContractInfo.user_id)
+                .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+            .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                .filter(Contract.contract_type == ContractType.PART_TIME, Contract.contract_status == ContractStatus.APPROVE)
             .join(Branches, Branches.id == Users.branch_id)
             .join(Parts, Parts.id == Users.part_id)
             .join(Commutes, Commutes.user_id == Users.id)
@@ -153,7 +163,7 @@ class PartTimerRepository(IPartTimerRepository):
                     )
                 )
             .join(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
-            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
+            .join(PartTimerHourlyWage, Contract.contract_id == PartTimerHourlyWage.part_timer_work_contract_id)
                 .filter(
                     and_(
                         PartTimerAdditionalInfo.work_set_start_time >= PartTimerHourlyWage.calculate_start_time,
@@ -183,12 +193,15 @@ class PartTimerRepository(IPartTimerRepository):
         '''
         part_timer_find_subquery = (
             select(Users.id)
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .distinct()
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(Contract.contract_type == ContractType.PART_TIME, Contract.contract_status == ContractStatus.APPROVE)
                 .join(Branches, Branches.id == Users.branch_id)
                     .filter(Branches.id == branch_id)
                 .join(Parts, Parts.id == Users.part_id)
                 .join(Commutes, Commutes.user_id == Users.id)
-            .group_by(Users.id)
                 .offset((page_num - 1) * page_size)
                 .limit(page_size)
         ).subquery()
@@ -212,13 +225,15 @@ class PartTimerRepository(IPartTimerRepository):
         '''
         part_timer_find_subquery = (
             select(Users.id)
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
+                .distinct()
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(Contract.contract_type == ContractType.PART_TIME, Contract.contract_status == ContractStatus.APPROVE)
                 .join(Branches, Branches.id == Users.branch_id)
                     .filter(Branches.id == branch_id)
                 .join(Parts, Parts.id == Users.part_id)
                     .filter(Parts.id == part_id)
-                .join(Commutes, Commutes.user_id == Users.id)
-            .group_by(Users.id)
                 .offset((page_num - 1) * page_size)
                 .limit(page_size)
         ).subquery()
@@ -264,8 +279,10 @@ class PartTimerRepository(IPartTimerRepository):
                 func.sum((work_hours - rest_hours) * PartTimerHourlyWage.hourly_wage).label('total_wage'),
             )
             .select_from(Users)
-            .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
-                .filter(PartTimerWorkContract.user_id == user_id)
+            .join(ContractInfo, Users.id == ContractInfo.user_id)
+                .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY)
+            .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                .filter(Contract.contract_type == ContractType.PART_TIME, Contract.contract_status == ContractStatus.APPROVE)
             .join(Commutes, Commutes.user_id == Users.id)
                 .filter(
                     and_(
@@ -275,7 +292,7 @@ class PartTimerRepository(IPartTimerRepository):
                     )
                 )
             .join(PartTimerAdditionalInfo, PartTimerAdditionalInfo.commute_id == Commutes.id)
-            .join(PartTimerHourlyWage, PartTimerHourlyWage.part_timer_work_contract_id == PartTimerWorkContract.id)
+            .join(PartTimerHourlyWage, Contract.contract_id == PartTimerHourlyWage.part_timer_work_contract_id)
                 .filter(
                     and_(
                         PartTimerAdditionalInfo.work_set_start_time >= PartTimerHourlyWage.calculate_start_time,
@@ -305,20 +322,21 @@ class PartTimerRepository(IPartTimerRepository):
         '''
         condition = []
         if user_name:
-            condition.append(Users.name.ilike(f'%{user_name}%'))
+            condition.append(Users.name.ilike(f"{user_name}"))
         if phone_number:
-            condition.append(Users.phone_number.ilike(f'%{phone_number}%'))
-
+            condition.append(Users.phone_number.ilike(f"{phone_number}"))
+            
         part_timer_find_subquery = (
             select(Users.id)
-                .join(PartTimerWorkContract, PartTimerWorkContract.user_id == Users.id)
-                    .filter(and_(*condition))
+                .join(ContractInfo, Users.id == ContractInfo.user_id)
+                    .filter(ContractInfo.employ_status == EmploymentStatus.TEMPORARY, *condition)
+                .join(Contract, ContractInfo.id == Contract.contract_info_id)
+                    .filter(Contract.contract_type == ContractType.PART_TIME, Contract.contract_status == ContractStatus.APPROVE)
                 .join(Branches, Branches.id == Users.branch_id)
                     .filter(Branches.id == branch_id)
                 .join(Parts, Parts.id == Users.part_id)
                     .filter(Parts.id == part_id)
-                .join(Commutes, Commutes.user_id == Users.id)
-            .group_by(Users.id)
+                .where(*condition)
         ).subquery()
         
         return await self.calculate_hours_and_wage(year, month, part_timer_find_subquery)
