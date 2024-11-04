@@ -41,3 +41,13 @@ class UserLeavesDaysResponse(BaseModel):
     decreased_days: Optional[float] = Field(default=0.00, ge=0) # 감소 일수
     total_leave_days: Optional[float] = Field(default=0.00, ge=0) # 총 휴무 일수
     year: Optional[int] = Field(None, gt=0) # 연도
+    
+class UserLeaveInfo(BaseModel):
+    """사용자 연차 정보를 담는 모델"""
+    user_id: int
+    branch_id: int
+    year: Optional[int]
+    increased_days: Optional[float]
+    decreased_days: Optional[float]
+    total_leave_days: Optional[float]
+    message: Optional[str] = None
