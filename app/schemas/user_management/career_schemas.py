@@ -3,13 +3,13 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from app.enums.users import ContractType
+from app.enums.users import CareerContractType
 from app.models.users.career_model import Career
 
 
 class CareerDto(BaseModel):
     company: Optional[str] = Field(None, description="회사명")
-    contract_type: Optional[ContractType] = Field(
+    contract_type: Optional[CareerContractType] = Field(
         None,
         description="계약유형 (정규직/계약직/임시직/인턴)"
     )
