@@ -18,8 +18,8 @@ class UserManagementRepository:
     ) -> Optional[Users]:
         stmt = (
             select(Users)
-            .options(joinedload(Users.branches))
-            .options(selectinload(Users.parts))
+            .options(joinedload(Users.branch))
+            .options(selectinload(Users.part))
             .where(Users.id == user_id)
             .where(Users.deleted_yn == "N")
         )

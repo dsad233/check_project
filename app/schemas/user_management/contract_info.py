@@ -69,18 +69,17 @@ class RequestCreateContractInfo(BaseModel):
     position: str
     employ_status: str
 
-    @classmethod
-    def to_domain(cls, user_id: int, manager_id: int) -> ContractInfo:
+    def to_domain(self, user_id: int, manager_id: int) -> ContractInfo:
         return ContractInfo(
             user_id=user_id,
             manager_id=manager_id,
-            hire_date=DatetimeUtil.str_to_date(cls.hire_date),
-            resignation_date=DatetimeUtil.str_to_date(cls.resignation_date) if cls.resignation_date else None,
-            contract_renewal_date=DatetimeUtil.str_to_date(cls.contract_renewal_date) if cls.contract_renewal_date else None,
-            part_id=cls.part_id,
-            job_title=cls.job_title,
-            position=cls.position,
-            employ_status=cls.employ_status
+            hire_date=DatetimeUtil.str_to_date(self.hire_date),
+            resignation_date=DatetimeUtil.str_to_date(self.resignation_date) if self.resignation_date else None,
+            contract_renewal_date=DatetimeUtil.str_to_date(self.contract_renewal_date) if self.contract_renewal_date else None,
+            part_id=self.part_id,
+            job_title=self.job_title,
+            position=self.position,
+            employ_status=self.employ_status
         )
 
 class RequestUpdateContractInfo(BaseModel):

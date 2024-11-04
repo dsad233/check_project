@@ -31,7 +31,7 @@ class RequestCreateSalaryContract(BaseModel):
     def to_domain(self) -> SalaryContract:
         return SalaryContract(
             contract_start_date=DatetimeUtil.str_to_date(self.contract_start_date),
-            contract_end_date=DatetimeUtil.str_to_date(self.contract_end_date),
+            contract_end_date=DatetimeUtil.str_to_date(self.contract_end_date) if self.contract_end_date else None,
             annual_salary=self.annual_salary,
             monthly_salary=self.monthly_salary,
             base_salary=self.base_salary,

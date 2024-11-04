@@ -10,6 +10,7 @@ from app.dependencies.user_management import get_user_management_work_contract_s
 from app.exceptions.exceptions import BadRequestError
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users
+from app.models.users.users_work_contract_model import WorkContract
 from app.schemas.user_work_contract_schemas import RequestCreateWorkContract, \
     ResponseUserWorkContractDto, ResponseCreatedWorkContractDto, WorkContractDto
 from app.enums.users import EmploymentStatus
@@ -55,7 +56,7 @@ class UserManagementWorkContract:
             work_contract_service: UserManagementWorkContractService = Depends(get_user_management_work_contract_service),
             current_user: Users = Depends(get_current_user)
     ):
-        work_contract = request_create_work_contract.to_domain()
+        work_contract: WorkContract = request_create_work_contract.to_domain()
         created_work_contract_id = await work_contract_service.create_work_contract(
             work_contract=work_contract,
         )

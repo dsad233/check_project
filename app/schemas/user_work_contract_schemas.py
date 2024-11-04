@@ -45,7 +45,7 @@ class RequestCreateWorkContract(BaseModel):
                     rest_day=rest_day.rest_day,
                     every_over_week=rest_day.every_over_week
                 ) for rest_day in self.fixed_rest_days
-            ] if self.fixed_rest_days else [],
+            ] if self.fixed_rest_days else None,
             weekly_work_start_time=self.weekly_work_start_time,
             weekly_work_end_time=self.weekly_work_end_time,
             saturday_work_start_time=self.saturday_work_start_time,

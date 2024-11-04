@@ -30,7 +30,7 @@ class UserManagementContractInfoService:
 
     async def get_total_contract_info(self, user_id: int, contract_info_id: int) -> ResponseTotalContractInfo:
         work_contract, salary_contract, part_time_contract = None, None, None
-        user = await self.user_management_service.get_user(user_id, session=get_db())
+        user = await self.user_management_service.get_user(user_id)
         contract_info = await self.contract_info_repository.find_by_id(contract_info_id)
 
         for contract in contract_info.contracts:
@@ -111,9 +111,9 @@ class UserManagementContractInfoService:
         return True
 
     async def send_contracts(self, user_id: int, contract_info_id: int):
-        contracts = await self.contract_info_repository.find_by_id(contract_info_id).contracts
+        contract_info = await self.contract_info_repository.find_by_id(contract_info_id)
 
-        for contract in contracts:
+        for contract in contract_info.contracts:
             await self.contract_service.send_contract_by_modusign(
                 user_id=user_id,
                 contract=contract

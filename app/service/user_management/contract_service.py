@@ -35,8 +35,8 @@ class UserManagementContractService:
             part_time_contract_service: UserManagementPartTimeContractService,
             contract_history_service: UserManagementContractHistoryService,
             contract_repository: UserManagementContractRepository,
-            modusign_template_service: ModusignTemplateService = Depends(),
-            modusign_document_service: ModusignDocumentService = Depends(),
+            modusign_template_service: ModusignTemplateService,
+            modusign_document_service: ModusignDocumentService,
     ):
         self.service = service
         self.salary_contract_service = salary_contract_service
@@ -72,10 +72,15 @@ class UserManagementContractService:
             contract_id=salary_contract_id,
         )
 
-        work_contract_contract_id, salary_contract_contract_id = asyncio.gather(
-            self.create_contract(contract=work_contract_contract),
-            self.create_contract(contract=salary_contract_contract)
-        )
+        # gather 메시지는 일단 Transaction 에러 발생 가능성으로 인해 보류
+        # await asyncio.gather(
+        #     self.create_contract(contract=work_contract_contract),
+        #     self.create_contract(contract=salary_contract_contract)
+        # )
+
+        await self.create_contract(contract=work_contract_contract),
+        await self.create_contract(contract=salary_contract_contract)
+
 
         contract_history = ContractHistory(
             contract_info_id=contract_info_id,
@@ -174,7 +179,7 @@ class UserManagementContractService:
         user = await self.service.get_user(user_id=user_id)
 
         if contract.contract_type != ContractType.WORK:
-            raise NotImplementedError("Work 이외의 계약서는 준비되지 않았습니다.")
+            return False
 
         template_response = await self.get_modusign_template_by_id(template_id=modusign_template_id)
 
