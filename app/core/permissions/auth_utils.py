@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import List
+from typing import List, Optional
 from fastapi import HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -163,24 +163,21 @@ async def check_part_in_branch(db: AsyncSession, part_id: int, branch_id: int) -
     return result.scalar_one_or_none() is not None
 
 
-
-async def can_manage_user_permissions(current_user: Users, target_user: Users, db: AsyncSession, part_id: int = None) -> bool:
-    """사용자가 다른 사용자의 권한을 관리할 수 있는지 확인하는 메서드"""
+async def can_manage_user_permissions(
+        current_user: Users,
+        target_user: Users,
+        new_role: Optional[Role],
+        db: AsyncSession,
+        part_id: int = None
+) -> bool:
+    """사용자 권한 관리 가능 여부 확인"""
     if not current_user.role or not target_user.role:
         return False
 
     current_level = ROLE_LEVELS[current_user.role]
     target_level = ROLE_LEVELS[target_user.role]
 
-    # 1. MSO 관련 로직 먼저 체크
-    if target_user.role == Role.MSO:
-        # MSO만 다른 MSO의 권한을 관리할 수 있음
-        if current_user.role != Role.MSO:
-            raise HTTPException(
-                status_code=401,
-                detail="MSO 관련 권한은 오직 MSO만 관리할 수 있습니다."
-            )
-    # MSO는 모든 지점의 모든 사용자 관리 가능
+    # MSO는 모든 권한 가능 (파트만 체크)
     if current_user.role == Role.MSO:
         if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
             raise HTTPException(
@@ -189,37 +186,53 @@ async def can_manage_user_permissions(current_user: Users, target_user: Users, d
             )
         return True
 
-    # 2. 지점 확인 (MSO를 제외한 모든 관리자급)
-    if current_user.role in [Role.SUPER_ADMIN, Role.INTEGRATED_ADMIN, Role.ADMIN]:
-        if current_user.branch_id != target_user.branch_id:
-            raise HTTPException(status_code=401, detail="다른 지점의 사용자의 권한은 관리할 수 없습니다.")
-
-    # 파트가 해당 지점에 속하는지 확인
-    if part_id and not await check_part_in_branch(db, part_id, target_user.branch_id):
+    # MSO가 아닌 경우 지점 체크
+    if current_user.branch_id != target_user.branch_id:
         raise HTTPException(
-            status_code=400,
-            detail=f"파트 ID {part_id}는 해당 사용자가 속한 지점에 존재하지 않습니다."
+            status_code=401,
+            detail=f"다른 지점의 사용자 권한은 변경할 수 없습니다."
         )
 
-    # 3. 역할별 권한 체크
-    # 최고 관리자 (MSO를 제외한 모든 권한 관리 가능)
-    if current_user.role == Role.SUPER_ADMIN:
-        return True
+    # 통합관리자는 역할 변경 불가
+    if current_user.role == Role.INTEGRATED_ADMIN and new_role != target_user.role:
+        raise HTTPException(
+            status_code=401,
+            detail="통합관리자는 사용자의 역할을 변경할 수 없습니다."
+        )
 
-    # 통합 관리자
-    # 자기 지점의, 자신보다 숫자가 같거나 높은 레벨 권한을 관리하려고 하면 Error
-    if current_user.role == Role.INTEGRATED_ADMIN:
-        if target_level <= current_level:
+    # 파트관리자는 권한 관리 불가
+    if current_user.role == Role.ADMIN:
+        raise HTTPException(
+            status_code=401,
+            detail="파트관리자는 권한을 관리할 수 없습니다."
+        )
+
+    # 자신보다 높은 권한의 사용자는 관리 불가
+    if target_level < current_level:
+        raise HTTPException(
+            status_code=401,
+            detail=f"자신보다 높은 권한의 사용자는 관리할 수 없습니다. (대상: {target_user.role})"
+        )
+
+    # 역할 변경이 있는 경우 추가 체크
+    if new_role and new_role != target_user.role:
+        new_level = ROLE_LEVELS[new_role]
+
+        # 최고관리자만 역할 변경 가능
+        if current_user.role != Role.SUPER_ADMIN:
             raise HTTPException(
                 status_code=401,
-                detail="통합 관리자는 같은 레벨, 보다 높은 권한을 가진 사용자의 권한은 수정할 수 없습니다."
+                detail="역할 변경은 최고관리자만 가능합니다."
             )
-        return True
 
-    raise HTTPException(
-        status_code=401,
-        detail="해당 파트 관리 권한이 없습니다."
-    )
+        # 자신보다 높은 권한으로 승격 불가
+        if new_level <= current_level:
+            raise HTTPException(
+                status_code=401,
+                detail=f"자신보다 높거나 같은 권한으로는 변경할 수 없습니다."
+            )
+
+    return True
 
 
 async def get_branch_filters(current_user: Users) -> List:

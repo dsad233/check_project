@@ -38,20 +38,18 @@ async def create_overtime(
         existing_overtime = await db.execute(
             select(Overtimes)
             .where(
-                or_(
-                    Overtimes.status == Status.PENDING,
-                    Overtimes.status == Status.APPROVED
-                ),
+                Overtimes.status.in_([Status.PENDING, Status.APPROVED]),
                 Overtimes.applicant_id == current_user_id,
                 Overtimes.application_date == datetime.now(UTC).date(),
                 Overtimes.deleted_yn == "N"
             )
+            .order_by(Overtimes.created_at.desc())
         )
 
         result_existing_overtime = existing_overtime.first()
 
-        if  result_existing_overtime is not None:
-            raise HTTPException(status_code=400, detail=f"이미 오늘 {overtime.overtime_hours}분 초과근무 신청을 했습니다.")
+        if result_existing_overtime is not None:
+            raise HTTPException(status_code=400, detail=f"이미 처리중이거나 승인된 초과근무 신청이 있습니다.")
             
         new_overtime = Overtimes(
             applicant_id=current_user_id,
@@ -198,7 +196,7 @@ async def approve_overtime(
             if result_part is None:
                 raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
             
-            # 기존 횟수에 대한 오버타임 조회
+            # 기존 횟수에 대한 오버타�� 조회
             find_overtime_history = await db.execute(select(OverTime_History).where(OverTime_History.user_id == result_user.id, OverTime_History.deleted_at == "N"))
             result_overtime_history = find_overtime_history.scalar_one_or_none()
 
@@ -469,22 +467,23 @@ async def get_overtimes_approved_list(
     phone_number: Optional[str] = None, 
     branch_id: Optional[int] = None, 
     part_id: Optional[int] = None,
-    is_deleted: Optional[str] = None,
+    user_deleted_yn: Optional[str] = None,
     page: int = 1,
     size: int = 10,
     db: AsyncSession = Depends(get_db)
     ):
     try:
         if date is None:
+            # 날짜가 없으면 현재 날짜 기준으로 해당 주의 일요일-토요일
             date_obj = datetime.now().date()
-            # weekday()가 0(월요일)~6(일요일)을 반환하므로, 
-            # 일요일부터 시작하려면 현재 요일에 1을 더한 후 7로 나눈 나머지를 사용
-            current_weekday = (date_obj.weekday() + 1) % 7
+            current_weekday = date_obj.weekday()
+            # 현재 날짜에서 현재 요일만큼 빼서 일요일을 구함
             date_start_day = date_obj - timedelta(days=current_weekday)
+            # 일요일부터 6일을 더해서 토요일을 구함
             date_end_day = date_start_day + timedelta(days=6)
         else:
             date_obj = date
-            current_weekday = (date_obj.weekday() + 1) % 7
+            current_weekday = date_obj.weekday()
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
 
@@ -496,11 +495,9 @@ async def get_overtimes_approved_list(
             Parts, Users.part_id == Parts.id
         ).where(
             OverTime_History.deleted_at == "N",
-            Users.deleted_yn == "N",
-            OverTime_History.created_at >= date_start_day,
-            OverTime_History.created_at <= date_end_day
+            Users.deleted_yn == "N"
         )
-  
+
         # 이름 검색 조건
         if name:
             base_query = base_query.where(Users.name.like(f"%{name}%"))
@@ -514,8 +511,8 @@ async def get_overtimes_approved_list(
         if part_id:
             base_query = base_query.where(Parts.id == part_id)
         # 사용자 삭제 여부 검색 조건
-        if is_deleted == "Y":
-            base_query = base_query.where(Users.resignation_date != None)
+        if user_deleted_yn == "Y":
+            base_query = base_query.where(Users.resignation_date.isnot(None))
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
@@ -525,14 +522,14 @@ async def get_overtimes_approved_list(
             .limit(size)
         )
         records = result.all()
-   
+
         formatted_data = [{
             "id": history.id,
             "user_id": user.id,
             "user_name": user.name,
-            "user_hire_date": user.hire_date,
-            "user_resignation_date": user.resignation_date,
+            "user_gender": user.gender,
             "user_phone_number": user.phone_number,
+            "user_resignation_date": user.resignation_date,
             "branch_id": branch.id,
             "branch_name": branch.name,
             "part_id": part.id,
@@ -563,8 +560,8 @@ async def get_overtimes_approved_list(
             },
             "data": formatted_data,
         }
-        
-        
+
+
     except HTTPException as http_err:
         await db.rollback()
         raise http_err
