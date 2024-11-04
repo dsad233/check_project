@@ -103,7 +103,7 @@ admin_router.include_router(user_management_contract_info.router, prefix='/user-
 admin_router.include_router(user_management_contract.router, prefix='/user-management/contract', tags=['User_Management_Contract: 계약 CRUD, 계약 메일 발송'])
 admin_router.include_router(user_management_salary_contract.permanent_router, prefix='/user-management/salary-contract', tags=['(Legacy) User_Management_Salary_Contract: (정규직) 급여 계약 CRUD'])
 admin_router.include_router(user_management_salary_contract.temporary_router, prefix='/user-management/salary-contract', tags=['(Legacy) User_Management_Salary_Contract: (계약직) 급여 계약 CRUD'])
-admin_router.include_router(user_management_work_contract.router, prefix='/user-management/work-contract', tags=['User_Management_Work_Contract: 근로 계약 CRUD'])
+admin_router.include_router(user_management_work_contract.router, prefix='/user-management/work-contract', tags=['(Legacy) User_Management_Work_Contract: 근로 계약 CRUD'])
 admin_router.include_router(user_management.router, prefix='/user-management', tags=['User_Management: 사용자 CRUD, 본인 정보/관리자 정보'])
 
 admin_router.include_router(attendance.router, prefix="/branches", tags=["Attendance | Admin Only: 근태 조회"])
