@@ -414,7 +414,6 @@ class UserQueryService:
         """필터 조건 적용"""
         if status:
             query = self._apply_status_filter(query, status)
-
         if name:
             query = query.filter(self.UserAlias.name.ilike(f"%{name}%"))
         if phone:
