@@ -33,7 +33,7 @@ user_parts = Table('user_parts', Base.metadata,
 
 user_menus = Table('user_menus', Base.metadata,
     Column('user_id', Integer, ForeignKey('users.id'), nullable=False),
-    Column('part_id', Integer, ForeignKey('parts.id'), nullable=False),
+    Column('part_id', Integer, ForeignKey('parts.id'), nullable=True),
     Column('menu_name', Enum(
                        MenuPermissions,
                        values_callable=lambda obj: [e.value for e in obj]
