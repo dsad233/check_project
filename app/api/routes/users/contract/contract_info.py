@@ -91,7 +91,7 @@ class UserManagementContractInfo:
             status="SUCCESS"
         )
 
-    @router.post("{contract_info_id}/send", response_model=ResponseDTO)
+    @router.post("/{contract_info_id}/send", response_model=ResponseDTO)
     async def send_contract(
             contract_info_id: Annotated[int, Path(..., title="계약 정보 ID", gt=0)],
             request_approve_contract: Annotated[RequestApproveContract, Body(..., title="계약 승인 요청")],
