@@ -8,6 +8,8 @@ from sqlalchemy.orm import aliased, joinedload, selectinload
 
 from app.core.database import get_db
 from app.cruds.user_management.base_crud import UserManagementRepository
+from app.cruds.users.career_crud import add_bulk_career
+from app.cruds.users.education_crud import add_bulk_education
 # from app.cruds.user_management.work_contract_crud import find_user_by_user_id
 from app.cruds.users.users_crud import find_by_email, add_user
 from app.enums.modusign import SIGNINGMETHOD_OBJECT_TYPE
@@ -15,6 +17,8 @@ from app.enums.users import Role
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.parts_model import Parts
 from app.models.parts.user_salary import UserSalary
+from app.models.users.career_model import Career
+from app.models.users.education_model import Education
 from app.models.users.users_model import Users, UserCreate, UserUpdate
 from app.schemas.modusign_schemas import TemplateResponse, SigningMethod
 
