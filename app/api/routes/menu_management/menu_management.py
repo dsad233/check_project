@@ -153,8 +153,13 @@ async def get_user_menu_permissions(
         # 통합관리자
         elif target_user.role == Role.INTEGRATED_ADMIN:
             menu_perms = await db.execute(
-                select(user_menus).where(
-                    user_menus.c.user_id == user_id
+                select(user_menus)
+                .join(Parts, user_menus.c.part_id == Parts.id)
+                .where(
+                    and_(
+                        user_menus.c.user_id == user_id,
+                        Parts.branch_id == target_user.branch_id  # 같은 지점의 파트만
+                    )
                 )
             )
             menu_perms = menu_perms.fetchall()
@@ -162,9 +167,9 @@ async def get_user_menu_permissions(
             response["menu_permissions"] = [
                 {
                     "menu_name": menu.value,
-                    "is_permitted": next(
-                        (p.is_permitted for p in menu_perms if p.menu_name == menu),
-                        False
+                    "is_permitted": any(
+                        p.is_permitted for p in menu_perms
+                        if p.menu_name == menu
                     )
                 } for menu in MenuPermissions
             ]
@@ -178,6 +183,7 @@ async def get_user_menu_permissions(
                 .where(
                     and_(
                         user_parts.c.user_id == user_id,
+                        Parts.branch_id == target_user.branch_id,  # 같은 지점의 파트만
                         Parts.deleted_yn == "N"
                     )
                 )
@@ -211,7 +217,7 @@ async def get_user_menu_permissions(
                 })
             return response
 
-        # 일반 사원
+        # 일반 사원 이하 등급 -> 일단 다 False로 리턴
         else:
             response["menu_permissions"] = [
                 {
