@@ -149,9 +149,13 @@ async def account_based_auto_annual_leave_grant(
     """
     회계 기반 자동 연차 부여
     """
+    if not branch.account_based_annual_leave_grant: # 설정 안되어있으면 종료
+        return True
+
     leave_reset_option = branch.account_based_annual_leave_grant.account_based_january_1st
     less_than_year_option = branch.account_based_annual_leave_grant.account_based_less_than_year
     decimal_rounding_option = branch.account_based_annual_leave_grant.account_based_decimal_point
+    
     today = date.today()
 
     if today.month == 1 and today.day == 1: # 1월 1일
@@ -220,7 +224,11 @@ async def entry_date_based_auto_annual_leave_grant(
     """
     입사일 기반 자동 연차 부여
     """
+    if not branch.entry_date_based_annual_leave_grant: # 설정 안되어있으면 종료
+        return True
+
     leave_reset_option = branch.entry_date_based_annual_leave_grant.entry_date_based_remaining_leave
+
     today = date.today()
 
     for user in part.users:
@@ -256,7 +264,11 @@ async def condition_based_auto_annual_leave_grant(
     """
     조건 기반 자동 연차 부여
     """
+    if not branch.condition_based_annual_leave_grant: # 설정 안되어있으면 종료
+        return True
+
     condition_options = branch.condition_based_annual_leave_grant
+    
     today = date.today()
 
     for condition_option in condition_options: # 조건 옵션 순회
