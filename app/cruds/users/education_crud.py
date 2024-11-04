@@ -28,9 +28,9 @@ async def add_bulk_education(
     education_records = [
         Education(
             user_id=user_id,
-            school_type=edu.school_type,
+            school_type=edu.school_type.value,  # Enum의 value 사용
             school_name=edu.school_name,
-            graduation_type=edu.graduation_type,
+            graduation_type=edu.graduation_type.value,  # Enum의 value 사용
             major=edu.major,
             admission_date=edu.admission_date,
             graduation_date=edu.graduation_date

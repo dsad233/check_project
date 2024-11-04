@@ -122,17 +122,12 @@ class GraduationType(str, Enum):
     DROPOUT = "중퇴"
 
 
-class ContractType(str, Enum):
+class CareerContractType(str, Enum):
     """
     계약 유형
-
-    PERMANENT: 정규직
-    CONTRACT: 계약직
-    INTERN: 인턴
-    PART_TIME: 파트타임
     """
-
     PERMANENT = "정규직"
     CONTRACT = "계약직"
     INTERN = "인턴"
     PART_TIME = "파트타임"
+    

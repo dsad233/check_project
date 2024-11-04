@@ -63,7 +63,7 @@ class Users(Base):
     birth_date = Column(Date, nullable=True)  # 생년월일
     resident_registration_number = Column(String(20), nullable=True)  # 주민등록번호
     gender = Column(Enum(*[e.value for e in Gender], name="user_gender"), nullable=False)  # 성별
-    part_id = Column(Integer, ForeignKey("parts.id"), nullable=False)  # 부서 ID
+    part_id = Column(Integer, ForeignKey("parts.id"), nullable=True)  # 부서 ID
     branch_id = Column(Integer, ForeignKey("branches.id"), nullable=False)  # 지점 ID
 
     # 일자 관련 정보
@@ -122,13 +122,11 @@ class UserCreate(BaseModel):
     address: Optional[str] = None
     detail_address: Optional[str] = None
     birth_date: Optional[date] = None
-    hire_date: Optional[date] = None
-    resignation_date: Optional[date] = None
     resident_registration_number: Optional[str] = None
 
     # 외래 키
     branch_id: Optional[int] = None
-    part_id: Optional[int] = None
+    
 
     # 추가 정보
     role: Optional[str] = None
@@ -182,12 +180,9 @@ class CreatedUserDto(BaseModel):
     address: Optional[str] = None
     detail_address: Optional[str] = None
     birth_date: Optional[date] = None
-    hire_date: Optional[date] = None
-    resignation_date: Optional[date] = None
     resident_registration_number: Optional[str] = None
 
     branch_id: Optional[int] = None
-    part_id: Optional[int] = None
     role: Optional[str] = None
     gender: Optional[str] = None
     is_foreigner: Optional[bool] = None
@@ -219,8 +214,6 @@ class CreatedUserDto(BaseModel):
             address=user.address,
             detail_address=user.detail_address,
             birth_date=user.birth_date,
-            hire_date=user.hire_date,
-            resignation_date=user.resignation_date,
             educations=[await EducationDto.build(edu) for edu in user.educations] if user.educations else None,
             careers=[await CareerDto.build(career) for career in user.careers] if user.careers else None
         )
