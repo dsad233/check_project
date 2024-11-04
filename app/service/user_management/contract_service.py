@@ -11,6 +11,7 @@ from app.models.users.users_model import Users
 from app.models.users.users_salary_contract_model import SalaryContract
 from app.models.users.users_work_contract_history_model import ContractHistory
 from app.models.users.users_work_contract_model import WorkContract
+from app.schemas.user_management.part_timers_contract_schemas import PartTimerWorkContractDto
 from app.schemas.user_management.salary_contract import SalaryContractDto
 from app.schemas.user_work_contract_schemas import WorkContractDto
 from app.service.template_service import TemplateService as ModusignTemplateService
