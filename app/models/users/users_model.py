@@ -10,16 +10,20 @@ from sqlalchemy import (
     Integer,
     String,
     Table,
-    Numeric
+    Numeric, select
 )
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.core.database import Base
 from datetime import date
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from sqlalchemy import text
 from pydantic import BaseModel
 
 from app.enums.users import Role, Gender, MenuPermissions, EmploymentStatus
+from app.schemas.user_management.career_schemas import CareerDto
+from app.schemas.user_management.education_schemas import EducationDto
 
 # Users와 Parts의 다대다 관계를 위한 연결 테이블
 user_parts = Table('user_parts', Base.metadata,

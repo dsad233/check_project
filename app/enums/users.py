@@ -94,3 +94,45 @@ class Weekday(str, Enum):
     SATURDAY = "saturday"
     SUNDAY = "sunday"
 
+
+class TimeOffType(str, Enum):
+    """
+    휴직 유형 구성용 Enum
+    """
+
+    PARENTAL = "육아"
+    INDUSTRIAL_ACCIDENT = "산재"
+
+
+class SchoolType(str, Enum):
+    """학교 유형"""
+    ELEMENTARY = "초등학교"
+    MIDDLE = "중학교"
+    HIGH = "고등학교"
+    UNIVERSITY = "대학교"
+    GRADUATE = "대학원"
+
+
+class GraduationType(str, Enum):
+    """졸업 상태"""
+    GRADUATED = "졸업"
+    EXPECTED = "졸업예정"
+    IN_PROGRESS = "재학중"
+    LEAVE = "휴학"
+    DROPOUT = "중퇴"
+
+
+class ContractType(str, Enum):
+    """
+    계약 유형
+
+    PERMANENT: 정규직
+    CONTRACT: 계약직
+    INTERN: 인턴
+    PART_TIME: 파트타임
+    """
+
+    PERMANENT = "정규직"
+    CONTRACT = "계약직"
+    INTERN = "인턴"
+    PART_TIME = "파트타임"

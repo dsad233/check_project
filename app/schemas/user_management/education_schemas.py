@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.enums.users import SchoolType, GraduationType
 from app.models.users.education_model import Education
 
 

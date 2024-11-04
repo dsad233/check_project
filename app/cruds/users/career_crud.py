@@ -1,5 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.users.career_model import Career
+from app.schemas.user_management.career_schemas import CareerDto
+
 
 async def add_career(
     session: AsyncSession,
@@ -8,7 +11,7 @@ async def add_career(
 ) -> Career:
     career = Career(
         user_id=user_id,
-        company_name=career_data.company_name,
+        company=career_data.company,
         position=career_data.position,
         department=career_data.department,
         start_date=career_data.start_date,

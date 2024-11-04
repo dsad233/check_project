@@ -1,5 +1,8 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.users.education_model import Education
+from app.schemas.user_management.education_schemas import EducationDto
+
 
 async def add_education(
     session: AsyncSession,

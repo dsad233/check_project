@@ -2,6 +2,8 @@ from app.core.database import Base
 from sqlalchemy import Column, Integer, String, Date, ForeignKey, Enum, DateTime
 from datetime import datetime, UTC
 
+from app.enums.users import GraduationType, SchoolType
+
 
 class Education(Base):
     __tablename__ = 'educations'

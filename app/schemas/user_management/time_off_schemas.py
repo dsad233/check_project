@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
+from app.enums.users import TimeOffType
+
 
 class TimeOffDto(BaseModel):
     id: int
