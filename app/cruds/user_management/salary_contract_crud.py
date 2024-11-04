@@ -47,14 +47,11 @@ class UserManagementSalaryContractRepository:
         await self.session.refresh(salary_contract)
         return salary_contract.id
 
-    async def partial_update(self, salary_contract_id: int, user_id: int, update_params: dict) -> SalaryContractDto:
+    async def partial_update(self, salary_contract_id: int, update_params: dict) -> SalaryContractDto:
         # 업데이트 쿼리 생성
         stmt = (
             update(SalaryContract)
-            .filter(
-                SalaryContract.id == salary_contract_id,
-                SalaryContract.user_id == user_id
-            )
+            .filter(SalaryContract.id == salary_contract_id)
             .values(**update_params)
         )
 

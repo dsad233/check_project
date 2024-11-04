@@ -7,7 +7,7 @@ from sqlalchemy.orm import joinedload, selectinload
 
 from app.models.users.users_model import Users
 from app.models.users.users_work_contract_history_model import ContractHistory
-from app.models.users.users_work_contract_model import WorkContract, FixedRestDay
+from app.models.users.users_work_contract_model import WorkContract, FixedRestDay, WorkContractBreakTime
 from app.schemas.user_work_contract_schemas import WorkContractDto
 
 
@@ -152,3 +152,44 @@ class UserManagementWorkContractRepository:
         except Exception as e:
             await self.session.rollback()
             raise e
+
+    async def partial_update_work_contract(self, contract_id: int, update_params: dict):
+        # 기본 필드와 리스트 필드를 분리
+        fixed_rest_days = update_params.pop("fixed_rest_days", None)
+        break_times = update_params.pop("break_times", None)
+
+        # 기본 필드 부분 업데이트 수행
+        if update_params:
+            stmt = (
+                update(WorkContract)
+                .where(WorkContract.id == contract_id)
+                .values(**update_params)
+            )
+            await self.session.execute(stmt)
+
+        # 연관된 리스트 필드 업데이트
+        if fixed_rest_days is not None:
+            await self._update_fixed_rest_days(contract_id, fixed_rest_days)
+        if break_times is not None:
+            await self._update_break_times(contract_id, break_times)
+
+        # 트랜잭션 커밋
+        await self.session.commit()
+
+    async def _update_fixed_rest_days(self, contract_id: int, fixed_rest_days: list):
+        # 기존 `fixed_rest_days` 데이터를 모두 삭제하고 새 데이터로 대체
+        await self.session.execute(
+            delete(FixedRestDay).where(FixedRestDay.work_contract_id == contract_id)
+        )
+        for rest_day in fixed_rest_days:
+            new_rest_day = FixedRestDay(work_contract_id=contract_id, **rest_day)
+            self.session.add(new_rest_day)
+
+    async def _update_break_times(self, contract_id: int, break_times: list):
+        # 기존 `break_times` 데이터를 모두 삭제하고 새 데이터로 대체
+        await self.session.execute(
+            delete(WorkContractBreakTime).where(WorkContractBreakTime.work_contract_id == contract_id)
+        )
+        for break_time in break_times:
+            new_break_time = WorkContractBreakTime(work_contract_id=contract_id, **break_time)
+            self.session.add(new_break_time)
