@@ -70,12 +70,26 @@ async def count_all(*, session: AsyncSession) -> int:
     result = await session.execute(statement)
     return result.scalar_one()
 
+async def count_non_deleted_all(*, session: AsyncSession) -> int:
+
+    statement = select(func.count()).select_from(Branches).where(Branches.deleted_yn == 'N')
+    result = await session.execute(statement)
+    return result.scalar_one()
+
 
 async def find_by_id(
     *, session: AsyncSession, branch_id: int
 ) -> Optional[Branches]:
     
     statement = select(Branches).filter(Branches.id == branch_id).where(Branches.deleted_yn == 'N')
+    result = await session.execute(statement)
+    return result.scalar_one_or_none()
+
+async def find_deleted_by_id(
+    *, session: AsyncSession, branch_id: int
+) -> Optional[Branches]:
+    
+    statement = select(Branches).filter(Branches.id == branch_id).where(Branches.deleted_yn == 'Y')
     result = await session.execute(statement)
     return result.scalar_one_or_none()
 

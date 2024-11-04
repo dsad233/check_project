@@ -168,7 +168,7 @@ async def get_branch_histories(*, session: AsyncSession, branch_id: int, request
 
 async def get_branches(*, session: AsyncSession, request: BaseSearchDto) -> BranchListResponse:
     """지점 조회"""
-    count = await branches_crud.count_all(session=session)
+    count = await branches_crud.count_non_deleted_all(session=session)
     if request.page == 0:
         branches = await branches_crud.find_all(session=session)
         pagination = PaginationDto(total_record=count, record_size=count)
@@ -211,7 +211,7 @@ async def create_branch(
 
 async def revive_branch(*, session: AsyncSession, branch_id: int) -> bool:
     """삭제된 지점 복구"""
-    branch = await branches_crud.find_by_id(session=session, branch_id=branch_id)
+    branch = await branches_crud.find_deleted_by_id(session=session, branch_id=branch_id)
     if branch is None:
         raise NotFoundError(detail=f"{branch_id}번 지점이 없습니다.")
     return await branches_crud.revive(session=session, branch_id=branch_id)
@@ -397,32 +397,34 @@ async def update_branch_policies(*, session: AsyncSession, branch_id: int, reque
 
 # 근무 캘린더에서 고정 휴점일을 변경할 때 사용
 async def update_schedule_holiday(*, session: AsyncSession, branch_id: int, request: ScheduleHolidayUpdateDto) -> str:
-    """지점 정책 수정"""
+    """지점의 고정 휴무일 수정"""
     try:
-        # WorkPolicies 업데이트
+        # 지점의 근무 정책 조회
         work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
         if work_policies is None:
-            await work_crud.create(session=session, branch_id=branch_id)
-            work_policies = await work_crud.find_by_branch_id(session=session, branch_id=branch_id)
-            if work_policies is None:
-                raise HTTPException(status_code=500, detail="근무정책 생성에 실패하였습니다.")
-        else:
-            await work_crud.update_schedule_holiday(
-                session=session,
-                branch_id=branch_id,
-                work_policies_update=request.work_policies  # WorkPoliciesUpdateDto 타입으로 전달
-            )
+            raise NotFoundError(detail=f"{branch_id}번 지점의 근무정책이 없습니다.")
+        
+        # 스케줄 업데이트
+        await work_crud.update_schedule_holiday(
+            session=session,
+            branch_id=branch_id,
+            work_policies_update=request.work_policies
+        )
 
         await session.commit()
-        return f"{branch_id} 번 지점의 근무정책 업데이트 완료"
+        return f"{branch_id}번 지점의 고정 휴무일 업데이트 완료"
+
+    except NotFoundError as e:
+        raise e
 
     except Exception as e:
         await session.rollback()
         logger.error(f"Database error occurred: {str(e)}")
         raise HTTPException(
             status_code=500,
-            detail="근무정책 업데이트에 실패하였습니다."
+            detail="고정 휴무일 업데이트에 실패하였습니다."
         )
+    
     
 # 자동 연차 부여 스케줄링
 async def auto_annual_leave_grant_scheduling(*, session: AsyncSession):
