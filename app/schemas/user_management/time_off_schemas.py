@@ -6,8 +6,9 @@ from pydantic import BaseModel, Field
 from app.enums.users import TimeOffType
 
 
-class TimeOffGetResponseDto(BaseModel):
+class TimeOffResponseDto(BaseModel):
     id: int
+    user_id: int
     time_off_type: Optional[TimeOffType] = Field(
         default=None,
         description="휴가 유형"
@@ -29,7 +30,7 @@ class TimeOffGetResponseDto(BaseModel):
     class Config:
         from_attributes = True
 
-class TimeOffCreateRequestDto(BaseModel):
+class TimeOffCreateAndUpdateRequestDto(BaseModel):
     user_id: int
     time_off_type: TimeOffType
     start_date: datetime

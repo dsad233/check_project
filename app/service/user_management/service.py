@@ -20,6 +20,9 @@ from app.models.users.career_model import Career
 from app.models.users.education_model import Education
 from app.models.users.users_model import Users, UserCreate, UserUpdate
 from app.schemas.user_management.user_management_schemas import UserListDto, UserDTO
+from app.models.users.time_off_model import TimeOff
+from sqlalchemy.orm import load_only
+from sqlalchemy import desc
 
 logger = logging.getLogger(__name__)
 
