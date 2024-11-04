@@ -139,7 +139,8 @@ class UserManagementService:
                 joinedload(UserAlias.part),
                 joinedload(UserAlias.branch),
                 selectinload(UserAlias.educations),
-                selectinload(UserAlias.careers)
+                selectinload(UserAlias.careers),
+                selectinload(UserAlias.time_offs)
             )
             .outerjoin(Commutes, UserAlias.id == Commutes.user_id)
             .outerjoin(UserSalary, UserAlias.id == UserSalary.user_id)
@@ -155,6 +156,7 @@ class UserManagementService:
             raise HTTPException(status_code=404, detail="요청한 사용자를 찾을 수 없거나 접근 권한이 없습니다.")
 
         user, last_activity, monthly_salary, annual_salary = user_data
+        print(f"Time offs: {user.time_offs}")
 
         # DTO 변환
         return UserDTO.from_user_data(

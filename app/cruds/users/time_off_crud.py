@@ -5,7 +5,9 @@ from sqlalchemy.orm import joinedload
 
 from app.models.users.time_off_model import TimeOff
 from app.models.users.users_model import Users
-from app.schemas.user_management.time_off_schemas import TimeOffListResponse, TimeOffListDto, TimeOffDto
+from app.schemas.user_management.time_off_schemas import TimeOffListResponse, TimeOffListDto, TimeOffGetResponseDto, TimeOffCreateRequestDto
+from app.core.database import get_db
+from fastapi import Depends
 
 
 async def time_off_create(
@@ -24,6 +26,14 @@ async def time_off_create(
     session.add(time_off_db)
     await session.commit()
     return time_off_db
+
+async def time_off_create(
+        *,
+        session: AsyncSession,
+        time_off_request_dto: TimeOffCreateRequestDto,
+        user_id: int
+) -> TimeOffCreateRequestDto:
+    
 
 
 async def time_off_list(

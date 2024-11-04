@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
 from pydantic import BaseModel, Field
@@ -6,17 +6,17 @@ from pydantic import BaseModel, Field
 from app.enums.users import TimeOffType
 
 
-class TimeOffDto(BaseModel):
+class TimeOffGetResponseDto(BaseModel):
     id: int
     time_off_type: Optional[TimeOffType] = Field(
         default=None,
         description="휴가 유형"
     )
-    start_date: Optional[date] = Field(
+    start_date: Optional[datetime] = Field(
         default=None,
         description="휴가 시작일"
     )
-    end_date: Optional[date] = Field(
+    end_date: Optional[datetime] = Field(
         default=None,
         description="휴가 종료일"
     )
