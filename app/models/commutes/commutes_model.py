@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, List, Optional
 from datetime import UTC, datetime
 
 from sqlalchemy import Column, DateTime, Float, ForeignKey, Integer, String, func
