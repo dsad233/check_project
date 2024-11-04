@@ -1,16 +1,19 @@
 from typing import List
 from fastapi import Depends
-from sqlalchemy import and_, func, select
+from sqlalchemy import and_, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.routes.closed_days.dto.closed_days_response_dto import EarlyClockInResponseDTO, UserClosedDayDetail, UserClosedDayDetailDTO, UserClosedDaySummaryDTO
 from app.core.database import get_db
-from app.enums.users import Status
+from app.enums.user_management import ContractStatus, ContractType
+from app.enums.users import EmploymentStatus, Status
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from app.models.branches.work_policies_model import BranchWorkSchedule, WorkPolicies
 from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
 from app.models.parts.parts_model import Parts
 from app.models.users.leave_histories_model import LeaveHistories
+from app.models.users.users_contract_info_model import ContractInfo
+from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
 from calendar import monthrange
 from datetime import date, timedelta
@@ -75,19 +78,61 @@ class ClosedDayService:
         
         # 정기 휴무 -> fixed_closed_days 조회
         # 날짜만 구하기
-        query = (
-            select(WorkContract.user_id, WorkContract.contract_start_date, FixedRestDay.rest_day, FixedRestDay.every_over_week)
-            .join(FixedRestDay, FixedRestDay.work_contract_id == WorkContract.id)
-                .filter(
-                    and_(
-                        WorkContract.user_id.in_(user_ids),
-                        WorkContract.is_fixed_rest_day == True
-                    )
+        ## 유저별 최신 WORK 타입 계약 테이블에서 정기 휴무일 조회
+        latest_contracts = (
+            select(
+                ContractInfo.user_id,
+                func.max(Contract.created_at).label('max_date')
+            )
+            .select_from(Contract)
+            .join(ContractInfo, Contract.contract_info_id == ContractInfo.id)
+                .filter(ContractInfo.user_id.in_(user_ids))
+            .where(Contract.contract_type == ContractType.WORK)
+            .group_by(ContractInfo.user_id)
+            .subquery()
+        )
+    
+        ## 유저별 최신 WORK 타입 계약 테이블
+        current_contract_table = (
+            select(
+                ContractInfo.user_id,
+                Contract.contract_type,
+                Contract.created_at,
+                Contract.contract_id,
+                ContractInfo.hire_date
+            )
+            .select_from(Contract)
+            .join(ContractInfo, Contract.contract_info_id == ContractInfo.id)
+                .filter(ContractInfo.employ_status == EmploymentStatus.PERMANENT)
+            .where(
+                and_(
+                    Contract.contract_type == ContractType.WORK,
+                    Contract.contract_status == ContractStatus.APPROVE,
+                    tuple_(ContractInfo.user_id, Contract.created_at).in_(
+                        select(
+                            latest_contracts.c.user_id,
+                            latest_contracts.c.max_date
+                        ).select_from(latest_contracts)
+                    ),
                 )
-        )   
+            )
+            .subquery()
+        )
+
+        query = (
+            select(current_contract_table.c.user_id, current_contract_table.c.hire_date, FixedRestDay.rest_day, FixedRestDay.every_over_week)
+            .select_from(current_contract_table)
+            .join(WorkContract, current_contract_table.c.contract_id == WorkContract.id)
+                .filter(
+                    WorkContract.is_fixed_rest_day == True,
+                    WorkContract.deleted_yn == "n"
+                )
+            .join(FixedRestDay, WorkContract.id == FixedRestDay.work_contract_id)
+        )
 
         result = await self.session.execute(query)
         fixed_rest_days = result.fetchall()
+
         for user_id, contract_start_date, rest_day, every_over_week in fixed_rest_days:
             first_day_of_month = date(year, month, 1)
             days_in_month = monthrange(year, month)[1]
@@ -106,10 +151,10 @@ class ClosedDayService:
 
         # 날짜별로 정렬
         for user_id in user_id_to_detail:
-            user_id_to_detail[user_id]["user_closed_days"].sort(key=lambda x: x.closed_date)
+            user_id_to_detail[user_id]["user_closed_days"] = set(user_id_to_detail[user_id]["user_closed_days"])
 
         return [
-            UserClosedDayDetailDTO(user_id=user_id, **detail)
+            UserClosedDayDetailDTO.to_DTO(user_id, **detail)
             for user_id, detail in user_id_to_detail.items()
         ]
     
@@ -132,6 +177,7 @@ class ClosedDayService:
                 )
             .join(Parts, Users.part_id == Parts.id)
         )
+
         result = await self.session.execute(query)
         closed_days = result.fetchall()
 
@@ -139,8 +185,8 @@ class ClosedDayService:
         for closed_day_date, user_id, user_name, part_name in closed_days:
             date_str = closed_day_date.strftime("%Y-%m-%d")
             if date_str not in date_to_users:
-                date_to_users[date_str] = []
-            date_to_users[date_str].append(UserClosedDayDetail(
+                date_to_users[date_str] = set()
+            date_to_users[date_str].add(UserClosedDayDetail(
                 user_id=user_id,
                 user_name=user_name,
                 part_name=part_name,
@@ -171,8 +217,8 @@ class ClosedDayService:
             while current_date <= end_date:
                 date_str = current_date.strftime("%Y-%m-%d")
                 if date_str not in date_to_users:
-                    date_to_users[date_str] = []
-                date_to_users[date_str].append(UserClosedDayDetail(
+                    date_to_users[date_str] = set()
+                date_to_users[date_str].add(UserClosedDayDetail(
                     user_id=user_id,
                     user_name=user_name,
                     part_name=part_name,
@@ -181,18 +227,59 @@ class ClosedDayService:
                 current_date += timedelta(days=1)
         
         # 정기 휴무 -> fixed_closed_days 조회
-        query = (
-            select(WorkContract.user_id, WorkContract.contract_start_date, FixedRestDay.rest_day, FixedRestDay.every_over_week, Users.name, Parts.name)
-            .join(FixedRestDay, FixedRestDay.work_contract_id == WorkContract.id)
-            .join(Users, WorkContract.user_id == Users.id)
-            .join(Parts, Users.part_id == Parts.id)
-                .filter(
-                    and_(
-                        Users.branch_id == branch_id,
-                        WorkContract.is_fixed_rest_day == True
+        ## 각 user_id별 최신 created_at을 찾는 쿼리
+        latest_contracts = (
+            select(
+                ContractInfo.user_id,
+                func.max(Contract.created_at).label('max_date')
+            )
+            .select_from(Contract)
+            .join(ContractInfo, Contract.contract_info_id == ContractInfo.id)
+            .where(Contract.contract_type == ContractType.WORK)
+            .group_by(ContractInfo.user_id)
+            .subquery()
+        )
+    
+        ## 유저별 최신 WORK 타입 계약 테이블
+        current_contract_table = (
+            select(
+                ContractInfo.user_id,
+                Contract.contract_type,
+                Contract.created_at,
+                Contract.contract_id,
+                ContractInfo.hire_date
+            )
+            .select_from(Contract)
+            .join(ContractInfo, Contract.contract_info_id == ContractInfo.id)
+                .filter(ContractInfo.employ_status == EmploymentStatus.PERMANENT)
+            .where(
+                and_(
+                    Contract.contract_type == ContractType.WORK,
+                    Contract.contract_status == ContractStatus.APPROVE,
+                    tuple_(ContractInfo.user_id, Contract.created_at).in_(
+                        select(
+                            latest_contracts.c.user_id,
+                            latest_contracts.c.max_date
+                        ).select_from(latest_contracts)
                     )
                 )
-        )   
+            )
+            .subquery()
+        )
+
+        query = (
+            select(current_contract_table.c.user_id, current_contract_table.c.hire_date, FixedRestDay.rest_day, FixedRestDay.every_over_week, Users.name, Parts.name)
+            .select_from(current_contract_table)
+            .join(Users, current_contract_table.c.user_id == Users.id)
+            .join(Parts, Users.part_id == Parts.id)
+                .filter(Parts.branch_id == branch_id) # Users에서 Branch_id가 빠질 경우를 대비하여 Parts에서 조회
+            .join(WorkContract, current_contract_table.c.contract_id == WorkContract.id)
+                .filter(
+                    WorkContract.is_fixed_rest_day == True,
+                    WorkContract.deleted_yn == "n"
+                )
+            .join(FixedRestDay, WorkContract.id == FixedRestDay.work_contract_id)
+        )
 
         result = await self.session.execute(query)
         fixed_rest_days = result.fetchall()
@@ -211,8 +298,8 @@ class ClosedDayService:
                     weeks_since_start = ((current_day - contract_start_date).days // 7)
                     if weeks_since_start % 2 == 0:
                         if date_str not in date_to_users:
-                            date_to_users[date_str] = []
-                        date_to_users[date_str].append(UserClosedDayDetail(
+                            date_to_users[date_str] = set()
+                        date_to_users[date_str].add(UserClosedDayDetail(
                             user_id=user_id,
                             user_name=user_name,
                             part_name=part_name,
@@ -220,8 +307,8 @@ class ClosedDayService:
                         ))
                 else:
                     if date_str not in date_to_users:
-                        date_to_users[date_str] = []
-                    date_to_users[date_str].append(UserClosedDayDetail(
+                        date_to_users[date_str] = set()
+                    date_to_users[date_str].add(UserClosedDayDetail(
                         user_id=user_id,
                         user_name=user_name,
                         part_name=part_name,
@@ -276,11 +363,9 @@ class ClosedDayService:
         
         return sorted(closed_days)
         
-
-
     async def get_user_and_hospital_closed_days(self, branch_id: int, user_id: int, year: int, month: int) -> tuple[dict[str, List[UserClosedDayDetail]], List[str]]:
         '''
-        특정 사용자의 휴무일과 병원 휴무일을 조회
+        사용자의 특정 휴무일과 병원 휴무일을 조회
         '''
         # 직원의 특정 휴무일 조회
         query = (
@@ -394,9 +479,40 @@ class ClosedDayService:
         hospital_closed_days = await self.get_all_hospital_closed_days(branch_id, year, month)
 
         return dict(sorted(date_to_users.items())), hospital_closed_days
-
-
-
+    
+    async def get_all_user_early_clock_ins_group_by_date(self, branch_id: int, year: int, month: int) -> dict[str, EarlyClockInResponseDTO]:
+        """
+        특정 지점의 모든 직원의 월간 조기 출근 기록 조회
+        """
+        query = (
+            select(EarlyClockIn.early_clock_in, Users.id, Users.name, Parts.name)
+            .join(Users, EarlyClockIn.user_id == Users.id)
+            .join(Parts, Users.part_id == Parts.id)
+            .filter(
+                and_(
+                    Users.branch_id == branch_id,
+                    func.extract('year', EarlyClockIn.early_clock_in) == year,
+                    func.extract('month', EarlyClockIn.early_clock_in) == month,
+                    EarlyClockIn.deleted_yn == "N"
+                )
+            )
+        )
+        
+        result = await self.session.execute(query)
+        early_clock_ins = result.fetchall()
+        
+        early_clock_in_days = {}
+        for clock_in_time, user_id, user_name, part_name in early_clock_ins:
+            date_str = clock_in_time.strftime("%Y-%m-%d")
+            time_str = clock_in_time.strftime("%H:%M")
+            
+            early_clock_in_days[date_str] = EarlyClockInResponseDTO(
+                user_id=user_id,
+                user_name=f"[{time_str}]{user_name}",
+                part_name=part_name
+            )
+        
+        return early_clock_in_days
 
     async def get_user_early_clock_in(self, branch_id: int, user_id: int, year: int, month: int) -> dict[str, EarlyClockInResponseDTO]:
         """

@@ -114,118 +114,124 @@ async def get_manageable_parts(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get(
-    "",
-    summary="관리자의 메뉴 권한 정보 조회"
+    "/{user_id}",
+    summary="특정 사용자의 메뉴 권한 정보 조회"
 )
 async def get_user_menu_permissions(
+    user_id: int,
     current_user: Users = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    """
-    관리자의 메뉴 권한 정보를 조회합니다.
-    - MSO/최고관리자: 모든 권한을 가지고 있으므로 별도 권한 정보 불필요
-    - 통합 관리자: 본인의 세부 권한 정보
-    - 파트 관리자: 자신이 속한 파트의 세부 권한 정보
-    """
+    """특정 사용자의 메뉴 권한 정보를 조회합니다."""
     try:
-        if current_user.role in [Role.MSO, Role.SUPER_ADMIN]:
-            return AdminNoPermissionsNeededResponse(
-                message="MSO는 모든 지점, 최고관리자는 본인 지점의 모든 권한을 가지고 있습니다."
+        target_user = await db.scalar(
+            select(Users).where(Users.id == user_id)
+        )
+
+        if not target_user:
+            raise HTTPException(
+                status_code=404,
+                detail="해당 사용자를 찾을 수 없습니다."
             )
 
-        elif current_user.role == Role.INTEGRATED_ADMIN:
-            # 통합 관리자: 본인의 세부 권한 정보 조회
+        response = {
+            "user_id": user_id,
+            "user_role": target_user.role,
+            "menu_permissions": []
+        }
+
+        # MSO/최고관리자
+        if target_user.role in [Role.MSO, Role.SUPER_ADMIN]:
+            response["menu_permissions"] = [
+                {
+                    "menu_name": menu.value,
+                    "is_permitted": True
+                } for menu in MenuPermissions
+            ]
+            return response
+
+        # 통합관리자
+        elif target_user.role == Role.INTEGRATED_ADMIN:
             menu_perms = await db.execute(
-                select(user_menus).where(
-                    user_menus.c.user_id == current_user.id
+                select(user_menus)
+                .join(Parts, user_menus.c.part_id == Parts.id)
+                .where(
+                    and_(
+                        user_menus.c.user_id == user_id,
+                        Parts.branch_id == target_user.branch_id  # 같은 지점의 파트만
+                    )
                 )
             )
             menu_perms = menu_perms.fetchall()
 
-            all_menu_permissions = []
-            for menu in MenuPermissions:
-                existing_perm = next(
-                    (p for p in menu_perms if p.menu_name == menu),
-                    None
-                )
-                all_menu_permissions.append(
-                    MenuPermissionInfo(
-                        menu_name=menu.value,
-                        is_permitted=existing_perm.is_permitted if existing_perm else False
+            response["menu_permissions"] = [
+                {
+                    "menu_name": menu.value,
+                    "is_permitted": any(
+                        p.is_permitted for p in menu_perms
+                        if p.menu_name == menu
+                    )
+                } for menu in MenuPermissions
+            ]
+            return response
+
+        # 파트관리자
+        elif target_user.role == Role.ADMIN:
+            manageable_parts = await db.scalars(
+                select(Parts)
+                .join(user_parts, user_parts.c.part_id == Parts.id)
+                .where(
+                    and_(
+                        user_parts.c.user_id == user_id,
+                        Parts.branch_id == target_user.branch_id,  # 같은 지점의 파트만
+                        Parts.deleted_yn == "N"
                     )
                 )
-
-            return AdminMenuPermissionsResponse(
-                menu_permissions=all_menu_permissions
             )
+            parts = manageable_parts.all()
 
-        elif current_user.role == Role.ADMIN:
-            # 파트 관리자: user_parts 테이블에서 관리 가능한 파트 조회
-            manageable_parts_query = select(Parts).join(
-                user_parts,
-                and_(
-                    user_parts.c.part_id == Parts.id,
-                    user_parts.c.user_id == current_user.id
-                )
-            ).where(
-                and_(
-                    Parts.branch_id == current_user.branch_id,
-                    Parts.deleted_yn == "N"
-                )
-            )
-
-            parts = await db.execute(manageable_parts_query)
-            parts = parts.scalars().all()
-
-            if not parts:
-                raise HTTPException(
-                    status_code=404,
-                    detail="관리 가능한 파트가 없습니다."
-                )
-
-            permissions = []
+            response["part_permissions"] = []
             for part in parts:
                 menu_perms = await db.execute(
                     select(user_menus).where(
                         and_(
-                            user_menus.c.user_id == current_user.id,
+                            user_menus.c.user_id == user_id,
                             user_menus.c.part_id == part.id
                         )
                     )
                 )
                 menu_perms = menu_perms.fetchall()
 
-                all_menu_permissions = []
-                for menu in MenuPermissions:
-                    existing_perm = next(
-                        (p for p in menu_perms if p.menu_name == menu),
-                        None
-                    )
-                    all_menu_permissions.append(
-                        MenuPermissionInfo(
-                            menu_name=menu.value,
-                            is_permitted=existing_perm.is_permitted if existing_perm else False
-                        )
-                    )
+                response["part_permissions"].append({
+                    "part_id": part.id,
+                    "part_name": part.name,
+                    "menu_permissions": [
+                        {
+                            "menu_name": menu.value,
+                            "is_permitted": next(
+                                (p.is_permitted for p in menu_perms if p.menu_name == menu),
+                                False
+                            )
+                        } for menu in MenuPermissions
+                    ]
+                })
+            return response
 
-                permissions.append(
-                    PartMenuPermissions(
-                        part_id=part.id,
-                        part_name=part.name,
-                        menu_permissions=all_menu_permissions
-                    )
-                )
-
-            return PartAdminMenuPermissionsResponse(
-                permissions=permissions
-            )
+        # 일반 사원 이하 등급 -> 일단 다 False로 리턴
+        else:
+            response["menu_permissions"] = [
+                {
+                    "menu_name": menu.value,
+                    "is_permitted": False
+                } for menu in MenuPermissions
+            ]
+            return response
 
     except HTTPException:
         raise
     except Exception as e:
+        print(f"Error: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
 
 @router.post("/update")
 @available_higher_than(Role.INTEGRATED_ADMIN)

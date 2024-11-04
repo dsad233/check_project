@@ -16,14 +16,11 @@ async def get_my_branch_closed_days(
 ) -> EntireClosedDayResponseDTO:
     """
     현재 로그인한 사용자의 소속 지점의 휴무일을 조회합니다.
-    - 본인의 휴무일과 병원 휴무일만 포함
     - 기본값으로 현재 년/월의 데이터를 조회
     """
-    user_closed_days, hospital_closed_days = await service.get_user_and_hospital_closed_days(
-        branch_id=context.state.user.branch_id,
-        user_id=context.state.user.id,
-        year=year,
-        month=month
-    )
+    branch_id = context.state.user.branch_id
+    user_closed_days = await service.get_all_user_closed_days_group_by_date(branch_id, year, month)
+    hospital_closed_days = await service.get_all_hospital_closed_days(branch_id, year, month)
+    early_clock_in_days = await service.get_all_user_early_clock_ins_group_by_date(branch_id, year, month)
 
-    return EntireClosedDayResponseDTO.to_DTO(user_closed_days, hospital_closed_days )
+    return EntireClosedDayResponseDTO.to_DTO(user_closed_days, hospital_closed_days, early_clock_in_days)

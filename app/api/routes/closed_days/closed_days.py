@@ -35,7 +35,9 @@ async def get_all_user_closed_days(request : Request, branch_id : int, closed_da
 async def get_all_closed_days(request : Request, branch_id : int, service: ClosedDayService = Depends(ClosedDayService), year: int = datetime.now().year, month : int = datetime.now().month) -> EntireClosedDayResponseDTO:
     user_closed_days = await service.get_all_user_closed_days_group_by_date(branch_id, year, month)
     hospital_closed_days = await service.get_all_hospital_closed_days(branch_id, year, month)
-    return EntireClosedDayResponseDTO.to_DTO(user_closed_days, hospital_closed_days)
+    early_clock_in_days = await service.get_all_user_early_clock_ins_group_by_date(branch_id, year, month)
+
+    return EntireClosedDayResponseDTO.to_DTO(user_closed_days, hospital_closed_days, early_clock_in_days)
     
 
 # 지점 휴점일 생성 (관리자)
