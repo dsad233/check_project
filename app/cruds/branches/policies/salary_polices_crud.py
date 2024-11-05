@@ -74,19 +74,29 @@ async def update_policies(session: AsyncSession, branch_id: int, update_data: Co
             - allowance_policies: 업데이트된 수당 정책(branch단위)
     """
     try:
-        # 파트타이머 정책 업데이트
+        # 파트타이머 정책 업데이트 또는 생성
         if update_data.parttimer_policies:
             parttimer_query = select(ParttimerPolicies).filter(
                 ParttimerPolicies.branch_id == branch_id
             )
             parttimer_policy = (await session.execute(parttimer_query)).scalar_one_or_none()
+            
             if parttimer_policy:
+                # 기존 정책 업데이트
                 update_dict = update_data.parttimer_policies.model_dump(exclude_unset=True)
                 for key, value in update_dict.items():
                     if key != 'branch_id':
                         setattr(parttimer_policy, key, value)
+            else:
+                # 새로운 정책 생성
+                new_policy = ParttimerPolicies(branch_id=branch_id)
+                update_dict = update_data.parttimer_policies.model_dump(exclude_unset=True)
+                for key, value in update_dict.items():
+                    if key != 'branch_id':
+                        setattr(new_policy, key, value)
+                session.add(new_policy)
 
-        # 급여 템플릿 정책 업데이트
+        # 급여 템플릿 정책 업데이트 또는 생성
         if update_data.salary_templates_policies:
             for template_data in update_data.salary_templates_policies:
                 template_query = select(SalaryTemplatesPolicies).filter(
@@ -95,12 +105,24 @@ async def update_policies(session: AsyncSession, branch_id: int, update_data: Co
                 )
                 template = (await session.execute(template_query)).scalar_one_or_none()
                 if template:
+                    # 기존 템플릿 업데이트
                     update_dict = template_data.model_dump(exclude_unset=True)
                     for key, value in update_dict.items():
                         if key not in ['branch_id', 'part_id', 'part_name']:
                             setattr(template, key, value)
+                else:
+                    # 새로운 템플릿 생성
+                    new_template = SalaryTemplatesPolicies(
+                        branch_id=branch_id,
+                        part_id=template_data.part_id
+                    )
+                    update_dict = template_data.model_dump(exclude_unset=True)
+                    for key, value in update_dict.items():
+                        if key not in ['branch_id', 'part_id', 'part_name']:
+                            setattr(new_template, key, value)
+                    session.add(new_template)
 
-        # 수당 정책 업데이트
+        # 수당 정책 업데이트 또는 생성
         if update_data.allowance_policies:
             allowance_query = select(AllowancePolicies).filter(
                 AllowancePolicies.branch_id == branch_id,
@@ -108,10 +130,22 @@ async def update_policies(session: AsyncSession, branch_id: int, update_data: Co
             )
             allowance_policy = (await session.execute(allowance_query)).scalar_one_or_none()
             if allowance_policy:
+                # 기존 정책 업데이트
                 update_dict = update_data.allowance_policies.model_dump(exclude_unset=True)
                 for key, value in update_dict.items():
                     if key != 'branch_id':
                         setattr(allowance_policy, key, value)
+            else:
+                # 새로운 정책 생성
+                new_policy = AllowancePolicies(
+                    branch_id=branch_id,
+                    deleted_yn="N"
+                )
+                update_dict = update_data.allowance_policies.model_dump(exclude_unset=True)
+                for key, value in update_dict.items():
+                    if key != 'branch_id':
+                        setattr(new_policy, key, value)
+                session.add(new_policy)
 
         await session.commit()
         

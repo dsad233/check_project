@@ -33,6 +33,7 @@ class ParttimerPolicies(Base):
 
 class ParttimerPoliciesDto(BaseModel):
     branch_id: Optional[int] = None
+    part_id: Optional[int] = None
     weekday_base_salary: bool = Field(description="기본급(평일) 사용여부", default=False)
     remote_base_salary: bool = Field(description="기본급(재택) 사용여부", default=False)
     annual_leave_allowance: bool = Field(description="연차수당 사용여부", default=False)
