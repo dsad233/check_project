@@ -28,6 +28,7 @@ from app.utils.modusign_utils import ModuSignGenerator
 
 SAMPLE_WORK_TEMPLATE_ID = "e7193300-96da-11ef-8b54-adaae74d0aa0"
 SAMPLE_SALARY_TEMPLATE_ID = "c5561590-9ac6-11ef-a30b-91785db5ea61"
+SAMPLE_PART_TIME_TEMPLATE_ID = "1645abb0-9b48-11ef-aeb5-2b180aaeea70"
 
 class UserManagementContractService:
     def __init__(
@@ -196,7 +197,11 @@ class UserManagementContractService:
                 user=user
             )
         elif contract.contract_type == ContractType.PART_TIME:
-            return False
+            template_response = await self.get_modusign_template_by_id(template_id=SAMPLE_PART_TIME_TEMPLATE_ID)
+            document_data = ModuSignGenerator.get_part_time_template_document_data(
+                template_response=template_response,
+                user=user
+            )
 
         modusign_result = await self.modusign_document_service.create_document_with_template(
             document_data=document_data

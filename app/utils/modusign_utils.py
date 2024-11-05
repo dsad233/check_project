@@ -12,13 +12,11 @@ class ModuSignGenerator:
             user: Users,
     ) -> dict:
         today = datetime.today()
-        # image_path = "/Users/marin/Downloads/signature.jpg"
 
         return {
             "templateId": template_response.id,
             "document": {
                 "title": template_response.title,
-                # "title": f"{user.name} 근로 계약서",
                 "participantMappings": [
                     {
                         "signingMethod": {
@@ -108,7 +106,40 @@ class ModuSignGenerator:
             "templateId": template_response.id,
             "document": {
                 "title": template_response.title,
-                # "title": f"{user.name} 근로 계약서",
+                "participantMappings": [
+                    {
+                        "signingMethod": {
+                            "type": SIGNINGMETHOD_OBJECT_TYPE.KAKAO,
+                            "value": user.phone_number.replace("-", "")
+                        },
+                        "role": participant.role,
+                        "name": user.name
+                    }
+                    for participant in template_response.participants
+                ],
+                "requesterInputMappings": [
+                    {
+                        "dataLabel": "USER_NAME_1",
+                        "value": user.name
+                    },
+                    {
+                        "dataLabel": "USER_NAME_2",
+                        "value": user.name
+                    }
+                ]
+            }
+        }
+
+
+    @staticmethod
+    def get_part_time_template_document_data(
+            template_response: TemplateResponse,
+            user: Users
+    ) -> dict:
+        return {
+            "templateId": template_response.id,
+            "document": {
+                "title": template_response.title,
                 "participantMappings": [
                     {
                         "signingMethod": {

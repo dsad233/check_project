@@ -26,20 +26,21 @@ class AdditionalInfoDto(BaseModel):
 class RequestCreatePartTimeContract(BaseModel):
     contract_start_date: date = Field(..., description="계약 시작 날짜")
     contract_end_date: date = Field(..., description="계약 종료 날짜")
-    daily_break_time: int = Field(default=30, description="일일 휴식 시간(분)", ge=30)
+    daily_break_time: int = Field(default=30, description="일일 휴식 시간(분)", ge=30, le=120)
     working_times: List[WorkingTimeDto] = Field(..., description="작업 시간 목록")
     hourly_wages: List[HourlyWageDto] = Field(..., description="시급 정보 목록")
 
-    @field_validator("contract_end_date")
-    def validate_dates(cls, end_date, values):
-        start_date = values.get("contract_start_date")
-        if start_date and end_date < start_date:
-            raise ValueError("계약 종료 날짜는 계약 시작 날짜보다 빠를 수 없습니다.")
-        return end_date
+    # @field_validator("contract_end_date")
+    # def validate_dates(cls, end_date, values):
+    #     start_date = values.get("contract_start_date")
+    #     if start_date and end_date < start_date:
+    #         raise ValueError("계약 종료 날짜는 계약 시작 날짜보다 빠를 수 없습니다.")
+    #     return end_date
 
-    def to_domain(self) -> PartTimerWorkContract:
+    def to_domain(self, contract_info_id) -> PartTimerWorkContract:
         # PartTimerWorkContract 엔티티 생성
         part_time_contract = PartTimerWorkContract(
+            contract_info_id=contract_info_id,
             contract_start_date=self.contract_start_date,
             contract_end_date=self.contract_end_date,
             daily_break_time=self.daily_break_time,
