@@ -200,13 +200,6 @@ async def can_manage_user_permissions(
             detail=f"다른 지점의 사용자 권한은 변경할 수 없습니다."
         )
 
-    # 통합관리자는 역할 변경 불가
-    if current_user.role == Role.INTEGRATED_ADMIN and new_role != target_user.role:
-        raise HTTPException(
-            status_code=401,
-            detail="통합관리자는 사용자의 역할을 변경할 수 없습니다."
-        )
-
     # 파트관리자는 권한 관리 불가
     if current_user.role == Role.ADMIN:
         raise HTTPException(
