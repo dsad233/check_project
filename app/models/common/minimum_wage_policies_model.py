@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from sqlalchemy import (
     Boolean,
     Column,
@@ -28,13 +28,11 @@ class MinimumWageRequestDto(BaseModel):
     minimum_wage: int = Field(description="최저시급")
     person_in_charge: str = Field(description="담당자")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class MinimumWageResponseDto(BaseModel):
     minimum_wage: int = Field(description="최저시급")
     updated_at: datetime = Field(description="마지막 저장일")
     person_in_charge: str = Field(description="담당자")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

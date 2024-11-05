@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from typing import Literal, Optional
 from app.enums.users import Weekday
 from app.schemas.parts_schemas import PartIdWithName
@@ -18,8 +18,7 @@ class AccountBasedGrantDto(BaseModel):
         Field(description="소수점처리", default="0.5 기준 올림")
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class ConditionBasedGrantDto(BaseModel):
@@ -33,8 +32,7 @@ class ConditionBasedGrantDto(BaseModel):
             return None
         return v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EntryDateBasedGrantDto(BaseModel):
@@ -42,8 +40,7 @@ class EntryDateBasedGrantDto(BaseModel):
         description="매 년 입사일 기준", default="초기화"
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AccountPoliciesWithParts(AccountBasedGrantDto):
@@ -64,8 +61,7 @@ class AutoAnnualLeaveApprovalDto(BaseModel):
     total_auto_approval: bool = Field(description="관리자 자동승인", default=False)
     part_auto_approval: bool = Field(description="사원 자동승인", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AutoLeavePoliciesAndPartsDto(BaseModel):
@@ -80,8 +76,7 @@ class BranchHistoryResponse(BaseModel):
     snapshot_id: str
     history: dict
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BranchHistoriesResponse(BaseModel):
@@ -122,8 +117,7 @@ class BranchResponse(BaseModel):
     updated_at: datetime = Field(description="수정 일자")
     deleted_yn: str = Field(description="삭제 여부")
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class BranchListResponse(BaseModel):
@@ -143,9 +137,7 @@ class BranchWorkScheduleDto(BaseModel):
     end_time: Optional[time] = None
     is_holiday: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
-        use_enum_values = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class BranchBreakTimeDto(BaseModel):
@@ -154,8 +146,7 @@ class BranchBreakTimeDto(BaseModel):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WorkPoliciesDto(BaseModel):
@@ -163,8 +154,7 @@ class WorkPoliciesDto(BaseModel):
     work_schedules: Optional[list[BranchWorkScheduleDto]] = Field(description="근무일정", default=[])
     break_times: Optional[list[BranchBreakTimeDto]] = Field(description="휴게시간", default=[])
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
         
         
 class BranchWorkScheduleUpdateDto(BaseModel):
@@ -173,9 +163,7 @@ class BranchWorkScheduleUpdateDto(BaseModel):
     end_time: Optional[time] = None
     is_holiday: Optional[bool] = None
 
-    class Config:
-        from_attributes = True
-        use_enum_values = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class BranchBreakTimeUpdateDto(BaseModel):
@@ -184,8 +172,7 @@ class BranchBreakTimeUpdateDto(BaseModel):
     start_time: Optional[time] = None
     end_time: Optional[time] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class WorkPoliciesUpdateDto(BaseModel):
@@ -195,8 +182,7 @@ class WorkPoliciesUpdateDto(BaseModel):
     work_schedules: Optional[list[BranchWorkScheduleUpdateDto]] = None
     break_times: Optional[list[BranchBreakTimeUpdateDto]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AutoOvertimePoliciesDto(BaseModel):
@@ -204,15 +190,13 @@ class AutoOvertimePoliciesDto(BaseModel):
     total_auto_applied: bool = Field(description="관리자 자동적용", default=False)
     part_auto_applied: bool = Field(description="사원 자동적용", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HolidayWorkPoliciesDto(BaseModel):
     do_holiday_work: bool = Field(description="휴무일 근무 여부", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OverTimePoliciesDto(BaseModel):
@@ -226,8 +210,7 @@ class OverTimePoliciesDto(BaseModel):
     common_ot_90: int = Field(description="O.T 90분 초과", default=0)
     common_ot_120: int = Field(description="O.T 120분 초과", default=0)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class DefaultAllowancePoliciesDto(BaseModel):
@@ -240,16 +223,14 @@ class DefaultAllowancePoliciesDto(BaseModel):
     meal: bool = Field(description="식대", default=False)
     base_salary: bool = Field(description="기본급 사용여부", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HolidayAllowancePoliciesDto(BaseModel):
     doctor_holiday_work_pay: int = Field(description="의사 휴일수당", default=0)
     common_holiday_work_pay: int = Field(description="일반 휴일수당", default=0)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class AllowancePoliciesDto(DefaultAllowancePoliciesDto, HolidayAllowancePoliciesDto):
@@ -279,8 +260,7 @@ class AllowancePoliciesResponse(BaseModel):
     display_meal_calc: bool = Field(description="식대 계산 표시", default=False)
     display_night_calc: bool = Field(description="야간 수당 계산 표시", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CombinedPoliciesDto(BaseModel):
@@ -312,8 +292,7 @@ class PersonnelRecordCategoryResponse(BaseModel):
     id: int
     name: str
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PersonnelRecordCategoriesResponse(BaseModel):

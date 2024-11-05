@@ -1,6 +1,6 @@
 from datetime import datetime, time
 from typing import Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from enum import Enum
 
 class AttendanceStatus(str, Enum):
@@ -29,9 +29,7 @@ class CommuteRecord(BaseModel):
     clock_out: Optional[time] = Field(None, description="퇴근 시간")
     status: Optional[str] = Field(default=AttendanceStatus.NONE, description="출근 상태")
 
-    model_config = {
-        "use_enum_values": True
-    }
+    model_config = ConfigDict(use_enum_values=True)
 
 
 class UserCommuteDetail(BaseModel):

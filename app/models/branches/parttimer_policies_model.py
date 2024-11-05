@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 from sqlalchemy import (
     Boolean,
     Column,
@@ -39,5 +39,4 @@ class ParttimerPoliciesDto(BaseModel):
     overtime_allowance: bool = Field(description="연장근로수당 사용여부", default=False)
     holiday_work_allowance: bool = Field(description="휴일근로수당 사용여부", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

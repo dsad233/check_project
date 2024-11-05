@@ -19,7 +19,7 @@ from app.core.database import Base
 from datetime import date
 from typing import Optional, Dict, List, Any
 from sqlalchemy import text
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.enums.users import Role, Gender, MenuPermissions, EmploymentStatus
 from app.schemas.user_management.career_schemas import CareerDto
@@ -106,7 +106,7 @@ class PersonnelRecordHistory(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=False)
     worker_comment = Column(String(255), nullable=False)
-    admin_comment = Column(String(255), nullable=False)
+    admin_comment = Column(String(255), nullable=False) # TODO: create_date 추가?
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")
@@ -192,8 +192,7 @@ class CreatedUserDto(BaseModel):
     educations: Optional[list[EducationDto]] = None
     careers: Optional[list[CareerDto]] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
     @classmethod
     async def build(cls, user: Users, session: AsyncSession):
@@ -240,8 +239,7 @@ class UserUpdate(BaseModel):
     hire_date: Optional[date] = None
     resignation_date: Optional[date] = None
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 # 직원의 Role 변경을 위한 Pydantic 모델

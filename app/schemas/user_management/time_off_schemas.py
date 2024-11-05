@@ -1,7 +1,7 @@
 from datetime import date, datetime
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.enums.users import TimeOffType
 
@@ -27,8 +27,7 @@ class TimeOffResponseDto(BaseModel):
         description="휴가 사유"
     )
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TimeOffBaseDto(BaseModel):
@@ -37,8 +36,7 @@ class TimeOffBaseDto(BaseModel):
     end_date: datetime
     description: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TimeOffUpdateRequestDto(BaseModel):
@@ -47,8 +45,7 @@ class TimeOffUpdateRequestDto(BaseModel):
     end_date: Optional[datetime] =None
     description: Optional[str] = None
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class TimeOffCreateRequestDto(TimeOffBaseDto):

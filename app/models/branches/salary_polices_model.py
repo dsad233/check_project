@@ -9,7 +9,7 @@ from sqlalchemy import (
     String,
 )
 from app.core.database import Base
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from app.schemas.branches_schemas import AllowancePoliciesResponse
 from app.models.branches.parttimer_policies_model import ParttimerPoliciesDto
 
@@ -46,8 +46,7 @@ class SalaryTemplatesPoliciesDto(BaseModel):
     annual_leave_deduction: bool = Field(description="연차사용공제", default=False)
     attendance_deduction: bool = Field(description="근태공제", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
         
 
 class CombinedPoliciesResponse(BaseModel):
@@ -56,17 +55,16 @@ class CombinedPoliciesResponse(BaseModel):
     allowance_policies: AllowancePoliciesResponse | None = None
     
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class CombinedPoliciesUpdate(BaseModel):
     parttimer_policies: Optional[ParttimerPoliciesDto] = None
     salary_templates_policies: Optional[List[SalaryTemplatesPoliciesDto]] = None
     allowance_policies: Optional[AllowancePoliciesResponse] = None
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "parttimer_policies": {
                     "branch_id": 1,
@@ -96,3 +94,4 @@ class CombinedPoliciesUpdate(BaseModel):
                 }
             }
         }
+    )
