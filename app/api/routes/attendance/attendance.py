@@ -119,7 +119,7 @@ async def find_attendance(
             if name:
                 base_query = base_query.where(Users.name.like(f"%{name}%"))
             if phone_number:
-                base_query = base_query.where(Users.phone_number.like(f"%{phone_number}%"))
+                base_query = base_query.where(Users.phone_number.like(f"{phone_number}"))
 
             base_query = base_query.subquery()
             
