@@ -6,6 +6,7 @@ from sqlalchemy.orm import selectinload, joinedload
 
 from app.enums.users import Role
 from app.models.branches.branches_model import Branches
+from app.models.users.users_contract_info_model import ContractInfo
 from app.models.users.users_model import Users
 
 
@@ -19,8 +20,11 @@ class UserManagementRepository:
     ) -> Optional[Users]:
         stmt = (
             select(Users)
-            .options(joinedload(Users.branch))
-            .options(selectinload(Users.part))
+            .options(
+                joinedload(Users.user_contract_infos).joinedload(ContractInfo.part),
+                joinedload(Users.branch),
+                joinedload(Users.part)
+            )
             .where(Users.id == user_id)
             .where(Users.deleted_yn == "N")
         )
