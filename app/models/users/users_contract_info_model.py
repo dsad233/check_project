@@ -4,7 +4,6 @@ from sqlalchemy import Column, Integer, ForeignKey, Date, String, DateTime, Enum
 
 from app.core.database import Base
 from app.enums.common import YesNo
-from app.enums.user_management import ContractType
 from app.enums.users import EmploymentStatus
 
 
