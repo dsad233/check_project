@@ -198,6 +198,11 @@ class MenuService:
             await self.db.commit()
             return {"message": "권한이 업데이트되었습니다"}
 
+        # HTTP 예외는 그대로 전달
+        except HTTPException as e:
+            await self.db.rollback()
+            raise e
+        # 기타 예외만 500 에러로 변환
         except Exception as e:
             await self.db.rollback()
             raise HTTPException(status_code=500, detail=str(e))
