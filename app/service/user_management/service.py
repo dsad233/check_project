@@ -131,7 +131,9 @@ class UserManagementService:
                 joinedload(UserAlias.part),
                 joinedload(UserAlias.branch),
                 selectinload(UserAlias.educations),
-                selectinload(UserAlias.careers),
+                selectinload(UserAlias.careers).options(
+                    selectinload(Career).order_by(desc(Career.end_date).nulls_first())
+                ),
                 selectinload(UserAlias.time_offs)
             )
             .outerjoin(Commutes, UserAlias.id == Commutes.user_id)
