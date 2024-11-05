@@ -34,6 +34,7 @@ class BaseAppSettings(BaseSettings):
     CHANNEL : str
     API_URL : str 
     
+    
     @property
     def MODUSIGN_HEADERS(self) -> dict:
         if not self.MODUSIGN_API_KEY or not self.MODUSIGN_USER_EMAIL:

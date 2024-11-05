@@ -3,9 +3,10 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from sqlalchemy import select, insert, text
+from sqlalchemy import select, insert, text, update
 from sqlalchemy.orm import selectinload, joinedload
 
+from app.models.users.users_contract_info_model import ContractInfo
 from app.models.users.users_contract_model import Contract, ContractSendMailHistory
 from app.models.users.users_model import Users
 
@@ -18,11 +19,8 @@ class UserManagementContractRepository:
     async def find_user_by_id_with_contracts(self, user_id: int) -> Optional[Users]:
         stmt = (
             select(Users)
-            # user_id 관계로 연결된 contracts 로드
             .options(selectinload(Users.contracts_user_id)
-            # 각 contract의 manager 정보도 로드
             .options(joinedload(Contract.manager)),
-                # manager_id 관계로 연결된 contracts 로드
                 selectinload(Users.contracts_manager_id)
             )
             .where(Users.id == user_id)
@@ -32,12 +30,13 @@ class UserManagementContractRepository:
         return result.scalar_one_or_none()
 
 
-    async def find_contract_by_contract_id(self, user_id: int, contract_id: int) -> Optional[Contract]:
+    async def find_contract_by_contract_id(self, contract_id: int) -> Optional[Contract]:
         stmt = (
             select(Contract)
-            .where(Contract.id == contract_id)
-            .where(Contract.user_id == user_id)
-            .where(Contract.deleted_yn == "N")
+            .filter(
+                Contract.id == contract_id,
+                Contract.deleted_yn == "N"
+            )
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
@@ -46,10 +45,9 @@ class UserManagementContractRepository:
     async def find_contract_by_modusign_id(self, modusign_id: str) -> Optional[Contract]:
         stmt = (
             select(Contract)
-            .options(joinedload(Contract.user))
-            .options(joinedload(Contract.manager))
-            .options(joinedload(Contract.work_contract))
-            # .options(joinedload(Contract.work_contract_histories))
+            .options(
+                joinedload(Contract.contract_info).joinedload(ContractInfo.user)
+            )
             .where(
                 Contract.modusign_id == modusign_id,
                 Contract.deleted_yn == "N"
@@ -57,6 +55,17 @@ class UserManagementContractRepository:
         )
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
+
+    async def find_contracts_by_contract_info_id(self, contract_info_id: int) -> list[Contract]:
+        stmt = (
+            select(Contract)
+            .filter(
+                Contract.contract_info_id == contract_info_id,
+                Contract.deleted_yn == "N"
+            )
+        )
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())
 
 
     async def find_contract_send_mail_histories_by_user_id(self, user_id: int) -> list[ContractSendMailHistory]:
@@ -147,5 +156,19 @@ class UserManagementContractRepository:
             await self.session.commit()
         except Exception as e:
             logger.error(f"Failed to hard delete contract: {e}")
+            await self.session.rollback()
+            raise e
+
+    async def update_contract(self, contract_id: int, update_params: dict):
+        try:
+            stmt = (
+                update(Contract)
+                .where(Contract.id == contract_id)
+                .values(update_params)
+            )
+            await self.session.execute(stmt)
+            await self.session.commit()
+        except Exception as e:
+            logger.error(f"Failed to update contract: {e}")
             await self.session.rollback()
             raise e

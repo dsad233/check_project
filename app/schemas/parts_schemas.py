@@ -26,6 +26,7 @@ class PartResponse(BaseModel):
     is_doctor: bool
     required_certification: bool
     leave_granting_authority: bool
+    auto_annual_leave_grant: str
     
     class Config:
         from_attributes = True

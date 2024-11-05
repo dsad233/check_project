@@ -7,12 +7,12 @@ from app.schemas.modusign_schemas import TemplateResponse
 
 class ModuSignGenerator:
     @staticmethod
-    def convert_template_response_to_document_data(
+    def get_work_template_document_data(
             template_response: TemplateResponse,
             user: Users,
     ) -> dict:
         today = datetime.today()
-        image_path = "/Users/marin/Downloads/signature.jpg"
+        # image_path = "/Users/marin/Downloads/signature.jpg"
 
         return {
             "templateId": template_response.id,
@@ -99,3 +99,36 @@ class ModuSignGenerator:
             }
         }
 
+    @staticmethod
+    def get_salary_template_document_data(
+            template_response: TemplateResponse,
+            user: Users
+    ) -> dict:
+        return {
+            "templateId": template_response.id,
+            "document": {
+                "title": template_response.title,
+                # "title": f"{user.name} 근로 계약서",
+                "participantMappings": [
+                    {
+                        "signingMethod": {
+                            "type": SIGNINGMETHOD_OBJECT_TYPE.KAKAO,
+                            "value": user.phone_number.replace("-", "")
+                        },
+                        "role": participant.role,
+                        "name": user.name
+                    }
+                    for participant in template_response.participants
+                ],
+                "requesterInputMappings": [
+                    {
+                        "dataLabel": "USER_NAME_1",
+                        "value": user.name
+                    },
+                    {
+                        "dataLabel": "USER_NAME_2",
+                        "value": user.name
+                    }
+                ]
+            }
+        }

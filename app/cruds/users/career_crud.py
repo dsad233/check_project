@@ -12,6 +12,8 @@ async def add_career(
     career = Career(
         user_id=user_id,
         company=career_data.company,
+        contract_type=career_data.contract_type.value,
+        job_title=career_data.job_title,
         position=career_data.position,
         department=career_data.department,
         start_date=career_data.start_date,
@@ -29,7 +31,7 @@ async def add_bulk_career(
         Career(
             user_id=user_id,
             company=career.company,
-            contract_type=career.contract_type,
+            contract_type=career.contract_type.value, 
             start_date=career.start_date,
             end_date=career.end_date,
             job_title=career.job_title,

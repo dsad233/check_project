@@ -40,6 +40,7 @@ class LeaveHistories(Base):
     manager_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     manager_name = Column(String(10), nullable=True)
     
+    increased_days = Column(Numeric(10, 2), default=0.00)
     decreased_days = Column(Numeric(10, 2), default=0.00)
     application_date = Column(Date, nullable=False)
     start_date = Column(Date, nullable=True) # 추가 사항

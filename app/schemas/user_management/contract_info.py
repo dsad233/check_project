@@ -3,6 +3,7 @@ from typing import Optional
 from pydantic import BaseModel
 
 from app.models.users.users_contract_info_model import ContractInfo
+from app.schemas.user_management.part_timers_contract_schemas import PartTimerWorkContractDto
 from app.schemas.user_management.salary_contract import SalaryContractDto, RequestCreateSalaryContract
 from app.schemas.user_work_contract_schemas import WorkContractDto, RequestCreateWorkContract
 from app.utils.datetime_utils import DatetimeUtil
@@ -42,13 +43,13 @@ class ResponseTotalContractInfo(BaseModel):
             contract_info: ContractInfoDto,
             work_contract: Optional[WorkContractDto],
             salary_contract: Optional[SalaryContractDto],
-            # part_time_contract: Optional[PartTimeContractDto]
+            part_time_contract: Optional[PartTimerWorkContractDto]
     ) -> "ResponseTotalContractInfo":
         return ResponseTotalContractInfo(
             contract_info=contract_info,
             work_contract=work_contract,
             salary_contract=salary_contract,
-            # part_time_contract=part_time_contract
+            part_time_contract=part_time_contract
         )
 
 class ResponseCreatedContractInfo(BaseModel):
@@ -68,18 +69,17 @@ class RequestCreateContractInfo(BaseModel):
     position: str
     employ_status: str
 
-    @classmethod
-    def to_domain(cls, user_id: int, manager_id: int) -> ContractInfo:
+    def to_domain(self, user_id: int, manager_id: int) -> ContractInfo:
         return ContractInfo(
             user_id=user_id,
             manager_id=manager_id,
-            hire_date=DatetimeUtil.str_to_date(cls.hire_date),
-            resignation_date=DatetimeUtil.str_to_date(cls.resignation_date) if cls.resignation_date else None,
-            contract_renewal_date=DatetimeUtil.str_to_date(cls.contract_renewal_date) if cls.contract_renewal_date else None,
-            part_id=cls.part_id,
-            job_title=cls.job_title,
-            position=cls.position,
-            employ_status=cls.employ_status
+            hire_date=DatetimeUtil.str_to_date(self.hire_date),
+            resignation_date=DatetimeUtil.str_to_date(self.resignation_date) if self.resignation_date else None,
+            contract_renewal_date=DatetimeUtil.str_to_date(self.contract_renewal_date) if self.contract_renewal_date else None,
+            part_id=self.part_id,
+            job_title=self.job_title,
+            position=self.position,
+            employ_status=self.employ_status
         )
 
 class RequestUpdateContractInfo(BaseModel):
@@ -91,7 +91,5 @@ class RequestUpdateContractInfo(BaseModel):
     position: Optional[str]
     employ_status: Optional[str]
 
-class RequestRegisterContract(BaseModel):
-    work: Optional[RequestCreateWorkContract]
-    salary: Optional[RequestCreateSalaryContract]
-    # part_time: Optional[RequestCreatePartTimeContract]
+class RequestApproveContract(BaseModel):
+    user_id: int

@@ -376,10 +376,10 @@ class UserQueryService:
 
             # 정렬 및 페이지네이션 적용
             final_query = self._apply_sorting_and_pagination(
-                filtered_query,
-                current_user.id,
-                page,
-                record_size
+                query=filtered_query,
+                current_user_id=current_user.id,
+                page=page,
+                record_size=record_size
             )
 
             # 쿼리 실행 및 결과 처리
@@ -416,10 +416,16 @@ class UserQueryService:
         branch_id: Optional[int],
         part_id: Optional[int]
     ):
-        """필터 조건 적용"""
+        """
+        필터 조건 적용
+        status: 사용자 상태 필터링
+        name: 사용자 이름 필터링
+        phone: 사용자 전화번호 필터링
+        branch_id: 사용자 부서 필터링
+        part_id: 사용자 파트 필터링
+        """
         if status:
             query = self._apply_status_filter(query, status)
-
         if name:
             query = query.filter(self.UserAlias.name.ilike(f"%{name}%"))
         if phone:
@@ -427,13 +433,20 @@ class UserQueryService:
         if branch_id:
             query = query.filter(self.UserAlias.branch_id == branch_id)
         if part_id:
-            query = query.filter(self.UserAlias.parts.any(Parts.id == part_id))
+            query = query.filter(self.UserAlias.part_id == part_id)
 
         return query
 
     def _apply_status_filter(self, query, status: Optional[str]):
+        """
+        사용자 상태 필터링
+        전체: 삭제회원 제외한 전체 조회
+        재직자: 퇴사자, 휴직자,삭제회원을 제외한 재직자 조회
+        퇴사자: 삭제회원을 제외한 퇴사자 조회
+        휴직자: 삭제회원을 제외한 휴직자 조회
+        삭제회원: 삭제회원 조회
+        """
         if not status or status == "전체":
-            # 삭제회원 제외한 전체 조회
             return query.filter(self.UserAlias.deleted_yn == 'N')
             
         status_filters = {
@@ -464,10 +477,17 @@ class UserQueryService:
         )
 
     async def _get_total_count(self, db: AsyncSession, query) -> int:
-        """총 레코드 수 계산"""
-        count_query = select(func.count(distinct(self.UserAlias.id))).select_from(query.subquery())
-        result = await db.execute(count_query)
-        return result.scalar_one()
+        """
+        총 레코드 수 계산
+        """
+        try:
+            subq = query.subquery()
+            count_query = select(func.count()).select_from(subq)
+            result = await db.execute(count_query)
+            return result.scalar_one()
+        except Exception as e:
+            logger.error(f"총 레코드 수 계산 중 에러 발생: {str(e)}")
+            raise
 
     def _apply_sorting_and_pagination(
         self,

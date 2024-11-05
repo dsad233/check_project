@@ -144,6 +144,7 @@ class UserDTO(BaseModel):
             last_activity=last_activity,
             birth_date=user.birth_date,
             phone_number=user.phone_number,
+            employment_status=user.employment_status,
             monthly_salary=monthly_salary,
             annual_salary=annual_salary,
             education=educations,
@@ -195,7 +196,6 @@ class UserListDto(BaseModel):
     role: str
     position: Optional[str] = None
     employment_status: Optional[str] = None
-    last_activity: Optional[datetime] = None
 
     @classmethod
     def from_orm(cls, user, last_activity=None, monthly_salary=None, annual_salary=None):
@@ -213,14 +213,18 @@ class UserListDto(BaseModel):
         return cls(
             id=user.id,
             name=user.name,
+            en_name=user.en_name,
             gender=user.gender,
             email=user.email,
             hire_date=user.hire_date,
+            resignation_date=user.resignation_date,
             parts=parts,
             branch=BranchListDto(**user.branch.__dict__) if user.branch else None,
             role=user.role,
             birth_date=user.birth_date,
             phone_number=user.phone_number,
+            employment_status=user.employment_status,
+            position=user.position,
             monthly_salary=monthly_salary,
             annual_salary=annual_salary
         )

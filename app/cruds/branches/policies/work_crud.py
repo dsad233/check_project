@@ -10,7 +10,7 @@ from app.models.branches.work_policies_model import (
     BranchWorkSchedule,
     BranchBreakTime,
 )
-from app.schemas.branches_schemas import WorkPoliciesUpdateDto, WorkPoliciesUpdateDto
+from app.schemas.branches_schemas import WorkPoliciesUpdateDto, WorkPoliciesUpdateDto, WorkPoliciesDto
 from app.exceptions.exceptions import BadRequestError, NotFoundError
 from app.enums.users import Weekday
 from sqlalchemy.orm import selectinload
@@ -18,7 +18,7 @@ from sqlalchemy.orm import selectinload
 logger = logging.getLogger(__name__)
 
 
-def generate_break_times(work_policy_id: int) -> list[BranchBreakTime]:
+def generate_break_times() -> list[BranchBreakTime]:
     break_times = []
     for is_doctor in [True, False]:
         for break_type, start, end in [
@@ -26,7 +26,6 @@ def generate_break_times(work_policy_id: int) -> list[BranchBreakTime]:
             ("저녁", time(18, 0), time(19, 0)),
         ]:
             break_time = BranchBreakTime(
-                work_policy_id=work_policy_id,
                 is_doctor=is_doctor,
                 break_type=break_type,
                 start_time=start,
@@ -36,108 +35,120 @@ def generate_break_times(work_policy_id: int) -> list[BranchBreakTime]:
     return break_times
 
 
-async def create(
-    *,
-    session: AsyncSession,
-    branch_id: int,
-) -> WorkPolicies:
-    # 기존 정책 존재 여부 확인
-    if await find_by_branch_id(session=session, branch_id=branch_id) is not None:
-        raise BadRequestError(f"{branch_id}번 지점의 근무 정책이 이미 존재합니다.")
-
-    # WorkPolicies 객체 생성
-    work_policies = WorkPolicies(
-        branch_id=branch_id,
-        weekly_work_days=5,  # 기본값
-        created_at=datetime.now(),
-        updated_at=datetime.now(),
-        deleted_yn="N",
-    )
-
-    session.add(work_policies)
-    await session.commit()
-    await session.flush()
-    await session.refresh(work_policies)
-
-    # 월요일부터 일요일까지의 WorkSchedule 생성
+def generate_work_schedules() -> list[BranchWorkSchedule]:
+    work_schedules = []
     for day in Weekday:
         work_schedule = BranchWorkSchedule(
-            work_policy_id=work_policies.id,
             day_of_week=day,
             start_time=time(9, 0),
             end_time=time(18, 0),
             is_holiday=(day in [Weekday.SATURDAY, Weekday.SUNDAY]),
         )
+        work_schedules.append(work_schedule)
+    return work_schedules
+
+
+async def create(
+    *,
+    session: AsyncSession,
+    branch_id: int,
+    request: WorkPoliciesDto = WorkPoliciesDto(),
+) -> WorkPolicies:
+    
+    work_policies = WorkPolicies(branch_id=branch_id, weekly_work_days=request.weekly_work_days)
+    session.add(work_policies)
+    await session.flush()
+    await session.refresh(work_policies)
+    work_policies_id = work_policies.id
+
+    # 월요일부터 일요일까지의 WorkSchedule 생성
+    work_schedules = generate_work_schedules() if not request.work_schedules else [BranchWorkSchedule(**work_schedule.model_dump()) for work_schedule in request.work_schedules]
+    for work_schedule in work_schedules:
+        work_schedule.work_policy_id = work_policies_id
         session.add(work_schedule)
 
     # BreakTime 4개 생성
-    break_times = generate_break_times(work_policies.id)
+    break_times = generate_break_times() if not request.break_times else [BranchBreakTime(**break_time.model_dump()) for break_time in request.break_times]
     for break_time in break_times:
+        break_time.work_policy_id = work_policies_id
         session.add(break_time)
 
-    await session.commit()
-    return work_policies
+    await session.flush()
+    return request
 
 
 async def update(
     *,
     session: AsyncSession,
     branch_id: int,
-    work_policies_update: WorkPoliciesUpdateDto,
-) -> None:
-    # 기존 정책 조회
-    work_policies = await find_by_branch_id(session=session, branch_id=branch_id)
-    if work_policies is None:
-        raise NotFoundError(f"{branch_id}번 지점의 근무 정책이 존재하지 않습니다.")
+    request: WorkPoliciesDto,
+    old: WorkPolicies,
+) -> bool:
 
     # WorkPolicies 직접 업데이트 - weekly_work_days가 있을 때만 업데이트
-    if work_policies_update.weekly_work_days is not None:
-        work_policies.weekly_work_days = work_policies_update.weekly_work_days
-    work_policies.updated_at = datetime.now()
+    if old.weekly_work_days != request.weekly_work_days:
+        old.weekly_work_days = request.weekly_work_days
+        old.updated_at = datetime.now()
 
     # WorkSchedule 업데이트
-    if work_policies_update.work_schedules:
-        existing_schedules = await session.execute(
-            select(BranchWorkSchedule).where(BranchWorkSchedule.work_policy_id == work_policies.id)
-        )
-        existing_schedules = existing_schedules.scalars().all()
-
-        for i, new_schedule in enumerate(work_policies_update.work_schedules):
-            if i < len(existing_schedules):
-                schedule = existing_schedules[i]
-                # 각 필드가 있을 때만 업데이트
-                if new_schedule.day_of_week is not None:
-                    schedule.day_of_week = new_schedule.day_of_week
-                if new_schedule.start_time is not None:
-                    schedule.start_time = new_schedule.start_time
-                if new_schedule.end_time is not None:
-                    schedule.end_time = new_schedule.end_time
-                if new_schedule.is_holiday is not None:
-                    schedule.is_holiday = new_schedule.is_holiday
-                schedule.updated_at = datetime.now()
+    old_schedules_dict = {
+        schedule.day_of_week: schedule 
+        for schedule in old.work_schedules
+    }
+    
+    updated_schedules = []
+    for new_schedule in request.work_schedules:
+        old_schedule = old_schedules_dict.get(new_schedule.day_of_week)
+        if old_schedule:
+            # 실제 변경사항이 있는 경우만 업데이트
+            if (old_schedule.start_time != new_schedule.start_time or
+                old_schedule.end_time != new_schedule.end_time or
+                old_schedule.is_holiday != new_schedule.is_holiday):
+                
+                old_schedule.start_time = new_schedule.start_time
+                old_schedule.end_time = new_schedule.end_time
+                old_schedule.is_holiday = new_schedule.is_holiday
+                old_schedule.updated_at = datetime.now()
+                updated_schedules.append(old_schedule)
+        else:
+            new_schedule_obj = BranchWorkSchedule(
+                work_policy_id=old.id,
+                **new_schedule.model_dump()
+            )
+            updated_schedules.append(new_schedule_obj)
 
     # BreakTime 업데이트
-    if work_policies_update.break_times:
-        existing_breaks = await session.execute(
-            select(BranchBreakTime).where(BranchBreakTime.work_policy_id == work_policies.id)
-        )
-        existing_breaks = existing_breaks.scalars().all()
+    old_break_times_dict = {
+        (break_time.is_doctor, break_time.break_type): break_time 
+        for break_time in old.break_times
+    }
+    
+    updated_break_times = []
+    for new_break_time in request.break_times:
+        key = (new_break_time.is_doctor, new_break_time.break_type)
+        old_break_time = old_break_times_dict.get(key)
+        if old_break_time:
+            # 실제 변경사항이 있는 경우만 업데이트
+            if (old_break_time.start_time != new_break_time.start_time or
+                old_break_time.end_time != new_break_time.end_time):
+                
+                old_break_time.start_time = new_break_time.start_time
+                old_break_time.end_time = new_break_time.end_time
+                old_break_time.updated_at = datetime.now()
+                updated_break_times.append(old_break_time)
+        else:
+            new_break_time_obj = BranchBreakTime(
+                work_policy_id=old.id,
+                **new_break_time.model_dump()
+            )
+            updated_break_times.append(new_break_time_obj)
 
-        for i, new_break in enumerate(work_policies_update.break_times):
-            if i < len(existing_breaks):
-                break_time = existing_breaks[i]
-                # 각 필드가 있을 때만 업데이트
-                if new_break.is_doctor is not None:
-                    break_time.is_doctor = new_break.is_doctor
-                if new_break.break_type is not None:
-                    break_time.break_type = new_break.break_type
-                if new_break.start_time is not None:
-                    break_time.start_time = new_break.start_time
-                if new_break.end_time is not None:
-                    break_time.end_time = new_break.end_time
-                break_time.updated_at = datetime.now()
+    if updated_schedules:
+        session.add_all(updated_schedules)
+    if updated_break_times:
+        session.add_all(updated_break_times)
 
-    await session.commit()
+    await session.flush()
 
 
 async def find_by_branch_id(
@@ -150,39 +161,15 @@ async def find_by_branch_id(
     return db_obj
 
 
-async def get_work_policies(*, session: AsyncSession, branch_id: int) -> WorkPolicies:
+async def get_work_policies_with_break_times_and_schedules(*, session: AsyncSession, branch_id: int) -> WorkPolicies:
     stmt = (
         select(WorkPolicies)
-        .where(WorkPolicies.branch_id == branch_id, WorkPolicies.deleted_yn == "N")
-        .options(
-            selectinload(WorkPolicies.work_schedules),
-            selectinload(WorkPolicies.break_times),
-        )
+        .where(WorkPolicies.branch_id == branch_id)
+        .options(selectinload(WorkPolicies.break_times), selectinload(WorkPolicies.work_schedules))
     )
 
     result = await session.execute(stmt)
     work_policies = result.scalar_one_or_none()
-
-    if not work_policies:
-        raise HTTPException(status_code=404, detail="Work policies not found")
-
-    return work_policies
-
-async def get_work_policies(*, session: AsyncSession, branch_id: int) -> WorkPolicies:
-    stmt = (
-        select(WorkPolicies)
-        .where(WorkPolicies.branch_id == branch_id, WorkPolicies.deleted_yn == "N")
-        .options(
-            selectinload(WorkPolicies.work_schedules),
-            selectinload(WorkPolicies.break_times),
-        )
-    )
-
-    result = await session.execute(stmt)
-    work_policies = result.scalar_one_or_none()
-
-    if not work_policies:
-        raise HTTPException(status_code=404, detail="Work policies not found")
 
     return work_policies
 

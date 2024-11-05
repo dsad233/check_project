@@ -9,7 +9,7 @@ from app.middleware.tokenVerify import get_current_user
 from app.models.users.users_model import Users
 from app.models.users.users_salary_contract_model import SalaryContract
 from app.schemas.user_management.salary_contract import SalaryContractDto, RequestCreateSalaryContract, \
-    RequestUpdateSalaryContractDto
+    RequestUpdateSalaryContract
 from app.service.user_management.salary_contract_service import UserManagementSalaryContractService
 
 permanent_router = APIRouter(prefix="/permanent")
@@ -66,7 +66,7 @@ class UserManagementSalaryContract:
     )
     async def partial_update_salary_contract(
             user_id: Annotated[int, Path(..., title="사용자 ID", gt=0)],
-            request_update_salary_contract: Annotated[RequestUpdateSalaryContractDto, ...],
+            request_update_salary_contract: Annotated[RequestUpdateSalaryContract, ...],
             service: Annotated[UserManagementSalaryContractService, Depends(get_user_management_salary_contract_service)],
             current_user: Annotated[Users, Depends(get_current_user)]
     ):

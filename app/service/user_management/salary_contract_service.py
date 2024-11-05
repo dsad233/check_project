@@ -1,3 +1,5 @@
+from typing import Optional
+
 from fastapi import HTTPException
 
 from app.cruds.user_management.salary_contract_crud import UserManagementSalaryContractRepository
@@ -24,9 +26,8 @@ class UserManagementSalaryContractService:
             salary_contract=salary_contract
         )
 
-    async def partial_update_salary_contract(self, salary_contract_id: int, user_id: int, update_params: dict) -> SalaryContractDto:
+    async def partial_update_salary_contract(self, salary_contract_id: int, update_params: dict, user_id: Optional[int] = None) -> SalaryContractDto:
         return await self.salary_contract_repository.partial_update(
             salary_contract_id=salary_contract_id,
-            user_id=user_id,
             update_params=update_params
         )

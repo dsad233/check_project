@@ -28,7 +28,7 @@ user_query_service = UserQueryService()
 class UserManagement:
     router = router
 
-    @router.get("")
+    @router.get("", response_model=UserListResponseDTO)
     async def get_users(
         page: int = Query(1, ge=1),
         record_size: int = Query(10, ge=1),
@@ -421,5 +421,19 @@ class UserManagement:
             await db.rollback()
             logger.error(f"에러가 발생하였습니다: {err}")
             raise HTTPException(status_code=500, detail="서버 오류가 발생했습니다.")
+        
+    # @router.get("/{id}/resident-registration-number")
+    # async def get_resident_registration_number(
+    #         id: int,
+    #         db: AsyncSession = Depends(get_db)
+    # ):
+    #     user_query = select(Users).where(Users.id == id)
+    #     result = await db.execute(user_query)
+    #     target_user = result.unique().scalar_one_or_none()
+
+    #     if not target_user:
+    #         raise HTTPException(status_code=404, detail="해당 ID의 유저가 존재하지 않습니다.")
+
+    #     return {"resident_registration_number": target_user.resident_registration_number}
 
 user_management = UserManagement()
