@@ -248,16 +248,3 @@ class MenuService:
                 is_permitted=stmt.inserted.is_permitted
             )
             await self.db.execute(stmt)
-
-            # user_menus 테이블 업데이트
-            menu_enum = self.get_menu_enum(perm.menu_name)
-            stmt = mysql_insert(user_menus).values(
-                user_id=target_user.id,
-                part_id=perm.part_id,
-                menu_name=menu_enum,
-                is_permitted=perm.is_permitted
-            )
-            stmt = stmt.on_duplicate_key_update(
-                is_permitted=stmt.inserted.is_permitted
-            )
-            await self.db.execute(stmt)
