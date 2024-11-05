@@ -39,9 +39,11 @@ class UserManagementContract:
             contract_service: Annotated[UserManagementContractService, Depends(get_user_management_contract_service)],
             current_user: Annotated[Users, Depends(get_current_user)],
     ):
+        contract_info_id = request_temporary_contract.contract_info_id
+
         await contract_service.register_temporary_contract(
-            contract_info_id=request_temporary_contract.contract_info_id,
-            part_time_contract=request_temporary_contract.part_time_contract.to_domain(),
+            contract_info_id=contract_info_id,
+            part_time_contract=request_temporary_contract.part_time_contract.to_domain(contract_info_id=contract_info_id),
             note=request_temporary_contract.note,
             change_reason=request_temporary_contract.change_reason
         )
