@@ -18,7 +18,7 @@ router = APIRouter()
 
 
 @router.get(
-    "/leave-histories/current-user-leaves",
+    "/current-user-leaves",
     response_model=UserLeavesDaysResponse,
     summary="사원용 - 현재 사용자의 연차 일수 정보 조회",
     description="사원용 - 현재 사용자의 연차 일수 정보를 조회합니다.",
@@ -43,7 +43,7 @@ async def get_current_user_leaves(
 
 
 
-@router.post("/leave-histories", summary="사원용 - 연차 신청", description="사원용 - 연차를 신청합니다.")
+@router.post("", summary="사원용 - 연차 신청", description="사원용 - 연차를 신청합니다.")
 async def create_leave_history(
     context: Request,
     leave_create: LeaveHistoriesCreate,
@@ -80,7 +80,7 @@ async def create_leave_history(
     
 
 @router.get(
-    "/leave-histories",
+    "",
     summary="사원용 - 연차 신청 목록 조회",
     description="사원용 - 연차 신청 목록을 조회합니다.",
 )
@@ -140,7 +140,7 @@ async def get_leave_histories(
     
 
 @router.patch(
-    "/leave-histories/{leave_id}", summary="사원용 - 연차 수정", description="사원용 - 연차를 수정합니다."
+    "/{leave_id}", summary="사원용 - 연차 수정", description="사원용 - 연차를 수정합니다."
 )
 async def update_leave(
     leave_update: LeaveHistoriesUpdate,
@@ -164,7 +164,7 @@ async def update_leave(
 
 
 @router.delete(
-    "/leave-histories/{leave_id}", summary="사원용 - 연차 삭제", description="사원용 - 연차를 삭제합니다."
+    "/{leave_id}", summary="사원용 - 연차 삭제", description="사원용 - 연차를 삭제합니다."
 )
 async def delete_leave(
     branch_id: Annotated[
