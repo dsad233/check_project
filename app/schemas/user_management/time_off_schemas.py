@@ -40,13 +40,19 @@ class TimeOffBaseDto(BaseModel):
     class Config:
         from_attributes = True
 
+
+class TimeOffUpdateRequestDto(BaseModel):
+    time_off_type: Optional[TimeOffType] = None
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] =None
+    description: Optional[str] = None
+    
+    class Config:
+        from_attributes = True
+
+
 class TimeOffCreateRequestDto(TimeOffBaseDto):
     user_id: int
-
-class TimeOffUpdateRequestDto(TimeOffBaseDto):
-    id: int
-
-
 
 
 class TimeOffListDto(BaseModel):
