@@ -3,6 +3,7 @@ from datetime import datetime
 from sqlalchemy import Column, Integer, ForeignKey, Date, String, DateTime, Enum
 
 from app.core.database import Base
+from app.enums.common import YesNo
 from app.enums.user_management import ContractType
 from app.enums.users import EmploymentStatus
 
@@ -26,6 +27,11 @@ class ContractInfo(Base):
         nullable=False,
         default=EmploymentStatus.PERMANENT
     )  # 고용 상태 (정규직, 계약직)
+    activate_yn = Column(
+        Enum(*[e.value for e in YesNo], name="activate_yn"),
+        nullable=False,
+        datetime=YesNo.YES
+    )
 
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
