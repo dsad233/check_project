@@ -20,28 +20,17 @@ class DocumentSendHistory(Base):
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     document_id = Column(Integer, ForeignKey("document.id"), nullable=False)
+    request_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     request_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    request_date = Column(Date, nullable=False)
+    request_reason = Column(String(255), nullable=False)
     status = Column(
         "document_send_history_status",
         Enum(DocumentSendStatus, values_callable=lambda obj: [e.value for e in obj]),
         nullable=False,
         default=DocumentSendStatus.PENDING
     )
-
-    created_at = Column(DateTime, default=datetime.now(UTC))
-    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-
-
-class DocumentRequest(Base):
-    __tablename__ = "document_request"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    request_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-    document_type = Column(String(255), nullable=False)
-    request_date = Column(Date, nullable=False)
-    request_reason = Column(String(255), nullable=False)
 
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
