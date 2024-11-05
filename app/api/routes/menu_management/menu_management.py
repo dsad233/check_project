@@ -88,7 +88,7 @@ def get_menu_enum(menu_value: str) -> MenuPermissions:
     1. MSO/최고관리자 승격 시:
     {
         "user_id": 123,
-        "new_role": "SUPER_ADMIN"  // permissions 없어도 됨.
+        "new_role": "MSO 최고권한"  // permissions 없어도 됨.
     }
     
     2. 통합/파트관리자 권한 설정/수정 시:

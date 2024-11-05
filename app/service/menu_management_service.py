@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import HTTPException
-from sqlalchemy import and_, select, update, insert
+from sqlalchemy import and_, select, update, insert, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 
@@ -174,18 +174,25 @@ class MenuService:
                     detail="통합관리자/파트관리자 설정 시 메뉴 권한(permissions) 설정이 필요합니다."
                 )
 
-            # 역할 변경
+            # 역할이 변경될 때
             if new_role != target_user.role:
+                # 기존 권한 데이터 삭제
+                await self.db.execute(
+                    delete(user_parts).where(user_parts.c.user_id == target_user.id)
+                )
+                await self.db.execute(
+                    delete(user_menus).where(user_menus.c.user_id == target_user.id)
+                )
+
+                # 역할 변경
                 await self.db.execute(
                     update(Users)
                     .where(Users.id == target_user.id)
                     .values(role=new_role)
                 )
 
-            # 권한 설정
-            if new_role in [Role.MSO, Role.SUPER_ADMIN]:
-                await self._grant_full_permissions(target_user.id, target_user.part_id)
-            elif permissions:
+            # 권한 설정 (MSO/최고관리자가 아닌 경우에만)
+            if new_role not in [Role.MSO, Role.SUPER_ADMIN] and permissions:
                 await self.update_part_admin_permissions(target_user, permissions)
 
             await self.db.commit()
@@ -193,81 +200,104 @@ class MenuService:
 
         except Exception as e:
             await self.db.rollback()
-            if isinstance(e, HTTPException):
-                raise e
             raise HTTPException(status_code=500, detail=str(e))
 
-    async def _grant_full_permissions(self, user_id: int, part_id: int):
-        """MSO/최고관리자 전체 권한 부여"""
-        for menu in MenuPermissions:
-            stmt = mysql_insert(user_menus).values(
-                user_id=user_id,
-                part_id=part_id,
-                menu_name=menu,
-                is_permitted=True
-            )
-            stmt = stmt.on_duplicate_key_update(is_permitted=True)
-            await self.db.execute(stmt)
+    # async def _grant_full_permissions(self, user_id: int, part_id: int):
+    #     """MSO/최고관리자 전체 권한 부여"""
+    #     for menu in MenuPermissions:
+    #         stmt = mysql_insert(user_menus).values(
+    #             user_id=user_id,
+    #             part_id=part_id,
+    #             menu_name=menu,
+    #             is_permitted=True
+    #         )
+    #         stmt = stmt.on_duplicate_key_update(is_permitted=True)
+    #         await self.db.execute(stmt)
 
     async def update_part_admin_permissions(self, target_user: Users, permissions: List[MenuPermissionUpdate]):
         """파트 관리자 권한 설정"""
-        for perm in permissions:
-            part = await self.db.scalar(
-                select(Parts)
-                .where(
-                    and_(
-                        Parts.id == perm.part_id,
-                        Parts.branch_id == target_user.branch_id,
-                        Parts.deleted_yn == "N"
-                    )
-                )
+        try:
+            # 현재 사용자의 파트 권한 조회
+            result = await self.db.execute(
+                select(user_parts.c.part_id).where(user_parts.c.user_id == target_user.id)
             )
-            if not part:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"파트 ID {perm.part_id}는 해당 지점에 존재하지 않거나 삭제된 파트입니다."
-                )
+            existing_parts = {row[0] for row in result.fetchall()}
 
-            # user_parts 테이블 업데이트
-            stmt = mysql_insert(user_parts).values(
-                user_id=target_user.id,
-                part_id=perm.part_id
-            )
-            stmt = stmt.prefix_with('IGNORE')
-            await self.db.execute(stmt)
-
-            # 기존 메뉴 권한이 있는지 확인
-            menu_enum = self.get_menu_enum(perm.menu_name)
-            existing_perm = await self.db.scalar(
-                select(user_menus).where(
-                    and_(
-                        user_menus.c.user_id == target_user.id,
-                        user_menus.c.part_id == perm.part_id,
-                        user_menus.c.menu_name == menu_enum
-                    )
-                )
-            )
-
-            if existing_perm:
-                # 기존 권한이 있으면 업데이트
-                await self.db.execute(
-                    update(user_menus)
+            for perm in permissions:
+                # 파트 유효성 검증
+                part = await self.db.scalar(
+                    select(Parts)
                     .where(
                         and_(
-                            user_menus.c.user_id == target_user.id,
-                            user_menus.c.part_id == perm.part_id,
-                            user_menus.c.menu_name == menu_enum
+                            Parts.id == perm.part_id,
+                            Parts.branch_id == target_user.branch_id,
+                            Parts.deleted_yn == "N"
                         )
                     )
-                    .values(is_permitted=perm.is_permitted)
                 )
-            else:
-                # 기존 권한이 없으면 새로 생성
-                await self.db.execute(
-                    insert(user_menus).values(
+                if not part:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"파트 ID {perm.part_id}는 해당 지점에 존재하지 않거나 삭제된 파트입니다."
+                    )
+
+                if perm.is_permitted:
+                    # 파트가 존재하지 않을 때만 추가
+                    if perm.part_id not in existing_parts:
+                        await self.db.execute(
+                            insert(user_parts).values(
+                                user_id=target_user.id,
+                                part_id=perm.part_id
+                            )
+                        )
+                        existing_parts.add(perm.part_id)
+
+                    # user_menus 테이블 업데이트
+                    menu_enum = self.get_menu_enum(perm.menu_name)
+                    stmt = mysql_insert(user_menus).values(
                         user_id=target_user.id,
                         part_id=perm.part_id,
                         menu_name=menu_enum,
-                        is_permitted=perm.is_permitted
+                        is_permitted=True
                     )
-                )
+                    stmt = stmt.on_duplicate_key_update(
+                        is_permitted=True
+                    )
+                    await self.db.execute(stmt)
+                else:
+                    # 권한이 false면 해당 메뉴 권한만 삭제
+                    menu_enum = self.get_menu_enum(perm.menu_name)
+                    await self.db.execute(
+                        delete(user_menus).where(
+                            and_(
+                                user_menus.c.user_id == target_user.id,
+                                user_menus.c.part_id == perm.part_id,
+                                user_menus.c.menu_name == menu_enum
+                            )
+                        )
+                    )
+
+                    # 해당 파트의 모든 메뉴 권한이 없어졌는지 확인
+                    remaining_menus = await self.db.scalar(
+                        select(user_menus).where(
+                            and_(
+                                user_menus.c.user_id == target_user.id,
+                                user_menus.c.part_id == perm.part_id
+                            )
+                        )
+                    )
+
+                    # 모든 메뉴 권한이 없어졌다면 user_parts에서도 삭제
+                    if not remaining_menus:
+                        await self.db.execute(
+                            delete(user_parts).where(
+                                and_(
+                                    user_parts.c.user_id == target_user.id,
+                                    user_parts.c.part_id == perm.part_id
+                                )
+                            )
+                        )
+
+        except Exception as e:
+            await self.db.rollback()
+            raise HTTPException(status_code=500, detail=str(e))
