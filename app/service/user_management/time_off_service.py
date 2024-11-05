@@ -1,13 +1,42 @@
 from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import HTTPException
+from typing import List, Optional
+import logging
+
 from app.models.users.time_off_model import TimeOff
 from app.schemas.user_management.time_off_schemas import TimeOffCreateRequestDto, TimeOffUpdateRequestDto
+from app.schemas.user_management.time_off_schemas import TimeOffReadAllResponseDto
 from app.cruds.users import time_off_crud
-from fastapi import HTTPException
 from app.exceptions.exceptions import NotFoundError
-import logging
 
 
 logger = logging.getLogger(__name__)
+
+async def time_off_read_all(
+        *,
+        session: AsyncSession,
+        branch_name: Optional[str] = None,
+        part_name: Optional[str] = None,
+        name: Optional[str] = None
+) -> List[TimeOffReadAllResponseDto]:
+    try:
+        time_off_read_all_result = await time_off_crud.time_off_read_all(
+            session = session,
+            branch_name = branch_name,
+            part_name = part_name,
+            name = name
+        )
+        return time_off_read_all_result
+            
+    except Exception as error:
+        logger.error(f"휴직 조회 중 오류 발생: {str(error)}")
+
+        raise HTTPException(
+            status_code=500,
+            detail="휴직 조회 중 오류가 발생했습니다."
+        )
+
+
 
 async def time_off_create(
         *,

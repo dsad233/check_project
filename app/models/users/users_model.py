@@ -93,6 +93,7 @@ class Users(Base):
         default=EmploymentStatus.PERMANENT
     )  # 근무 상태
 
+    last_logout = Column(DateTime, nullable=True) # 마지막 로그아웃 시간
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     deleted_yn = Column(String(1), default="N")  # Y인 경우 삭제 회원으로 분류
