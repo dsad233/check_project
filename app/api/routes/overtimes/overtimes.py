@@ -524,6 +524,7 @@ async def get_overtimes_approved_list(
         records = result.all()
 
         formatted_data = [{
+            "id": (page - 1) * size + idx + 1,
             "user_id": record.user_id,
             "user_name": record.user_name,
             "user_gender": record.gender,
@@ -542,7 +543,7 @@ async def get_overtimes_approved_list(
             "total_count": record.total_count or 0,
             "total_time": float(record.total_time or 0),
             "total_money": float(record.total_money or 0)
-        } for record in records]
+        } for idx, record in enumerate(records)]
 
         # 전체 레코드 수 조회
         count_query = select(func.count()).select_from(base_query.subquery())
