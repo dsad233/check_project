@@ -6,7 +6,7 @@ import logging
 from app.models.users.time_off_model import TimeOff
 from app.schemas.user_management.time_off_schemas import TimeOffCreateRequestDto, TimeOffUpdateRequestDto
 from app.schemas.user_management.time_off_schemas import TimeOffReadAllResponseDto
-from app.cruds.users import time_off_crud
+from app.cruds.users import time_off_crud, users_crud
 from app.exceptions.exceptions import NotFoundError
 
 
@@ -44,6 +44,15 @@ async def time_off_create(
         time_off_create_request: TimeOffCreateRequestDto
 ) -> TimeOff:
     try:
+        user = await users_crud.find_by_id(
+            session = session,
+            user_id = time_off_create_request.user_id
+        )
+        if user is None:
+            raise NotFoundError(
+                detail="휴직 등록할 사용자가 존재하지 않습니다."
+            )
+
         time_off_create_result = await time_off_crud.time_off_create(
             session = session,
             time_off_create_request = TimeOff(**time_off_create_request.model_dump())
@@ -51,8 +60,10 @@ async def time_off_create(
         return time_off_create_result
     
     except Exception as error:
-        logger.error(f"휴직 등록 중 오류 발생: {str(error)}")
+        if isinstance(error, NotFoundError):
+            raise error
 
+        logger.error(f"휴직 등록 중 오류 발생: {str(error)}")
         raise HTTPException(
             status_code=500,
             detail="휴직 등록 중 오류가 발생했습니다."

@@ -61,7 +61,7 @@ async def time_off_read_all(
                 name = result_one.name,
                 branch_name = result_one.branch_name,
                 part_name = result_one.part_name,
-                created_at = result_one.Timeoff.created_at
+                created_at = result_one.TimeOff.created_at
             )
             for result_one in result_all
         ]
