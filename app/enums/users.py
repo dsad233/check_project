@@ -130,4 +130,13 @@ class CareerContractType(str, Enum):
     CONTRACT = "계약직"
     INTERN = "인턴"
     PART_TIME = "파트타임"
-    
+
+class UserStatus(str, Enum):
+    """
+    사용자 상태
+    """
+    ALL = "전체"
+    ACTIVE = "재직자"
+    RESIGNED = "퇴사자"
+    ON_LEAVE = "휴직자"
+    DELETED = "삭제회원"

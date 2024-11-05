@@ -12,7 +12,7 @@ from app.cruds.user_management.query_builder.user_management import UserSearchFi
 from app.cruds.users.career_crud import add_bulk_career
 from app.cruds.users.education_crud import add_bulk_education
 from app.cruds.users.users_crud import find_by_email, add_user
-from app.enums.users import Role
+from app.enums.users import Role, UserStatus
 from app.models.commutes.commutes_model import Commutes
 from app.models.parts.parts_model import Parts
 from app.models.parts.user_salary import UserSalary
@@ -435,23 +435,24 @@ class UserQueryService:
         휴직자: 삭제회원을 제외한 휴직자 조회
         삭제회원: 삭제회원 조회
         """
-        if not status or status == "전체":
+            
+        if status == UserStatus.ALL.value: 
             return query.filter(self.UserAlias.deleted_yn == 'N')
             
         status_filters = {
-            "재직자": [
+            UserStatus.ACTIVE: [
                 self.UserAlias.deleted_yn == 'N',
                 self.UserAlias.role.notin_(['퇴사자', '휴직자'])
             ],
-            "퇴사자": [
+            UserStatus.RESIGNED: [
                 self.UserAlias.deleted_yn == 'N',
                 self.UserAlias.role == '퇴사자'
             ],
-            "휴직자": [
+            UserStatus.ON_LEAVE: [
                 self.UserAlias.deleted_yn == 'N',
                 self.UserAlias.role == '휴직자'
             ],
-            "삭제회원": [
+            UserStatus.DELETED: [
                 self.UserAlias.deleted_yn == 'Y'
             ]
         }
@@ -461,8 +462,8 @@ class UserQueryService:
             
         # 잘못된 status 값이 전달된 경우
         raise HTTPException(
-            status_code=400,
-            detail="유효하지 않은 상태 필터입니다. ('전체', '재직자', '퇴사자', '휴직자', '삭제회원' 중 하나를 사용하세요)"
+        status_code=400,
+            detail=f"유효하지 않은 상태 필터입니다. ({', '.join([status.value for status in UserStatus])} 중 하나를 사용하세요)"
         )
 
     async def _get_total_count(self, db: AsyncSession, query) -> int:

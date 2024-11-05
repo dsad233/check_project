@@ -129,7 +129,7 @@ class UserCreate(BaseModel):
     
 
     # 추가 정보
-    role: Optional[str] = None
+    role: Optional[str] = Role.TEMPORARY.value
     gender: Optional[str] = None
     is_foreigner: Optional[bool] = None
     stay_start_date: Optional[date] = None

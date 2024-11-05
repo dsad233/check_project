@@ -10,7 +10,7 @@ from app.common.dto.response_dto import ResponseDTO
 from app.core.database import get_db
 from app.cruds.users.users_crud import find_all_by_branch_id_and_role
 from app.dependencies.user_management import get_user_management_service
-from app.enums.users import Role
+from app.enums.users import Role, UserStatus
 from app.middleware.tokenVerify import validate_token, get_current_user
 from app.models.users.users_model import Users, UserUpdate, RoleUpdate, UserCreate, CreatedUserDto, AdminUsersDto
 from app.schemas.parts_schemas import PartRequest
@@ -32,9 +32,9 @@ class UserManagement:
     async def get_users(
         page: int = Query(1, ge=1),
         record_size: int = Query(10, ge=1),
-        status: Optional[str] = Query(
+        status: Optional[UserStatus] = Query(
             None, 
-            description="사용자 상태 필터링 (가능한 값: '전체' => 삭제회원제외, '재직자' => 퇴사자,휴직자 제외, '퇴사자', '휴직자', '삭제회원')"
+            description="사용자 상태 필터링 (가능한 값: '전체' => 삭제회원제외, '재직자' => 퇴사자,휴직자 제외, '퇴사자', '휴직자', '삭제회원', 빈 값은 삭제회원 포함 전체 조회)"
         ),
         name: Optional[str] = None,
         phone: Optional[str] = None,
@@ -45,7 +45,6 @@ class UserManagement:
     ): 
         """
         사용자 목록을 조회합니다.
-        status 필터링 가능한 값: '전체', '재직자', '퇴사자', '휴직자', '삭제회원'
         """
         try:
             if not current_user:
