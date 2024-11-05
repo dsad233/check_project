@@ -220,20 +220,25 @@ class UserManagementContractService:
         return await self.modusign_template_service.get_template(template_id=template_id)
 
     async def callback_by_modusign(self, modusign_document_id: str) -> bool:
+        # 1. 모두사인 ID로 계약서 검색
         contract = await self.get_contract_by_modusign_id(modusign_id=modusign_document_id)
-        result = await self.update_contract_status(
-            contract_id=contract.id,
-            contract_status=ContractStatus.APPROVE
-        )
-
-        if (not result) or (await self.__check_all_signed(contract_info_id=contract.contract_info_id)):
+        if not contract:
             return False
 
-        session = get_db()
-        await self.service.update_user_role(
-            user_id=contract.contract_info.user.id,
-            session=session
-        )
+        # 2. 계약 상태 업데이트
+        if not await self.update_contract_status(
+            contract_id=contract.id,
+            contract_status=ContractStatus.APPROVE
+        ):
+            return False
+
+        # 3. 모든 서명이 완료되었는지 확인
+        if not await self.__check_all_signed(contract_info_id=contract.contract_info_id):
+            return False
+
+        # 4. 유저 권한 업데이트
+        await self.service.update_user_role(user_id=contract.contract_info.user.id)
+        return True
 
     async def __check_all_signed(self, contract_info_id: int) -> bool:
         contracts = await self.contract_repository.find_contracts_by_contract_info_id(contract_info_id=contract_info_id)

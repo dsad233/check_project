@@ -106,19 +106,8 @@ class UserManagementService:
         find_users = await self.repository.find_users(session=session, search_filter=search_filter, pagination=pagination)
 
 
-    async def update_user_role(
-            self,
-            user_id: int,
-            session: AsyncSession,
-            role: Role = Role.EMPLOYEE,
-    ) -> int:
-        user = await self.get_user(user_id=user_id, session=session)
-        user.role = role
-
-        await session.flush()
-        await session.commit()
-
-        return user.id
+    async def update_user_role(self, user_id: int, role: Role = Role.EMPLOYEE) -> bool:
+        return await self.repository.update_user_role(user_id=user_id, role=role)
 
     async def get_user_detail(
         self,

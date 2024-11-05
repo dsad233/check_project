@@ -1,9 +1,10 @@
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload, joinedload
 
+from app.enums.users import Role
 from app.models.branches.branches_model import Branches
 from app.models.users.users_model import Users
 
@@ -25,3 +26,14 @@ class UserManagementRepository:
         )
         result = await self.session.execute(stmt)
         return result.unique().scalar_one_or_none()
+
+    async def update_user_role(self, user_id: int, role: Role) -> bool:
+        stmt = (
+            update(Users)
+            .where(Users.id == user_id)
+            .values(role=role)
+        )
+        await self.session.execute(stmt)
+        await self.session.commit()
+        return True
+
