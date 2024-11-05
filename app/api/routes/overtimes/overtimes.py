@@ -40,7 +40,7 @@ async def create_overtime(
             .where(
                 Overtimes.status.in_([Status.PENDING, Status.APPROVED]),
                 Overtimes.applicant_id == current_user_id,
-                Overtimes.application_date == datetime.now(UTC).date(),
+                Overtimes.created_at == datetime.now(UTC).date(),
                 Overtimes.deleted_yn == "N"
             )
             .order_by(Overtimes.created_at.desc())
