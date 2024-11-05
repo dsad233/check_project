@@ -1,6 +1,6 @@
 from typing import List, Optional
 from fastapi import HTTPException
-from sqlalchemy import and_, select, update
+from sqlalchemy import and_, select, update, insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.dialects.mysql import insert as mysql_insert
 
@@ -236,15 +236,38 @@ class MenuService:
             stmt = stmt.prefix_with('IGNORE')
             await self.db.execute(stmt)
 
-            # user_menus 테이블 업데이트
+            # 기존 메뉴 권한이 있는지 확인
             menu_enum = self.get_menu_enum(perm.menu_name)
-            stmt = mysql_insert(user_menus).values(
-                user_id=target_user.id,
-                part_id=perm.part_id,
-                menu_name=menu_enum,
-                is_permitted=perm.is_permitted
+            existing_perm = await self.db.scalar(
+                select(user_menus).where(
+                    and_(
+                        user_menus.c.user_id == target_user.id,
+                        user_menus.c.part_id == perm.part_id,
+                        user_menus.c.menu_name == menu_enum
+                    )
+                )
             )
-            stmt = stmt.on_duplicate_key_update(
-                is_permitted=stmt.inserted.is_permitted
-            )
-            await self.db.execute(stmt)
+
+            if existing_perm:
+                # 기존 권한이 있으면 업데이트
+                await self.db.execute(
+                    update(user_menus)
+                    .where(
+                        and_(
+                            user_menus.c.user_id == target_user.id,
+                            user_menus.c.part_id == perm.part_id,
+                            user_menus.c.menu_name == menu_enum
+                        )
+                    )
+                    .values(is_permitted=perm.is_permitted)
+                )
+            else:
+                # 기존 권한이 없으면 새로 생성
+                await self.db.execute(
+                    insert(user_menus).values(
+                        user_id=target_user.id,
+                        part_id=perm.part_id,
+                        menu_name=menu_enum,
+                        is_permitted=perm.is_permitted
+                    )
+                )
