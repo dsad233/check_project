@@ -88,11 +88,11 @@ async def login(login: Login, res : Response, users: AsyncSession = Depends(get_
                 content="퇴사자 또는 휴직자는 로그인할 수 없습니다."
             )
 
-        # if findUser.role in [Role.TEMPORARY]:
-        #     return JSONResponse(
-        #         status_code=401,
-        #         content="관리자의 승인을 기다려 주세요."
-        #     )
+        if findUser.role in [Role.TEMPORARY]:
+            return JSONResponse(
+                status_code=401,
+                content="현재 임시 생성 상태입니다. 관리자의 승인을 기다려 주세요."
+            )
 
         jwt_service = JWTService(JWTEncoder(), JWTDecoder())
 
