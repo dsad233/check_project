@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -36,5 +36,4 @@ class AutoAnnualLeaveApprovalDto(BaseModel):
     total_auto_approval: bool = Field(description="관리자 자동승인", default=False)
     part_auto_approval: bool = Field(description="사원 자동승인", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

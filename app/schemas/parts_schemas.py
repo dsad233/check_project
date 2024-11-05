@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional
 
 
@@ -6,8 +6,7 @@ class PartIdWithName(BaseModel):
     id: Optional[int]
     name: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class PartRequest(BaseModel):
@@ -28,5 +27,4 @@ class PartResponse(BaseModel):
     leave_granting_authority: bool
     auto_annual_leave_grant: str
     
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

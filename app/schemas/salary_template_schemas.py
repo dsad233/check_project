@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict   
 from typing import Optional
 from app.common.dto.pagination_dto import PaginationDto
 
@@ -22,7 +22,7 @@ class SalaryTemplateRequest(BaseModel):
     annual_leave_allowance: int = Field(description="연차수당")
     annual_leave_allowance_hour: int = Field(description="연차수당시간")
     annual_leave_allowance_day: int = Field(description="연차수당일수")
-    hire_year: int = Field(descriptio="입사년도 ( 몇년도 기준 임금정책인지 )")
+    hire_year: int = Field(description="입사년도 ( 몇년도 기준 임금정책인지 )")
 
 
 
@@ -46,19 +46,17 @@ class SalaryTemplateResponse(BaseModel):
     annual_leave_allowance: int = Field(description="연차수당")
     annual_leave_allowance_hour: int = Field(description="연차수당시간")
     annual_leave_allowance_day: int = Field(description="연차수당일수")
-    hire_year: int = Field(descriptio="입사년도 ( 몇년도 기준 임금정책인지 )")
+    hire_year: int = Field(description="입사년도 ( 몇년도 기준 임금정책인지 )")
 
     holiday_allowance: Optional[int] = Field(description="휴일수당", default=None)
     job_allowance: Optional[int] = Field(description="직무(직책)수당", default=None)
     meal_allowance: Optional[int] = Field(description="식대", default=None)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class SalaryTemplatesResponse(BaseModel):
     data: list[SalaryTemplateResponse]
     pagination: PaginationDto
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

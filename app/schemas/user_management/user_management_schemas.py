@@ -1,7 +1,7 @@
 from datetime import datetime, date
 from typing import Optional, List
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.schemas.user_management.career_schemas import CareerDto
 from app.schemas.user_management.time_off_schemas import TimeOffResponseDto
@@ -21,8 +21,7 @@ class PartDTO(BaseModel):
     updated_at: Optional[datetime] = None
     deleted_yn: Optional[str] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class BranchDTO(BaseModel):
     address: str
@@ -54,8 +53,7 @@ class PartListDto(BaseModel):
     task: Optional[str] = None
 
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class EducationDTO(BaseModel):

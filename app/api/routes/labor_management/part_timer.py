@@ -58,7 +58,7 @@ async def get_part_timer_by_user_info(
     branch_id: int = Query(...),
     part_id: int = Query(...),
     user_name: str = Query(None),
-    phone_number: str = Query(None, regex="^[0-9\\-]+$"),
+    phone_number: str = Query(None, pattern="^[0-9\\-]+$"),
     year: int = Query(datetime.now().year),
     month: int = Query(datetime.now().month)) -> PartTimersSummariesDTO:
 

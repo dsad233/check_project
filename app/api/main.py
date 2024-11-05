@@ -75,7 +75,7 @@ public_router.include_router(
 )
 @public_router.get("/healthcheck", summary="healthcheck", tags=["default: healthcheck"])
 def health_check():
-    return {"status": "healthy"}
+    return {"status": "ok"}
 
 public_router.include_router(send_slack.router, prefix="/slack", tags=["Send_Slack"])
 

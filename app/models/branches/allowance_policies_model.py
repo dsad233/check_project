@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import Field, BaseModel
+from pydantic import Field, BaseModel, ConfigDict
 from pydantic_settings import BaseSettings
 from typing import Optional
 
@@ -63,15 +63,13 @@ class DefaultAllowancePoliciesDto(BaseModel):
     meal: bool = Field(description="식대", default=False)
 
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
     
 class HolidayAllowancePoliciesDto(BaseModel):
     doctor_holiday_work_pay: int = Field(description="의사 휴일수당", default=0)
     common_holiday_work_pay: int = Field(description="일반 휴일수당", default=0)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AllowancePoliciesDto(DefaultAllowancePoliciesDto, HolidayAllowancePoliciesDto):
     pass
@@ -91,8 +89,7 @@ class AllowancePoliciesResponse(BaseModel):
     display_meal_calc: bool = Field(description="식대 계산 표시", default=False)
     display_night_calc: bool = Field(description="야간 수당 계산 표시", default=False)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class AllowancePoliciesCreate(BaseSettings):
     comprehensive_overtime : bool

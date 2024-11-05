@@ -41,7 +41,7 @@ async def update_time_off(
         ...,
         description="업데이트할 휴직 데이터의 id",
         gt=0,
-        example=3
+        examples=3
     ),
     time_off_update_request: TimeOffUpdateRequestDto,
     request: Request,
@@ -70,7 +70,7 @@ async def delete_time_off(
         ...,
         description="삭제할 휴직 데이터 ID",
         gt=0,
-        example=3
+        examples=3
     ),
     request: Request,
     session: AsyncSession = Depends(get_db),

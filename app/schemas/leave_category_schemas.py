@@ -1,5 +1,5 @@
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from app.schemas.parts_schemas import PartIdWithName
 
 
@@ -15,8 +15,7 @@ class LeaveCategoryDto(BaseModel):
             return None
         return v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LeaveExcludedPartResponse(BaseModel):
@@ -24,8 +23,7 @@ class LeaveExcludedPartResponse(BaseModel):
     leave_category_id: int = Field(..., gt=0)
     part_id: int = Field(..., gt=0)
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class LeaveCategoryWithExcludedPartsDto(BaseModel):

@@ -1,7 +1,7 @@
 import os
 from typing import Union
 from pydantic_settings import BaseSettings
-from pydantic import Field
+from pydantic import Field, ConfigDict
 import base64
 
 # API 공개 경로 정의
@@ -26,9 +26,9 @@ class BaseAppSettings(BaseSettings):
 
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
-    MODUSIGN_API_KEY: str = Field(..., env="MODUSIGN_API_KEY")
+    MODUSIGN_API_KEY: str
     MODUSIGN_USER_EMAIL: str  
-    MODUSIGN_WEBHOOK_URL: str = Field(..., env="MODUSIGN_WEBHOOK_URL")
+    MODUSIGN_WEBHOOK_URL: str
     SLACK_HOOK : str
     USERNAME : str
     CHANNEL : str
@@ -48,9 +48,12 @@ class BaseAppSettings(BaseSettings):
             "Authorization": f"Basic {encoded_auth}"
         }
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
+    model_config = ConfigDict(
+        env_file=(".env"),
+        case_sensitive=False,  # 환경 변수 대소문자 구분 안함
+        extra="ignore",        # 추가 필드 무시
+        validate_assignment=True  # 할당 시에도 유효성 검사
+    )
 
 
 
@@ -65,8 +68,12 @@ class DevSettings(BaseAppSettings):
     def DATABASE_URL(self) -> str:
         return f"mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
 
-    class Config:
-        env_file = (".env", ".env.dev")
+    model_config = ConfigDict(
+        env_file=(".env", ".env.dev"),
+        case_sensitive=False,  # 환경 변수 대소문자 구분 안함
+        extra="ignore",        # 추가 필드 무시
+        validate_assignment=True  # 할당 시에도 유효성 검사
+    )
 
 class ProdSettings(BaseAppSettings):
     RDS_USER: str
@@ -79,16 +86,43 @@ class ProdSettings(BaseAppSettings):
     def DATABASE_URL(self) -> str:
         return f"mysql+aiomysql://{self.RDS_USER}:{self.RDS_PASSWORD}@{self.RDS_HOST}:{self.RDS_PORT}/{self.RDS_DATABASE}"
 
-    class Config:
-        env_file = (".env", ".env.prod")
+    model_config = ConfigDict(
+        env_file=(".env", ".env.prod"),
+        case_sensitive=False,  # 환경 변수 대소문자 구분 안함
+        extra="ignore",        # 추가 필드 무시
+        validate_assignment=True  # 할당 시에도 유효성 검사
+    )
 
-def load_settings() -> Union[DevSettings, ProdSettings]:
+
+class LocalSettings(BaseAppSettings):
+    MYSQL_USER: str
+    MYSQL_PASSWORD: str
+    MYSQL_HOST: str
+    MYSQL_PORT: int
+    MYSQL_DATABASE: str
+    MYSQL_ROOT_PASSWORD: str
+
+    @property
+    def DATABASE_URL(self) -> str:
+        return f"mysql+aiomysql://{self.MYSQL_USER}:{self.MYSQL_PASSWORD}@{self.MYSQL_HOST}:{self.MYSQL_PORT}/{self.MYSQL_DATABASE}"
+
+    model_config = ConfigDict(
+        env_file=(".env", ".env.local"),
+        case_sensitive=False,  # 환경 변수 대소문자 구분 안함
+        extra="ignore",        # 추가 필드 무시
+        validate_assignment=True  # 할당 시에도 유효성 검사
+    )
+
+
+def load_settings() -> Union[DevSettings, ProdSettings, LocalSettings]:
     mode = os.getenv("MODE", "dev")
 
     if mode == "dev":
         return DevSettings()
     elif mode == "prod":
         return ProdSettings()
+    elif mode == "local":
+        return LocalSettings()
     else:
         raise ValueError(f"Unsupported environment: {mode}")
     

@@ -1,6 +1,6 @@
 from datetime import time
 from typing import Optional
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ConfigDict
 from app.common.dto.pagination_dto import PaginationDto
 
 
@@ -33,8 +33,7 @@ class HourWageTemplateResponse(BaseModel):
     def set_part_id(cls, v):
         return 0 if v is None else v
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class HourWageTemplatesResponse(BaseModel):

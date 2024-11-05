@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import DeclarativeBase
 from sqlalchemy.pool import AsyncAdaptedQueuePool
 from app.core.config import settings
 from alembic.config import Config
@@ -31,7 +31,8 @@ async_session = async_sessionmaker(
     class_=AsyncSession
 )
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    pass
 
 
 async def get_db():

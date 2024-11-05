@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from app.enums.users import CareerContractType
 from app.models.users.career_model import Career
@@ -19,9 +19,9 @@ class CareerDto(BaseModel):
     department: Optional[str] = Field(None, description="조직")
     position: Optional[str] = Field(None, description="직위")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True, 
+        json_schema_extra={
             "example": {
                 "company": "테스트 회사",
                 "contract_type": "정규직",
@@ -32,6 +32,7 @@ class CareerDto(BaseModel):
                 "position": "사원"
             }
         }
+    )
 
     @classmethod
     async def build(cls, career: Career):

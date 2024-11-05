@@ -113,7 +113,6 @@ Branches.salaries = relationship("UserSalary", back_populates="branch")
 
 LeaveCategory.leave_excluded_parts = relationship("LeaveExcludedPart", back_populates="leave_category")
 
-Branches.closed_days = relationship("ClosedDays", back_populates="branch")
 Parts.closed_days = relationship("ClosedDays", back_populates="part")
 Branches.parttimer_policies = relationship("ParttimerPolicies", back_populates="branch", uselist=False)
 Branches.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="branch")
@@ -144,7 +143,6 @@ HolidayWorkPolicies.branch = relationship("Branches", back_populates="holiday_wo
 DocumentPolicies.branch = relationship("Branches", back_populates="document_policies")
 CommutePolicies.branch = relationship("Branches", back_populates="commute_policies")
 AutoOvertimePolicies.branch = relationship("Branches", back_populates="auto_overtime_policies")
-ClosedDays.branch = relationship("Branches", back_populates="closed_days")
 EarlyClockIn.branch = relationship("Branches", back_populates="early_clock_in")
 EarlyClockIn.user = relationship("Users", back_populates="early_clock_in")
 Overtimes.applicant = relationship("Users", foreign_keys=[Overtimes.applicant_id], back_populates="applied_overtimes")
@@ -160,11 +158,6 @@ UserSalary.part = relationship("Parts", back_populates="salaries")
 UserSalary.branch = relationship("Branches", back_populates="salaries")
 
 LeaveExcludedPart.part = relationship("Parts", back_populates="leave_excluded_parts")
-LeaveExcludedPart.leave_category = relationship("LeaveCategories", back_populates="leave_excluded_parts")
-
-ClosedDays.branch = relationship("Branches", back_populates="closed_days")
-ClosedDays.part = relationship("Parts", back_populates="closed_days")
-
 LeaveExcludedPart.leave_category = relationship("LeaveCategory", back_populates="leave_excluded_parts")
 
 AccountBasedAnnualLeaveGrant.branch = relationship("Branches", back_populates="account_based_annual_leave_grant")
@@ -206,7 +199,7 @@ DocumentSendHistory.document = relationship("Document", foreign_keys=[DocumentSe
 DocumentSendHistory.request_user = relationship("Users", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="document_send_histories")
 
 Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.user_id], back_populates="user")
-Users.document_send_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="request_user")
+Users.document_request_histories = relationship("DocumentSendHistory", foreign_keys=[DocumentSendHistory.request_user_id], back_populates="request_user")
 Document.document_send_histories = relationship("DocumentSendHistory", back_populates="document")
 
 Parts.salary_templates_policies = relationship("SalaryTemplatesPolicies", back_populates="part", uselist=False)

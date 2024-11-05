@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field, model_validator, ConfigDict
 
 # 공통 컴포넌트
 class SigningMethod(BaseModel):
@@ -50,8 +50,7 @@ class CreateDocumentFormRequest(BaseModel):
     title: str
     participants: List[dict]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class Document(BaseModel):
     id: str
@@ -124,8 +123,7 @@ class TemplateListResponse(BaseModel):
     count: int
     templates: List[Template]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 class RequesterInputField(BaseModel):
     type: str
@@ -153,7 +151,7 @@ class TemplateMetadataUpdate(BaseModel):
             
         return self
 
-    class Config:
+    model_config = ConfigDict(
         json_schema_extra = {
             "example": {
                 "metadatas": [
@@ -168,6 +166,7 @@ class TemplateMetadataUpdate(BaseModel):
                 ]
             }
         }
+    )
 
 class WebhookCreate(BaseModel):
     events: List[str] = Field(..., description="이벤트 목록")
@@ -175,7 +174,7 @@ class WebhookCreate(BaseModel):
     description: Optional[str] = Field(None, description="웹훅 설명")
     enabled: bool = Field(True, description="활성화 여부")
 
-    class Config:
+    model_config = ConfigDict(
         json_schema_extra = {
             "example": {
                 "events": [
@@ -188,3 +187,4 @@ class WebhookCreate(BaseModel):
                 "enabled": True
             }
         }
+    )
