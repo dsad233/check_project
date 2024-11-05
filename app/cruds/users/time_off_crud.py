@@ -55,10 +55,16 @@ async def time_off_update(
     existing_time_off = result.scalar_one_or_none()
 
     if existing_time_off:
-        # request data를 딕셔너리 형태로 가져와 순회
-        for key, value in time_off_update_request.__dict__.items():
-            if hasattr(existing_time_off, key) and key != 'id':
-                setattr(existing_time_off, key, value)
+        # SQLAlchemy 모델의 매핑된 컬럼들만 가져오기
+        update_data = {}
+        for column in TimeOff.__table__.columns:
+            if (column.name != 'id' 
+                and hasattr(time_off_update_request, column.name)
+                and getattr(time_off_update_request, column.name) is not None):
+                update_data[column.name] = getattr(time_off_update_request, column.name)
+        
+        for key, value in update_data.items():
+            setattr(existing_time_off, key, value)
 
         await session.commit()
         await session.refresh(existing_time_off)

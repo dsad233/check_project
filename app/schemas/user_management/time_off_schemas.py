@@ -30,8 +30,8 @@ class TimeOffResponseDto(BaseModel):
     class Config:
         from_attributes = True
 
-class TimeOffCreateAndUpdateRequestDto(BaseModel):
-    user_id: int
+
+class TimeOffBaseDto(BaseModel):
     time_off_type: TimeOffType
     start_date: datetime
     end_date: datetime
@@ -39,6 +39,12 @@ class TimeOffCreateAndUpdateRequestDto(BaseModel):
     
     class Config:
         from_attributes = True
+
+class TimeOffCreateRequestDto(TimeOffBaseDto):
+    user_id: int
+
+class TimeOffUpdateRequestDto(TimeOffBaseDto):
+    id: int
 
 
 
