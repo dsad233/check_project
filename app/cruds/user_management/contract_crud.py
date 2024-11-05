@@ -159,7 +159,7 @@ class UserManagementContractRepository:
             await self.session.rollback()
             raise e
 
-    async def update_contract(self, contract_id: int, update_params: dict):
+    async def update_contract(self, contract_id: int, update_params: dict) -> bool:
         try:
             stmt = (
                 update(Contract)
@@ -168,6 +168,7 @@ class UserManagementContractRepository:
             )
             await self.session.execute(stmt)
             await self.session.commit()
+            return True
         except Exception as e:
             logger.error(f"Failed to update contract: {e}")
             await self.session.rollback()
