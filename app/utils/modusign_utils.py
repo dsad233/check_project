@@ -49,7 +49,7 @@ class ModuSignGenerator:
                     },
                     {
                         "dataLabel": "work",
-                        "value": user.part.name
+                        "value": user.contract_info.part.name
                     },
                     {
                         "dataLabel": "employeeEmail",
