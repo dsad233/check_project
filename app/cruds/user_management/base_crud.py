@@ -21,7 +21,7 @@ class UserManagementRepository:
         stmt = (
             select(Users)
             .options(
-                joinedload(Users.contract_info).joinedload(ContractInfo.part),
+                joinedload(Users.user_contract_infos).joinedload(ContractInfo.part),
                 joinedload(Users.branch),
                 joinedload(Users.part)
             )
