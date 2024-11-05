@@ -17,6 +17,7 @@ router = APIRouter()
 @available_higher_than(Role.MSO)
 async def read_all_time_off(
     *,
+    request: Request,
     branch_name: Optional[str] = None,
     part_name: Optional[str] = None,
     name: Optional[str] = None,
