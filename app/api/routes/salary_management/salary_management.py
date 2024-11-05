@@ -11,21 +11,22 @@ router = APIRouter()
 @router.get("/{branch_id}/salary-management")
 async def get_salary_management(branch_id: int, part_id: int = Query(None), year: int = Query(datetime.now().year), month: int = Query(datetime.now().month)) -> List[EntireSalaryInfoResponseDTO]:
     mock_data = {
-        1: [  # branch_id 1 - 1번 지점
-            EntireSalaryInfoResponseDTO(
-                id=1,
-                user_id=101,
-                name="김철수",
-                part_id=1,  # 1번 지점 의사
-                part_name="의사", 
-                hire_date=datetime(2020, 1, 15).date(),
+        '2024-11': {
+            1: [  # branch_id 1 - 1번 지점
+                EntireSalaryInfoResponseDTO(
+                    id=1,
+                    user_id=101,
+                    name="김철수",
+                    part_id=1,  # 1번 지점 의사
+                    part_name="의사", 
+                    hire_date=datetime(2020, 1, 15).date(),
                     resignation_date=None,
-                monthly_salary=3500000,
-                base_salary=2800000,
-                meal_allowance=100000,
-                fixed_overtime_allowance=200000,
-                annual_leave_allowance=150000,
-                holiday_allowance=100000,
+                    monthly_salary=3500000,
+                    base_salary=2800000,
+                    meal_allowance=100000,
+                    fixed_overtime_allowance=200000,
+                    annual_leave_allowance=150000,
+                    holiday_allowance=100000,
                     night_work_allowance=80000,
                     duty_allowance=200000,
                     insentive_allowance=300000,
@@ -542,7 +543,8 @@ async def get_salary_management(branch_id: int, part_id: int = Query(None), year
                     hourly_wage=14423
                 )
             ]
-        }.get(branch_id, [])
+        }
+    }
     if not part_id:
-        return mock_data
-    return [salary for salary in mock_data if salary.part_id == part_id]
+        return mock_data.get(f'{year}-{month}', {}).get(branch_id, [])
+    return [salary for salary in mock_data.get(f'{year}-{month}', {}).get(branch_id, []) if salary.part_id == part_id]
