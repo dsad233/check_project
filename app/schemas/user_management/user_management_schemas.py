@@ -4,7 +4,7 @@ from typing import Optional, List
 from pydantic import BaseModel
 
 from app.schemas.user_management.career_schemas import CareerDto
-from app.schemas.user_management.time_off_schemas import TimeOffDto
+from app.schemas.user_management.time_off_schemas import TimeOffResponseDto
 
 
 class PartDTO(BaseModel):
@@ -98,7 +98,7 @@ class UserDTO(BaseModel):
     education: Optional[List[EducationDTO]] = None
     total_leave_days: Optional[float] = None
     remaining_annual_leave: Optional[int] = None
-    time_off: Optional[List[TimeOffDto]] = None
+    time_off: Optional[List[TimeOffResponseDto]] = None
     career: Optional[List[CareerDto]] = None
 
     @classmethod
@@ -126,6 +126,12 @@ class UserDTO(BaseModel):
         if hasattr(user, 'careers') and user.careers:
             careers = [CareerDto(**career.__dict__) for career in user.careers]
 
+        time_offs = None
+        if hasattr(user, 'time_offs') and user.time_offs:
+            latest_time_off = user.time_offs[0] if user.time_offs else None
+            if latest_time_off:
+                time_offs = [TimeOffResponseDto(**latest_time_off.__dict__)]
+
         return cls(
             id=user.id,
             name=user.name,
@@ -142,7 +148,8 @@ class UserDTO(BaseModel):
             monthly_salary=monthly_salary,
             annual_salary=annual_salary,
             education=educations,
-            career=careers
+            career=careers,
+            time_off=time_offs
         )
 
     @classmethod

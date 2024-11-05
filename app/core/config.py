@@ -91,5 +91,7 @@ def load_settings() -> Union[DevSettings, ProdSettings]:
         return ProdSettings()
     else:
         raise ValueError(f"Unsupported environment: {mode}")
+    
+
 
 settings = load_settings()

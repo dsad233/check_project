@@ -43,6 +43,7 @@ from app.api.routes.employee.leave_histories.employee_leave_histories import rou
 from app.api.routes.employee.branches.employee_branches import router as employee_branches_router
 from app.api.routes.employee.leave_category.employee_leave_categories import router as employee_leave_categories_router
 from app.api.routes.employee.closed_days.employee_closed_days import router as employee_closed_days_router
+from app.api.routes.users.time_off import time_off
 
 
 class APIPrefix(str, Enum):
@@ -118,7 +119,7 @@ admin_router.include_router(salary_policies.router, prefix='/branches/{branch_id
 admin_router.include_router(webhook.router, prefix='/modusign-webhook', tags=['Modusign_Webhook'])
 admin_router.include_router(document.router, prefix='/modusign-document', tags=['Modusign_Document'])
 admin_router.include_router(template.router, prefix='/modusign-template', tags=['Modusign_Template'])
-
+admin_router.include_router(time_off.router, prefix='/time-off', tags=['Time_Off: 휴직 설정'])
 
 # 일반 사원 접근 라우터 (employee)
 employee_router = APIRouter(prefix="/employee", tags=["Employee :  🙃 사원용 API  - 추후 세부 로직 확인 맞는지 확인 필요 🙃"])

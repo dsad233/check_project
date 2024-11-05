@@ -20,6 +20,7 @@ from app.models.parts.user_salary import UserSalary
 from app.schemas.user_management.user_management_schemas import CurrentUserDTO, UserDTO, UserListResponseDTO
 from app.dependencies.user_management import get_user_management_service
 from app.service.user_management.service import UserManagementService, UserQueryService
+from app.models.users.time_off_model import TimeOff
 
 router = APIRouter()
 user_query_service = UserQueryService()

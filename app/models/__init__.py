@@ -291,5 +291,12 @@ Career.user = relationship("Users", back_populates="careers")
 Users.educations = relationship("Education", back_populates="user")
 Education.user = relationship("Users", back_populates="educations")
 
-Users.time_offs = relationship("TimeOff", back_populates="user")
+# Users.time_offs = relationship("TimeOff", back_populates="user")
+Users.time_offs = relationship(
+   "TimeOff",
+   back_populates="user",
+   primaryjoin="and_(Users.id==TimeOff.user_id, TimeOff.deleted_yn=='N')",
+   order_by="desc(TimeOff.updated_at)",
+   lazy="selectin"
+)
 TimeOff.user = relationship("Users", back_populates="time_offs")

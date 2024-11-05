@@ -1,6 +1,7 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from enum import Enum
 from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Enum as SQLAlchemyEnum
+from zoneinfo import ZoneInfo
 
 from app.enums.users import TimeOffType
 from app.core.database import Base
@@ -19,9 +20,9 @@ class TimeOff(Base):
     end_date = Column(DateTime, nullable=False)
     description = Column(String(500))
 
-    created_at = Column(DateTime, default=lambda: datetime.now(timezone('Asia/Seoul')), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(timezone('Asia/Seoul')),
-                       onupdate=lambda: datetime.now(timezone('Asia/Seoul')),
+    created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Seoul")), nullable=False)
+    updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo('Asia/Seoul')),
+                       onupdate=lambda: datetime.now(ZoneInfo('Asia/Seoul')),
                        nullable=False)
     deleted_yn = Column(String(1), default="N")
 

@@ -20,6 +20,9 @@ from app.models.users.career_model import Career
 from app.models.users.education_model import Education
 from app.models.users.users_model import Users, UserCreate, UserUpdate
 from app.schemas.user_management.user_management_schemas import UserListDto, UserDTO
+from app.models.users.time_off_model import TimeOff
+from sqlalchemy.orm import load_only
+from sqlalchemy import desc
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +142,8 @@ class UserManagementService:
                 joinedload(UserAlias.part),
                 joinedload(UserAlias.branch),
                 selectinload(UserAlias.educations),
-                selectinload(UserAlias.careers)
+                selectinload(UserAlias.careers),
+                selectinload(UserAlias.time_offs)
             )
             .outerjoin(Commutes, UserAlias.id == Commutes.user_id)
             .outerjoin(UserSalary, UserAlias.id == UserSalary.user_id)
@@ -155,6 +159,7 @@ class UserManagementService:
             raise HTTPException(status_code=404, detail="요청한 사용자를 찾을 수 없거나 접근 권한이 없습니다.")
 
         user, last_activity, monthly_salary, annual_salary = user_data
+        print(f"Time offs: {user.time_offs}")
 
         # DTO 변환
         return UserDTO.from_user_data(
