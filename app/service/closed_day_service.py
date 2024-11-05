@@ -1,22 +1,23 @@
 from typing import List
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from sqlalchemy import and_, func, select, tuple_
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.routes.closed_days.dto.closed_days_response_dto import EarlyClockInResponseDTO, UserClosedDayDetail, UserClosedDayDetailDTO, UserClosedDaySummaryDTO
 from app.core.database import get_db
 from app.enums.user_management import ContractStatus, ContractType
 from app.enums.users import EmploymentStatus, Status
+from app.exceptions.exceptions import ForbiddenError, NotFoundError
 from app.models.branches.branches_model import Branches
 from app.models.branches.leave_categories_model import LeaveCategory
 from app.models.branches.work_policies_model import BranchWorkSchedule, WorkPolicies
-from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn
+from app.models.closed_days.closed_days_model import ClosedDays, EarlyClockIn, UserEarlyClockIn
 from app.models.parts.parts_model import Parts
 from app.models.users.leave_histories_model import LeaveHistories
 from app.models.users.users_contract_info_model import ContractInfo
 from app.models.users.users_contract_model import Contract
 from app.models.users.users_model import Users
 from calendar import monthrange
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from app.models.users.users_work_contract_model import FixedRestDay, WorkContract
 
@@ -574,7 +575,55 @@ class ClosedDayService:
         early_clock_ins = result.fetchall()
         
         return sorted([clock_in.early_clock_in.strftime("%Y-%m-%d") for clock_in in early_clock_ins])
+
+    async def delete_early_clock_in(self, branch_id: int, early_clock_in: UserEarlyClockIn) -> bool:
+        """
+        직원의 조기 출근 시간을 삭제 처리
+        """
+        try:
+            for user_id, dates in early_clock_in.early_clock_in_users.items():
+                # 해당 직원이 이 지점 소속인지 확인
+                stmt = select(Users).where(
+                    and_(
+                        Users.id == user_id,
+                        Users.branch_id == branch_id,
+                        Users.deleted_yn == 'N'
+                    )
+                )
+                result = await self.session.execute(stmt)
+                user = result.scalar_one_or_none()
                 
+                if not user:
+                    raise ForbiddenError(
+                        detail=f"사용자 ID {user_id}는 해당 지점의 직원이 아닙니다."
+                    )
+
+                # 삭제할 레코드 조회
+                stmt = (
+                    select(EarlyClockIn)
+                    .where(
+                        and_(
+                            EarlyClockIn.user_id == user_id,
+                            EarlyClockIn.branch_id == branch_id,
+                            EarlyClockIn.early_clock_in.in_(dates),
+                            EarlyClockIn.deleted_yn == "N"
+                        )
+                    )
+                )
+                result = await self.session.execute(stmt)
+                records = result.scalars().all()
+                # 삭제 처리
+                for record in records:
+                    record.deleted_yn = "Y"
+                    record.updated_at = datetime.now()
+
+            await self.session.commit()
+            return True
+        except HTTPException as http_err:
+            await self.session.rollback()
+            raise http_err
+        except Exception as err:
+            await self.session.rollback()
             
             
 

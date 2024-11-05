@@ -322,7 +322,7 @@ class PartTimerRepository(IPartTimerRepository):
         '''
         condition = []
         if user_name:
-            condition.append(Users.name.ilike(f"{user_name}"))
+            condition.append(Users.name.ilike(f"%{user_name}%"))
         if phone_number:
             condition.append(Users.phone_number.ilike(f"{phone_number}"))
             
