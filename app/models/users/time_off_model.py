@@ -1,6 +1,5 @@
 from datetime import datetime
-from enum import Enum
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Enum as SQLAlchemyEnum
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Enum as SQLAlchemyEnum, Boolean, text
 from zoneinfo import ZoneInfo
 
 from app.enums.users import TimeOffType
@@ -19,6 +18,7 @@ class TimeOff(Base):
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
     description = Column(String(500))
+    is_paid = Column(Boolean, nullable=False, default=False, server_default=text('false'))
 
     created_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo("Asia/Seoul")), nullable=False)
     updated_at = Column(DateTime, default=lambda: datetime.now(ZoneInfo('Asia/Seoul')),

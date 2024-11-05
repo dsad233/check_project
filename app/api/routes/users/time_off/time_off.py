@@ -1,16 +1,44 @@
 from fastapi import APIRouter, Depends, Request, Path
+from typing import List, Optional
 from app.core.database import get_db
 from app.core.permissions.auth_utils import available_higher_than
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.enums.users import Role
 
-from app.schemas.user_management.time_off_schemas import TimeOffCreateRequestDto, TimeOffUpdateRequestDto, TimeOffResponseDto
+from app.schemas.user_management.time_off_schemas import TimeOffCreateRequestDto, TimeOffUpdateRequestDto, TimeOffResponseDto, TimeOffReadAllResponseDto
 from app.service.user_management import time_off_service
 from app.common.dto.response_dto import ResponseDTO
 
 router = APIRouter()
 
-# GET(READ)은 user_management.py의 get_user_detail에 포함되어 있음
+# 회원상세 - 휴직등록 부분 GET(READ)은 user_management.py의 get_user_detail에 포함되어 있음
+
+@router.get("", response_model=ResponseDTO[List[TimeOffReadAllResponseDto]], status_code=200, summary='휴직 데이터 조회')
+@available_higher_than(Role.MSO)
+async def read_all_time_off(
+    *,
+    branch_name: Optional[str] = None,
+    part_name: Optional[str] = None,
+    name: Optional[str] = None,
+    session: AsyncSession = Depends(get_db)
+) -> ResponseDTO[List[TimeOffReadAllResponseDto]]:
+    
+    time_off_read_all = await time_off_service.time_off_read_all(
+        session = session,
+        branch_name = branch_name,
+        part_name = part_name,
+        name = name
+    )
+
+    if not time_off_read_all:
+        message = '휴직 데이터가 존재하지 않습니다.'
+    else: message = '휴직 데이터 조회가 완료되었습니다.'
+
+    return ResponseDTO(
+        status = 'SUCCESS',
+        message = message,
+        data = time_off_read_all
+    )
 
 @router.post("", response_model=ResponseDTO[TimeOffResponseDto], status_code=201, summary='휴직 등록')
 @available_higher_than(Role.MSO)
