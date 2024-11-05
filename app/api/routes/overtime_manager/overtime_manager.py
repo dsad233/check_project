@@ -1,20 +1,17 @@
 from calendar import monthrange
-from datetime import datetime, date, timedelta
+from datetime import datetime, timedelta
 from fastapi import APIRouter, HTTPException, Depends
-from app.core.database import async_session, get_db
+from app.core.database import get_db
 from app.models.users.overtimes_model import Overtimes
 from app.models.users.users_model import Users
 from app.models.parts.parts_model import Parts
 from app.models.branches.branches_model import Branches
-from app.middleware.tokenVerify import validate_token, get_current_user
 from sqlalchemy.future import select
 from sqlalchemy.orm import load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 router = APIRouter()
-# overtime_manager = async_session()
-
 
 # 오버타임 관리 전체 조회 [최고 관리자]
 @router.get("/overtime-manager", summary= "오버타임 관리 전체 조회")

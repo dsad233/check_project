@@ -112,15 +112,6 @@ app.add_middleware(
     allow_headers=["*", "Authorization", "Authorization_Swagger"],
 )
 
-# # 슬랙 메시지 웹훅으로 자동화 전송
-# @app.webhooks.post("/slack")
-# async def send_slack(context : str):
-#     try:
-#         channel_id = "D07Q87U8Z1V"
-#         await SlackAPI.post_message(channel_id=channel_id, text=context)
-#     except Exception as err:
-#         print(err)
-
 # Register exception handlers
 add_exception_handlers(app)
 app.include_router(main.app)
