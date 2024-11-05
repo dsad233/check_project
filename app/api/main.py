@@ -15,6 +15,7 @@ from app.api.routes.overtime_manager import overtime_manager
 from app.api.routes.parts import parts
 from app.api.routes.parts_policy import parts_policy
 from app.api.routes.salary_bracket import salary_bracket
+from app.api.routes.salary_management import salary_management
 from app.api.routes.users import users, user_management
 from app.api.routes.users.contract.contract_info import user_management_contract_info
 from app.api.routes.users.user_management_contract import user_management_contract
@@ -95,7 +96,7 @@ admin_router.include_router(leave_histories.router, prefix='/branches', tags=['L
 admin_router.include_router(work_policies.router, prefix='/branches/{branch_id}/work-policies', tags=['Work_policies: 근무정책 조회/수정'])
 admin_router.include_router(hour_wage_template.router, prefix='/branches/{branch_id}/hour-wage-templates', tags=['Hour_wage_templates: 시급 템플릿 CRUD'])
 admin_router.include_router(parts_policy.router, prefix="/branches/{branch_id}/parts-policies", tags=["Parts_policies: 파트 근무 정책/파트 급여 정책 관련"])
-
+admin_router.include_router(salary_management.router, prefix="/branches", tags=["Salary_Management: 급여 관리"])
 
 
 admin_router.include_router(salary_bracket.router, prefix='/salary-bracket', tags=['Salary Bracket: 급여 구간 CRUD'])
