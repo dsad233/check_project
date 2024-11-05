@@ -395,3 +395,18 @@ async def get_user_early_clock_in_dates(
 ) -> SimpleEarlyClockInListResponseDTO:
     early_clock_in_days = await service.get_user_early_clock_in_dates(branch_id, user_id, year, month)
     return SimpleEarlyClockInListResponseDTO.to_DTO(early_clock_in_days)
+
+
+# 직원 조기 출근 시간 삭제
+@router.delete("/{branch_id}/early-clock-in", status_code=200)
+@available_higher_than(Role.INTEGRATED_ADMIN)
+async def delete_early_clock_in(
+    request: Request,
+    branch_id: int,
+    early_clock_in: UserEarlyClockIn,
+    service: ClosedDayService = Depends(ClosedDayService)
+):
+    if await service.delete_early_clock_in(branch_id, early_clock_in):
+        return {"message": "조기 출근 시간이 성공적으로 삭제되었습니다."}
+    else:
+        raise HTTPException(status_code=500, detail="조기 출근 시간 삭제 실패")
