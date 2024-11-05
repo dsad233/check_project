@@ -42,7 +42,8 @@ class UserManagementContractInfo:
             current_user: Annotated[Users, Depends(get_current_user)],
     ):
         contract_info = request_create_contract_info.to_domain(user_id=user_id, manager_id=current_user.id)
-        created_contract_info_id = await contract_info_service.add_contract_info(
+        created_contract_info_id = await contract_info_service.register_new_contract_info(
+            user_id=user_id,
             contract_info=contract_info
         )
 

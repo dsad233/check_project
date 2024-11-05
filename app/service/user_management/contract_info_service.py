@@ -1,10 +1,11 @@
 import asyncio
-from typing import Optional
+from typing import Optional, List
 
 from fastapi import Depends
 
 from app.core.database import get_db
 from app.cruds.user_management.contract_info_crud import UserManagementContractInfoRepository
+from app.enums.common import YesNo
 from app.enums.user_management import ContractType
 from app.enums.users import EmploymentStatus
 from app.models.users.users_contract_info_model import ContractInfo
@@ -27,6 +28,9 @@ class UserManagementContractInfoService:
         self.contract_service = contract_service
         self.contract_history_service = contract_history_service
         self.contract_info_repository = contract_info_repository
+
+    async def get_activated_contract_infos_by_user_id(self, user_id: int) -> List[ContractInfo]:
+        return await self.contract_info_repository.find_activated_contract_info_by_user_id(user_id)
 
     async def get_total_contract_info(self, user_id: int, contract_info_id: int) -> ResponseTotalContractInfo:
         work_contract, salary_contract, part_time_contract = None, None, None
@@ -63,6 +67,20 @@ class UserManagementContractInfoService:
     async def add_contract_info(self, contract_info: ContractInfo) -> int:
         created_contract_info_id = await self.contract_info_repository.create(contract_info)
         return created_contract_info_id
+
+    async def register_new_contract_info(self, user_id: int, contract_info: ContractInfo) -> int:
+        await self.deactivate_contract_infos(user_id=user_id)
+        return await self.add_contract_info(contract_info=contract_info)
+
+
+    async def deactivate_contract_infos(self, user_id: int):
+        contract_infos = await self.contract_info_repository.find_activated_contract_infos_by_user_id(user_id=user_id)
+
+        if contract_infos:
+            for contract_info in contract_infos:
+                contract_info.activate_yn = YesNo.NO
+
+            await self.contract_info_repository.bulk_update(updated_contract_infos=contract_infos)
 
     async def update_contract_info(
             self,
