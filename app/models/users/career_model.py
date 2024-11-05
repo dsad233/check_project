@@ -21,9 +21,9 @@ class Career(Base):
     )  # 계약유형
     start_date = Column(Date, nullable=False)  # 입사 연월
     end_date = Column(Date, nullable=True)  # 퇴사 연월
-    job_title = Column(String(255), nullable=False)  # 직무
+    job_title = Column(String(255), nullable=True)  # 직무
     department = Column(String(255), nullable=True)  # 조직
-    position = Column(String(255), nullable=False)  # 직위
+    position = Column(String(255), nullable=True)  # 직위
 
     created_at = Column(DateTime, default=datetime.now(UTC), nullable=False)
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC), nullable=False)
