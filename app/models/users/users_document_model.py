@@ -1,5 +1,5 @@
 from datetime import datetime, UTC
-from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Enum
+from sqlalchemy import Column, Integer, ForeignKey, DateTime, String, Enum, Date
 from app.core.database import Base
 from app.enums.user_management import DocumentSendStatus
 
@@ -31,3 +31,18 @@ class DocumentSendHistory(Base):
 
     created_at = Column(DateTime, default=datetime.now(UTC))
     updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
+
+class DocumentRequest(Base):
+    __tablename__ = "document_request"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    request_user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    document_type = Column(String(255), nullable=False)
+    request_date = Column(Date, nullable=False)
+    request_reason = Column(String(255), nullable=False)
+
+    created_at = Column(DateTime, default=datetime.now(UTC))
+    updated_at = Column(DateTime, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    deleted_yn = Column(String(1), default="N")

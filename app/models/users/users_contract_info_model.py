@@ -29,7 +29,7 @@ class ContractInfo(Base):
     activate_yn = Column(
         Enum(*[e.value for e in YesNo], name="activate_yn"),
         nullable=False,
-        datetime=YesNo.YES
+        default=YesNo.YES
     )
 
     created_at = Column(DateTime, default=datetime.now)
