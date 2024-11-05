@@ -2,7 +2,7 @@ from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from sqlalchemy import func, or_, select
+from sqlalchemy import case, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
@@ -125,100 +125,63 @@ async def approve_overtime(
         overtime.is_approved = "Y"
         overtime.manager_memo = overtime_select.manager_memo
 
-        # 기존 횟수에 대한 오버타임 조회
-        find_overtime_history = await db.execute(select(OverTime_History).where(OverTime_History.user_id == result_user.id, OverTime_History.deleted_at == "N"))
-        result_overtime_history = find_overtime_history.scalar_one_or_none()
+        find_part = await db.execute(select(Parts).where(Parts.id == result_user.part_id, Parts.deleted_yn == "N"))
+        result_part = find_part.first()
+        
+        if result_part is None:
+            raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
 
-        # 기존 오버타임 기록이 존재하지 않는다면 데이터 생성
-        if(result_overtime_history is None):
-            new_overtime_history = OverTime_History(
-                user_id = result_user.id,
-                ot_30_total = 0,
-                ot_60_total = 0,
-                ot_90_total = 0,
-                ot_30_money = 0,
-                ot_60_money = 0,
-                ot_90_money = 0
-            )
+        # 정책 조회
+        find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+        find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(Branches.id == result_user.branch_id, result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+        # print(f"find_overtime_policies: {find_overtime_policies.first()}")
+        result_overtime_policies = find_overtime_policies.first()
 
-            db.add(new_overtime_history)
-            await db.flush()
-            await db.refresh(new_overtime_history)
+        if result_overtime_policies is None:
+            raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
 
+        # 해당 파트에 대한 의사 여부 확인
+        find_part = await db.execute(select(Parts).where(Parts.id == result_user.part_id, Parts.deleted_yn == "N"))
+        result_part = find_part.first()
 
-            # # 해당 파트에 대한 의사 여부 확인
-            find_part = await db.execute(select(Parts).where(Parts.id == result_user.part_id, Parts.deleted_yn == "N"))
-            result_part = find_part.first()
+        if result_part is None:
+            raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
 
-            if result_part is None:
-                raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
-            
-            # 정책 조회
-            find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
-            result_overtime_policies = find_overtime_policies.first()
+        new_overtime_history = OverTime_History(
+            user_id=result_user.id,
+            ot_30_total=0,
+            ot_60_total=0,
+            ot_90_total=0,
+            ot_30_money=0,
+            ot_60_money=0,
+            ot_90_money=0
+        )
 
-            if result_overtime_policies is None:
-                raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
-            
-            # 각 오버타임 승인 횟수에 대한 카운드 및 수당 카운트
-            if(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.THIRTY_MINUTES):
-                new_overtime_history.ot_30_total +=  1
-                new_overtime_history.ot_30_money += result_overtime_policies.doctor_ot_30 if result_part[0].is_doctor else result_overtime_policies.common_ot_30
-            elif(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.SIXTY_MINUTES):
-                new_overtime_history.ot_60_total += 1
-                new_overtime_history.ot_60_money += result_overtime_policies.doctor_ot_60 if result_part[0].is_doctor else result_overtime_policies.common_ot_60
-            elif(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.NINETY_MINUTES):
-                new_overtime_history.ot_90_total += 1
-                new_overtime_history.ot_90_money += result_overtime_policies.doctor_ot_90 if result_part[0].is_doctor else result_overtime_policies.common_ot_90
-            await db.commit()
-
-        else :
-            # 해당 파트에 대한 의사 여부 확인
-            find_part = await db.execute(select(Parts).where(Parts.id == result_user.part_id, Parts.deleted_yn == "N"))
-            result_part = find_part.first()
-            
-            if result_part is None:
-                raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
-
-            # 정책 조회
-            find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
-            find_overtime_policies = await db.scalars(select(OverTimePolicies).join(Branches, Branches.id == OverTimePolicies.branch_id).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(Branches.id == result_user.branch_id, result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
-            # print(f"find_overtime_policies: {find_overtime_policies.first()}")
-            result_overtime_policies = find_overtime_policies.first()
-
-            if result_overtime_policies is None:
-                raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
-
-            # 해당 파트에 대한 의사 여부 확인
-            find_part = await db.execute(select(Parts).where(Parts.id == result_user.part_id, Parts.deleted_yn == "N"))
-            result_part = find_part.first()
-    
-            if result_part is None:
-                raise HTTPException(status_code=404, detail="사용자 또는 파트 정보를 찾을 수 없습니다.")
-            
-            # 기존 횟수에 대한 오버타�� 조회
-            find_overtime_history = await db.execute(select(OverTime_History).where(OverTime_History.user_id == result_user.id, OverTime_History.deleted_at == "N"))
-            result_overtime_history = find_overtime_history.scalar_one_or_none()
-
-            if(result_overtime_history is None):
-                raise HTTPException(status_code=404, detail="존재하지 않는 오버타임 히스토리 입니다.")
-    
-            # 각 오버타임 승인 횟수에 대한 카운드 및 수당 카운트
-            if overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.THIRTY_MINUTES:
-                result_overtime_history.ot_30_total += 1
-                result_overtime_history.ot_30_money += result_overtime_policies.doctor_ot_30 if result_part[0].is_doctor else result_overtime_policies.common_ot_30
-            elif overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.SIXTY_MINUTES:
-                result_overtime_history.ot_60_total += 1
-                result_overtime_history.ot_60_money += result_overtime_policies.doctor_ot_60 if result_part[0].is_doctor else result_overtime_policies.common_ot_60
-            elif overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.NINETY_MINUTES:
-                result_overtime_history.ot_90_total += 1
-                result_overtime_history.ot_90_money += result_overtime_policies.doctor_ot_90 if result_part[0].is_doctor else result_overtime_policies.common_ot_90
-    
-            await db.commit()
+        # 시간별 금액 계산
+        find_overtime_policies = await db.scalars(select(OverTimePolicies).options(load_only(OverTimePolicies.doctor_ot_30, OverTimePolicies.doctor_ot_60, OverTimePolicies.doctor_ot_90, OverTimePolicies.common_ot_30, OverTimePolicies.common_ot_60, OverTimePolicies.common_ot_90)).where(result_user.branch_id == OverTimePolicies.branch_id, Branches.deleted_yn == "N", OverTimePolicies.deleted_yn == "N"))
+        result_overtime_policies = find_overtime_policies.first()
+        if result_overtime_policies is None:
+            raise HTTPException(status_code=404, detail="오버타임 정책을 찾을 수 없습니다.")
+        
+        # 각 오버타임 승인 횟수에 대한 카운드 및 수당 카운트
+        if(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.THIRTY_MINUTES):
+            new_overtime_history.ot_30_total +=  1
+            new_overtime_history.ot_30_money += result_overtime_policies.doctor_ot_30 if result_part[0].is_doctor else result_overtime_policies.common_ot_30
+        elif(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.SIXTY_MINUTES):
+            new_overtime_history.ot_60_total += 1
+            new_overtime_history.ot_60_money += result_overtime_policies.doctor_ot_60 if result_part[0].is_doctor else result_overtime_policies.common_ot_60
+        elif(overtime.overtime_hours != None and overtime.overtime_hours == OverTimeHours.NINETY_MINUTES):
+            new_overtime_history.ot_90_total += 1
+            new_overtime_history.ot_90_money += result_overtime_policies.doctor_ot_90 if result_part[0].is_doctor else result_overtime_policies.common_ot_90
+        # 새로운 기록을 데이터베이스에 추가
+        db.add(new_overtime_history)
+        
+        await db.commit()
         
         return {
             "message": "초과 근무 기록이 승인되었습니다.",
         }
+
     except HTTPException as http_err:
         await db.rollback()
         raise http_err
@@ -488,8 +451,33 @@ async def get_overtimes_approved_list(
             current_weekday = date_obj.weekday()
             date_start_day = date_obj - timedelta(days=current_weekday)
             date_end_day = date_start_day + timedelta(days=6)
-
-        base_query = select(OverTime_History, Users, Branches, Parts).join(
+            
+        base_query = select(
+            Users.id.label('user_id'),
+            Users.name.label('user_name'),
+            Users.gender,
+            Users.phone_number,
+            Users.resignation_date,
+            Branches.id.label('branch_id'),
+            Branches.name.label('branch_name'),
+            Parts.id.label('part_id'),
+            Parts.name.label('part_name'),
+            func.sum(OverTime_History.ot_30_total).label('ot_30_total'),
+            func.sum(OverTime_History.ot_60_total).label('ot_60_total'),
+            func.sum(OverTime_History.ot_90_total).label('ot_90_total'),
+            func.sum(OverTime_History.ot_30_money).label('ot_30_money'),
+            func.sum(OverTime_History.ot_60_money).label('ot_60_money'),
+            func.sum(OverTime_History.ot_90_money).label('ot_90_money'),
+            (func.sum(OverTime_History.ot_30_total) + 
+            func.sum(OverTime_History.ot_60_total) + 
+            func.sum(OverTime_History.ot_90_total)).label('total_count'),
+            (func.sum(OverTime_History.ot_30_total) * 0.5 + 
+            func.sum(OverTime_History.ot_60_total) * 1.0 + 
+            func.sum(OverTime_History.ot_90_total) * 1.5).label('total_time'),
+            (func.sum(OverTime_History.ot_30_money) + 
+            func.sum(OverTime_History.ot_60_money) + 
+            func.sum(OverTime_History.ot_90_money)).label('total_money')
+        ).select_from(OverTime_History).join(
             Users, OverTime_History.user_id == Users.id
         ).join(
             Branches, Users.branch_id == Branches.id
@@ -497,55 +485,64 @@ async def get_overtimes_approved_list(
             Parts, Users.part_id == Parts.id
         ).where(
             OverTime_History.deleted_at == "N",
-            Users.deleted_yn == "N"
+            Users.deleted_yn == "N",
+            OverTime_History.created_at >= date_start_day,
+            OverTime_History.created_at <= date_end_day
+        ).group_by(
+            Users.id,
+            Users.name,
+            Users.gender,
+            Users.phone_number,
+            Users.resignation_date,
+            Branches.id,
+            Branches.name,
+            Parts.id,
+            Parts.name
         )
 
-        # 이름 검색 조건
+        # 검색 조건 추가
         if name:
             base_query = base_query.where(Users.name.like(f"%{name}%"))
-        # 전화번호 검색 조건
         if phone_number:
             base_query = base_query.where(Users.phone_number.like(f"%{phone_number}%"))
-        # 지점 검색 조건
         if branch_id:
             base_query = base_query.where(Branches.id == branch_id)
-        # 파트 검색 조건
         if part_id:
             base_query = base_query.where(Parts.id == part_id)
-        # 사용자 삭제 여부 검색 조건
         if user_deleted_yn == "Y":
             base_query = base_query.where(Users.resignation_date.isnot(None))
+        elif user_deleted_yn == "N":
+            base_query = base_query.where(Users.resignation_date.is_(None))
 
         # 정렬, 페이징 적용
         skip = (page - 1) * size
         result = await db.execute(
-            base_query.order_by(OverTime_History.created_at.desc())
+            base_query.order_by(Users.name.asc())
             .offset(skip)
             .limit(size)
         )
         records = result.all()
 
         formatted_data = [{
-            "id": history.id,
-            "user_id": user.id,
-            "user_name": user.name,
-            "user_gender": user.gender,
-            "user_phone_number": user.phone_number,
-            "user_resignation_date": user.resignation_date,
-            "branch_id": branch.id,
-            "branch_name": branch.name,
-            "part_id": part.id,
-            "part_name": part.name,
-            "ot_30_total": history.ot_30_total,
-            "ot_30_money": history.ot_30_money,
-            "ot_60_total": history.ot_60_total,
-            "ot_60_money": history.ot_60_money,
-            "ot_90_total": history.ot_90_total,
-            "ot_90_money": history.ot_90_money,
-            "total_count": history.ot_30_total + history.ot_60_total + history.ot_90_total,
-            "total_time": history.ot_30_total * 0.5 + history.ot_60_total * 1 + history.ot_90_total * 1.5,
-            "total_money": history.ot_30_money + history.ot_60_money + history.ot_90_money
-        } for history, user, branch, part in records]
+            "user_id": record.user_id,
+            "user_name": record.user_name,
+            "user_gender": record.gender,
+            "user_phone_number": record.phone_number,
+            "user_resignation_date": record.resignation_date,
+            "branch_id": record.branch_id,
+            "branch_name": record.branch_name,
+            "part_id": record.part_id,
+            "part_name": record.part_name,
+            "ot_30_total": record.ot_30_total or 0,
+            "ot_60_total": record.ot_60_total or 0,
+            "ot_90_total": record.ot_90_total or 0,
+            "ot_30_money": record.ot_30_money or 0,
+            "ot_60_money": record.ot_60_money or 0,
+            "ot_90_money": record.ot_90_money or 0,
+            "total_count": record.total_count or 0,
+            "total_time": float(record.total_time or 0),
+            "total_money": float(record.total_money or 0)
+        } for record in records]
 
         # 전체 레코드 수 조회
         count_query = select(func.count()).select_from(base_query.subquery())
@@ -562,7 +559,6 @@ async def get_overtimes_approved_list(
             },
             "data": formatted_data,
         }
-
 
     except HTTPException as http_err:
         await db.rollback()
@@ -608,7 +604,7 @@ async def get_overtimes_approved_list(
 #                 update_data["application_memo"] = overtime_update.application_memo
         
 #         else:
-#             raise HTTPException(status_code=403, detail="초과 근무 기록을 수정할 권한이 없습니다.")
+#             raise HTTPException(status_code=403, detail="초과 근무 기록을 수정할 권이 없습니다.")
 
 #         if not update_data:
 #             raise HTTPException(status_code=400, detail="수정할 내용이 없습니다.")
