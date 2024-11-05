@@ -174,6 +174,13 @@ async def can_manage_user_permissions(
     if not current_user.role or not target_user.role:
         return False
 
+    # 본인 권한 변경 불가
+    if current_user.id == target_user.id:
+        raise HTTPException(
+            status_code=401,
+            detail="본인의 권한은 변경할 수 없습니다."
+        )
+
     current_level = ROLE_LEVELS[current_user.role]
     target_level = ROLE_LEVELS[target_user.role]
 
